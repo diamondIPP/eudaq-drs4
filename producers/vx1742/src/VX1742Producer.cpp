@@ -71,6 +71,14 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     custom_size = conf.Get("custom_size", 0);
     m_group_mask = (groups[3]<<3) + (groups[2]<<2) + (groups[1]<<1) + groups[0];
 
+    trn_enable[0] = conf.Get("TR01_enable", 0);
+    trn_enable[1] = conf.Get("TR23_enable", 0);
+    trn_threshold[0] = conf.Get("TR01_threshold", 0x51C6);
+    trn_threshold[1] = conf.Get("TR23_threshold", 0x51C6);
+    trn_offset[0] = conf.Get("TR01_offset", 0x8000);
+    trn_offset[1] = conf.Get("TR23_offset", 0x8000);
+    trn_polarity = conf.Get("TRn_polarity", 1);
+
 
     if(caen->isRunning())
       caen->stopAcquisition();
@@ -86,6 +94,8 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     caen->sendBusyToTRGout();
     caen->setTriggerCount(); //count all, not just accepted triggers
     caen->disableIndividualTriggers(); //count one event only once, not per group
+    usleep(10000);
+    caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity);
 
 
     //individual group configuration here
@@ -146,7 +156,7 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
 
 
     //time_calibration
-    
+    usleep(2000000);
 
     caen->clearBuffers();
     caen->startAcquisition();
@@ -174,7 +184,7 @@ void VX1742Producer::ReadoutLoop() {
   while(m_running){
     try{
       //std::cout << "Events stored: " << caen->getEventsStored() << ", size of next event: " << caen->getNextEventSize() << std::endl;
-      //usleep(500);
+      //usleep(500000);
       if(caen->eventReady()){
         VX1742Event vxEvent;
         caen->BlockTransferEventD64(&vxEvent);

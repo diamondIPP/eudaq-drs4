@@ -173,6 +173,29 @@ uint32_t VX1742Interface::getSamplingFrequency(){
 
 }
 
+bool VX1742Interface::SPIBusBusy(uint32_t grp){
+	return vx1742->group_n_conf[grp].group_status.spi_busy;
+}
+
+
+void VX1742Interface::enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity){
+	if(enable[0] || enable[1]){
+		vx1742->group_conf.trigger_trn_enable = 1;
+		vx1742->group_conf.sig_trn_enable = 0; //disable readout of signal for now
+		vx1742->group_conf.trigger_polarity = polarity;
+	}
+	for(int grp=0; grp<2; grp++){
+		if(!SPIBusBusy(grp*2)){
+			vx1742->group_n_conf[grp*2].trn_threshold = threshold[grp];
+			vx1742->group_n_conf[grp*2].trn_dc_offset = offset[grp];
+		}else{
+			std::cout << std::endl << "Enabling TRn failed - SPI Bus busy!" << std::endl;
+			exit(-1);
+		}
+	}
+}
+
+
 void VX1742Interface::setPostTriggerSamples(uint32_t param){
 	vx1742->post_trigger = param;
 }
@@ -287,9 +310,10 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 			if(ret != 0){std::printf("Error in BlockTransfer!"); return -1;}
 		}
 
-		uint32_t* data = (uint32_t*)seg->VirtualAddress();
+		std::cout << "size of u_long" << sizeof(u_long) << " ,size of uint32_t: " << sizeof(uint32_t) << std::endl;
+		//uint32_t* data = (uint32_t*)seg->VirtualAddress();
+		uint32_t* data = (uint32_t*)(seg->VirtualAddress());
 
-    	//size = (uint32_t)seg->Size()/sizeof(uint32_t);
     	
     	#ifdef DEBUG
     		std::printf("CMEM segment, virt = %p, phys = 0x%016lx, size = %u\n", (void*)data, seg->PhysicalAddress(), eventsize);
@@ -317,7 +341,7 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 		head.evnt_cnt.raw= data[(++offset)];
 		head.trigger_time= data[(++offset)];
 
-		#ifdef DEBUG
+		//#ifdef DEBUG
 			printf("******************************************************\n");
 			printf("RAW header:         0x%08X\n", head.size.raw);
 			printf("0xA:                0x%01X\n", head.size.A);
@@ -333,7 +357,7 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 			printf("------------------------------------------------------\n");
 			printf("Trigger time:       %u\n", head.trigger_time);
 			printf("******************************************************\n\n");
-		#endif
+		//#endif
 
 		vxEvent->setData(&head, data+4, (head.size.eventSize-4));
 	}
