@@ -7,6 +7,7 @@
 
 #include "HitmapCollection.hh"
 #include "OnlineMon.hh"
+#include "OnlineMonWindow.hh"
 
 static int counting = 0;
 static int events = 0;

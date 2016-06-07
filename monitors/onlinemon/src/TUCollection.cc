@@ -11,17 +11,7 @@
 
 #include "TUCollection.hh"
 #include "OnlineMon.hh"
-
-//ROOT Includes
-#include <TH2I.h>
-#include <TFile.h>
-
-//STL includes
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <map>
-#include <iostream>
+#include "OnlineMonWindow.hh"
 
 //project includes
 #include "SimpleStandardEvent.hh"

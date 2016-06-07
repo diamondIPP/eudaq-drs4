@@ -1,3 +1,6 @@
+#include "OnlineMonWindow.hh"
+
+
 // ROOT includes
 #include <TH2F.h>
 #include <TCanvas.h>
@@ -10,7 +13,7 @@
 //C++ includes
 #include <iostream>
 #include <sstream>
-#include "OnlineMonWindow.hh"
+
 
 #include "config.h"  // for version symbols
 
