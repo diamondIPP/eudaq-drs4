@@ -12,7 +12,6 @@
 //software trigger
 //trigger on signal
 //calibration
-//readout TRn
 //send info in bore event!
 //give channels names!
 
@@ -92,7 +91,7 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     caen->toggleGroups(groups);
     caen->setCustomSize(custom_size);
     caen->sendBusyToTRGout();
-    caen->setTriggerCount(); //count all, not just accepted triggers
+    caen->setTriggerCount(); //count just accepted triggers
     caen->disableIndividualTriggers(); //count one event only once, not per group
     usleep(10000);
     caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity);
@@ -132,6 +131,7 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
     uint32_t n_channels = caen->getActiveChannels();
     bore.SetTag("active_channels", std::to_string(n_channels));
     bore.SetTag("device_name", "VX1742");
+    bore.SetTag("group_mask", std::to_string(m_group_mask));
 
     uint32_t s_freq = caen->getSamplingFrequency();
     if(s_freq==0) bore.SetTag("sampling_speed", std::to_string(5));
@@ -153,7 +153,6 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
     }
 
     bore.SetTag("voltage_range", std::to_string(1));
-
 
     //time_calibration
     usleep(2000000);
@@ -197,9 +196,9 @@ void VX1742Producer::ReadoutLoop() {
           uint32_t event_size = vxEvent.EventSize();
 
           //fix first two redneck events
-          if(n_groups==0){
-            group_mask = m_group_mask;
-          }
+          //if(n_groups==0){
+          //  group_mask = m_group_mask;
+          //}
 
           uint32_t block_no = 0;
           eudaq::RawDataEvent ev(m_event_type, m_run, event_counter);          
@@ -224,11 +223,11 @@ void VX1742Producer::ReadoutLoop() {
               uint32_t event_timestamp = vxEvent.GetEventTimeStamp(grp);
 
               //fix first two redneck events
-              if(n_groups==0){
-                samples_per_channel = this->SamplesInCustomSize();
-                start_index_cell = 0;
-                event_timestamp = 0;
-              }
+              //if(n_groups==0){
+              //  samples_per_channel = this->SamplesInCustomSize();
+              //  start_index_cell = 0;
+              //  event_timestamp = 0;
+              //}
 
               #ifdef DEBUG
                 std::cout << "***********************************************************************" << std::endl << std::endl;
@@ -254,13 +253,13 @@ void VX1742Producer::ReadoutLoop() {
                 uint16_t *payload = new uint16_t[samples_per_channel];
                   
                 //first two sucker events have no channel data for whatever reason which then fucks up the OnlineMonitor so just send zeros
-                if(n_groups == 0){
-                  for(int idx = 0; idx<samples_per_channel; idx++){
-                    payload[idx] = 0;
-                  }                   
-                }else{
-                  vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
-                }
+                //if(n_groups == 0){
+                //  for(int idx = 0; idx<samples_per_channel; idx++){
+                //    payload[idx] = 0;
+                //  }                   
+                //}else{
+                vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
+                //}
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;
                 delete payload;
@@ -341,7 +340,7 @@ void VX1742Producer::SetTimeStamp(){
 }
 
 
-uint32_t VX1742Producer::SamplesInCustomSize(){
-  uint32_t csizes[4] = {1024, 520, 256, 136};
-  return csizes[custom_size];
-}
+//uint32_t VX1742Producer::SamplesInCustomSize(){
+//  uint32_t csizes[4] = {1024, 520, 256, 136};
+//  return csizes[custom_size];
+//}

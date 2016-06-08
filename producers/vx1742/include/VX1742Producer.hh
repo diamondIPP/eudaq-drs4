@@ -26,7 +26,7 @@ public:
   void OnTerminate();
   void SetTimeStamp();
   void ReadoutLoop();
-  uint32_t SamplesInCustomSize();
+  //uint32_t SamplesInCustomSize();
 
 private:
   VX1742Interface *caen;

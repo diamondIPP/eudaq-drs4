@@ -64,6 +64,11 @@ void VX1742Interface::openVME(){
     //printf("checksum              is at 0x%08x\n", (size_t)&vx1742->flash_data  - (size_t)&vx1742->output_buffer);
     std::cout << "###Create new contiguous memory segment.. ";
     seg = new CMEMSegment("caenProducer", vmec::buffer_size);
+    if((*seg)()){
+    	std::cout << "ERROR generating contiguous memory segment..\n Check /proc/cmem_rcc for more information." << std::endl;
+    	vme->ErrorPrint((*seg)());
+    	std::exit(-1);
+    }
     std::cout << "[OK]" << std::endl;
     
 
@@ -258,7 +263,7 @@ uint32_t VX1742Interface::getCustomSize(){
 }
 
 void VX1742Interface::setTriggerCount(){
-	vx1742->acq_control.trigger_count = 1;
+	vx1742->acq_control.trigger_count = 0;
 }
 
 void VX1742Interface::setMaxBLTEvents(uint32_t param){
