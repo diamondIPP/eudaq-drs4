@@ -27,19 +27,19 @@ class VX1742ConverterPlugin:public DataConverterPlugin {
 public:
   virtual void Initialize(const Event & bore, const Configuration & cnf) {
   	std::cout << "Read VX1742 BORE Event" << std::endl;
-  	timestamp = bore.GetTag("timestamp", " ");
+  	timestamp = bore.GetTag("timestamp", 0);
   	serialno = bore.GetTag("serial_number", " ");
   	firmware = bore.GetTag("firmware_version", " ");
-  	active_channels = bore.GetTag("active_channels", " ");
-  	sampling_speed = bore.GetTag("sampling_speed", " ");
-  	samples_in_channel = bore.GetTag("samples_in_channel", " ");
+  	active_channels = bore.GetTag("active_channels", 0);
+  	sampling_speed = bore.GetTag("sampling_speed", 0);
+  	samples_in_channel = bore.GetTag("samples_in_channel", 0);
   	device_name = bore.GetTag("device_name", " ");
-  	group_mask = bore.GetTag("group_mask", " ");
+  	group_mask = bore.GetTag("group_mask", 0);
   	
 	std::cout<<"Device: " << device_name << std::endl;
 	std::cout<<"Firmware:   " << firmware << std::endl;
 
-	for (int ch = 0; ch < stoi(active_channels); ch++){
+	for (int ch = 0; ch < active_channels; ch++){
 		std::string tag = "CH_"+std::to_string(ch);
 		channel_names[ch] = bore.GetTag(tag, tag);
 		std::cout << "CH" << ch << " Name: " << channel_names[ch] << std::endl;
@@ -124,13 +124,13 @@ public:
 private:
   VX1742ConverterPlugin():DataConverterPlugin(EVENT_TYPE){}
 
-  std::string timestamp;
+  uint64_t timestamp;
   std::string serialno;
   std::string firmware;
-  std::string active_channels;
-  std::string sampling_speed, samples_in_channel;
+  uint32_t active_channels;
+  uint32_t sampling_speed, samples_in_channel;
   std::string device_name;
-  std::string group_mask;
+  uint32_t group_mask;
   std::map<int, std::string> channel_names;
   static VX1742ConverterPlugin m_instance;
 
