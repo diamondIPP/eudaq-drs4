@@ -4,7 +4,7 @@
 ** <VX1742ConverterPlugin>.cc
 ** 
 ** Date: April 2016
-** Fixme: replace c-style casts with static_cast<type> and understand the problem.
+** Fixme: replace c-style casts with static_cast<type>
 ** Author: Christian Dorfer (dorfer@phys.ethz.ch)
 ** ---------------------------------------------------------------------------------*/
 
@@ -26,12 +26,24 @@ class VX1742ConverterPlugin:public DataConverterPlugin {
 
 public:
   virtual void Initialize(const Event & bore, const Configuration & cnf) {
-	//std::cout<<"VX1742 Initialize"<<std::endl;
-	//m_serialno = bore.GetTag("VX1742_serial_no", (int)-1);
-	//m_firmware = bore.GetTag("VX1742_firmware_v", (int)-1);
-	//m_timestamp = bore.GetTag("VX1742_timestamp", (int)-1);
-	m_range = 0.5; //TODO
+  	std::cout << "Read VX1742 BORE Event" << std::endl;
+  	timestamp = bore.GetTag("timestamp", 0);
+  	serialno = bore.GetTag("serial_number", " ");
+  	firmware = bore.GetTag("firmware_version", " ");
+  	active_channels = bore.GetTag("active_channels", 0);
+  	sampling_speed = bore.GetTag("sampling_speed", 0);
+  	samples_in_channel = bore.GetTag("samples_in_channel", 0);
+  	device_name = bore.GetTag("device_name", " ");
+  	group_mask = bore.GetTag("group_mask", 0);
+  	
+	std::cout<<"Device: " << device_name << std::endl;
+	std::cout<<"Firmware:   " << firmware << std::endl;
 
+	for (int ch = 0; ch < active_channels; ch++){
+		std::string tag = "CH_"+std::to_string(ch);
+		channel_names[ch] = bore.GetTag(tag, tag);
+		std::cout << "CH" << ch << " Name: " << channel_names[ch] << std::endl;
+	}
 }
 
   virtual bool GetStandardSubEvent(StandardEvent & sev, const Event & ev) const{
@@ -88,8 +100,9 @@ public:
 			for (int i = 0; i < samples_per_channel; i++){
 	  		  wave_array[i] = (uint16_t)(raw_wave_array[i]);
 	   	  	}
-	
-	  		StandardWaveform wf(ch, EVENT_TYPE, " VX1742 CH" + std::to_string(grp*8+ch));
+
+			std::cout << channel_names.at(ch) << std::endl;
+	  		StandardWaveform wf(ch, EVENT_TYPE, " VX1742 CH" + std::to_string(grp*8+ch) + "-" + channel_names.at(ch));
 	  		wf.SetChannelName("CH" + std::to_string(grp*8+ch));
 	  		wf.SetChannelNumber(grp*8+ch);
 	  		wf.SetNSamples(samples_per_channel);
@@ -109,13 +122,16 @@ public:
 
 
 private:
-  VX1742ConverterPlugin():DataConverterPlugin(EVENT_TYPE), m_serialno(-1), m_firmware(-1), m_range(0){
+  VX1742ConverterPlugin():DataConverterPlugin(EVENT_TYPE){}
 
-}
-
-  uint64_t m_timestamp;
-  uint32_t m_serialno;
-  float m_firmware, m_range;
+  uint64_t timestamp;
+  std::string serialno;
+  std::string firmware;
+  uint32_t active_channels;
+  uint32_t sampling_speed, samples_in_channel;
+  std::string device_name;
+  uint32_t group_mask;
+  std::map<int, std::string> channel_names;
   static VX1742ConverterPlugin m_instance;
 
 }; // class VX1742ConverterPlugin
