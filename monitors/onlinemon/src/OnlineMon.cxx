@@ -262,6 +262,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
         EUDAQ_LOG(WARN,(eudaq_warn_message.str()).c_str());
       
       }else{
+        //bruder problem:
         myevent.setNWaveforms(nwf);}
     }//end else
 

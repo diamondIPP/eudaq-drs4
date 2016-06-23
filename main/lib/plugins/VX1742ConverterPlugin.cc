@@ -83,7 +83,8 @@ public:
 
 
        	  std::cout << "***********************************************************************" << std::endl << std::endl;
-       	  std::cout << "Event size: " << event_size << std::endl;
+       	  std::cout << "Event: " << ev.GetEventNumber() << std::endl;
+          std::cout << "Event size: " << event_size << std::endl;
           std::cout << "Groups enabled: " << n_groups << std::endl;
           std::cout << "Group mask: " << group_mask << std::endl;
           std::cout << "Trigger time tag: " << trigger_time_tag << std::endl;
@@ -97,11 +98,11 @@ public:
     		data = in_raw.GetBlock(id);
     		uint16_t wave_array[samples_per_channel];
 	  		uint16_t *raw_wave_array = (uint16_t*)(&data[0]);
-			for (int i = 0; i < samples_per_channel; i++){
+			  for (int i = 0; i < samples_per_channel; i++){
 	  		  wave_array[i] = (uint16_t)(raw_wave_array[i]);
 	   	  	}
 
-			std::cout << channel_names.at(ch) << std::endl;
+			  //std::cout << channel_names.at(ch) << std::endl;
 	  		StandardWaveform wf(ch, EVENT_TYPE, " VX1742 CH" + std::to_string(grp*8+ch) + "-" + channel_names.at(ch));
 	  		wf.SetChannelName("CH" + std::to_string(grp*8+ch));
 	  		wf.SetChannelNumber(grp*8+ch);

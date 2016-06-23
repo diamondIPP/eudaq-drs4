@@ -516,7 +516,7 @@ void WaveformHistos::FillEvent(const SimpleStandardWaveform & wf, bool isPulserE
                 int max = (bins)*t_bin;
                 it->second->SetBins(bins,0,max);
             }
-                time_profiles[prefix+"SignalMinusPedestal"]->Fill(delta_t,signalSpread-pedestalSpread);
+                //time_profiles[prefix+"SignalMinusPedestal"]->Fill(delta_t,signalSpread-pedestalSpread); //cdorfer
         }
         for (it = profiles.begin();it!=profiles.end();it++){
             if (it->second->GetXaxis()->GetXmax() < event_no){
