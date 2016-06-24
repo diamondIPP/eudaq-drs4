@@ -69,21 +69,21 @@ public:
 	//loop over all groups
     for(uint32_t grp = 0; grp < 4; grp++){
     	if(group_mask & (1<<grp)){ 
-    	  std::cout << "Reading data from group: " << grp << std::endl;
+    	  //std::cout << "Reading data from group: " << grp << std::endl;
 
-          data = in_raw.GetBlock(id++);
-       	  uint32_t samples_per_channel = *((uint32_t*) &data[0]);
+        data = in_raw.GetBlock(id++);
+       	uint32_t samples_per_channel = *((uint32_t*) &data[0]);
 
-       	  data = in_raw.GetBlock(id++);
-       	  uint32_t start_index_cell = *((uint32_t*) &data[0]);
+       	data = in_raw.GetBlock(id++);
+       	uint32_t start_index_cell = *((uint32_t*) &data[0]);
        	  
 
-       	  data = in_raw.GetBlock(id++);
-       	  uint32_t event_timestamp = *((uint32_t*) &data[0]);
+       	data = in_raw.GetBlock(id++);
+       	uint32_t event_timestamp = *((uint32_t*) &data[0]);
 
-
-       	  std::cout << "***********************************************************************" << std::endl << std::endl;
-       	  std::cout << "Event: " << ev.GetEventNumber() << std::endl;
+        #ifdef DEBUG
+          std::cout << "***********************************************************************" << std::endl << std::endl;
+          std::cout << "Event: " << ev.GetEventNumber() << std::endl;
           std::cout << "Event size: " << event_size << std::endl;
           std::cout << "Groups enabled: " << n_groups << std::endl;
           std::cout << "Group mask: " << group_mask << std::endl;
@@ -92,9 +92,9 @@ public:
           std::cout << "Start index cell : " << start_index_cell << std::endl;
           std::cout << "Event trigger time tag: " << event_timestamp << std::endl;
           std::cout << "***********************************************************************" << std::endl << std::endl; 
+        #endif
 
-
-    	  for(u_int ch = 0; ch < 8; ch++){
+    	  for(u_int ch = 0; ch < active_channels; ch++){
     		data = in_raw.GetBlock(id);
     		uint16_t wave_array[samples_per_channel];
 	  		uint16_t *raw_wave_array = (uint16_t*)(&data[0]);
@@ -102,9 +102,9 @@ public:
 	  		  wave_array[i] = (uint16_t)(raw_wave_array[i]);
 	   	  	}
 
-			  //std::cout << channel_names.at(ch) << std::endl;
-	  		StandardWaveform wf(ch, EVENT_TYPE, " VX1742 CH" + std::to_string(grp*8+ch) + "-" + channel_names.at(ch));
-	  		wf.SetChannelName("CH" + std::to_string(grp*8+ch));
+
+	  		StandardWaveform wf(ch, EVENT_TYPE, (std::string)("VX1742 - " + channel_names.at(ch)));
+	  		wf.SetChannelName(channel_names.at(ch));
 	  		wf.SetChannelNumber(grp*8+ch);
 	  		wf.SetNSamples(samples_per_channel);
 	  		wf.SetWaveform((uint16_t*) wave_array);
