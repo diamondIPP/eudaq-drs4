@@ -79,6 +79,9 @@ void VX1742Interface::openVME(){
     std::cout << this->getDRS4FirmwareVersion();
     std::cout << "***********************************************************************" << std::endl << std::endl;
 
+    //initialize variables:
+    correctionDataInitialized[4] = {false};
+
   }catch(...){
   	std::cout << "Problem occured in VX1742Interface::OpenVME()" << std::endl;
   }
@@ -288,6 +291,130 @@ void VX1742Interface::disableIndividualTriggers(){
 }
 
 
+
+
+uint32_t VX1742Interface::readFlashPage(uint32_t group, int8_t* page, uint32_t pagenumber){
+	uint32_t flash_addr;
+	uint8_t addr0, addr1, addr2;
+	uint16_t dd = 0xffff;
+	uint32_t ret = 0;
+	uint32_t fl_size = 528;
+	uint32_t fl_a[fl_size];
+	uint32_t tmp[fl_size];
+
+	flash_addr = pagenumber<<9;
+	addr0 = uint8_t(flash_addr);
+	addr1 = uint8_t(flash_addr>>8);
+	addr2 = uint8_t(flash_addr>>16);
+
+
+	while((dd>>2) & 0x1)
+		if((ret = vmm->ReadSafe(STATUS(group), &dd)) != 0){std::cout << "Digitizer memory corrupted (0)!" << std::endl; return -1;}
+		
+	if((ret = vmm->WriteSafe(SEL_FLASH(group), (uint16_t)1)) != 0){std::cout << "Digitizer memory corrupted (1)!" << std::endl; return -1;}
+	if((ret = vmm->WriteSafe(FLASH(group), vmec::VX1742_MAIN_MEM_PAGE_READ)) != 0){std::cout << "Digitizer memory corrupted (2)!" << std::endl; return -1;}
+
+	if((ret = vmm->WriteSafe(FLASH(group), addr2)) != 0){std::cout << "Digitizer memory corrupted (3)!" << std::endl; return -1;}
+	if((ret = vmm->WriteSafe(FLASH(group), addr1)) != 0){std::cout << "Digitizer memory corrupted (4)!" << std::endl; return -1;}
+	if((ret = vmm->WriteSafe(FLASH(group), addr0)) != 0){std::cout << "Digitizer memory corrupted (5)!" << std::endl; return -1;}
+
+	for(uint32_t idx=0; idx<4; idx++){
+		if((ret = vmm->WriteSafe(SEL_FLASH(group), (uint16_t)0)) != 0){std::cout << "Digitizer memory corrupted (6)!" << std::endl; return -1;}
+	}
+
+	for(uint32_t idx=0; idx<fl_size; idx+=2){
+		fl_a[idx] = FLASH(group);
+		fl_a[idx+1] = STATUS(group);
+	}
+
+
+	for(uint32_t rd=0; rd<fl_size; rd++){
+		if((ret = vmm->ReadSafe(fl_a[rd], &tmp[rd])) != 0){std::cout << "Digitizer memory corrupted (7)!" << std::endl; return -1;}
+	}
+
+	for(uint32_t idx=0; idx<fl_size; idx+=2){
+		page[(int)(idx/2)] = (int8_t) tmp[idx];
+	}
+
+	if((ret = vmm->WriteSafe(SEL_FLASH(group), (uint16_t)0)) != 0){std::cout << "Digitizer memory corrupted (8)!" << std::endl; return -1;}
+
+	return 0;
+}
+
+
+
+
+
+
+
+uint32_t VX1742Interface::loadDRS4CorrectionTables(uint32_t group, uint32_t frequency){
+    uint32_t pagenum = 0;
+    int8_t tempCell[264];
+    int8_t *p;
+    int8_t tmp[0x1000]; // 256byte * 16 pages
+
+
+    for (int ch=0; ch<vmec::VX1742_MAX_CHANNEL_SIZE; ch++){
+        pagenum = 0;
+        pagenum = (group %2) ? 0xC00: 0x800;
+        pagenum |= frequency << 8;
+        pagenum |= ch << 2;
+
+        //load offset cell correction:
+        p = tempCell;
+        uint32_t start = 0;
+        for(uint32_t idx=0; idx<4; idx++){
+        	uint32_t endidx = 256;
+
+        }
+
+
+    }
+    p=tempCell;
+    this->readFlashPage(0, p, pagenum);
+    
+    return 0;
+}	
+
+
+
+
+
+
+
+
+
+
+
+uint32_t VX1742Interface::initializeDRS4CorrectionTables(uint32_t frequency){
+	uint ret = 0;
+
+	switch(frequency){
+		case 0:
+			std::cout << "Initializing correction tables for 5 GS/s sampling speed." << std::endl;
+			break;
+		case 1:
+			std::cout << "Initializing correction tables for 2.5 GS/s sampling speed." << std::endl;
+			break;
+		case 2:
+			std::cout << "Initializing correction tables for 1 GS/s sampling speed." << std::endl;
+			break;
+		case 3:
+			std::cout << "Initializing correction tables for 750 MS/s sampling speed." << std::endl;
+			break;
+		default: return -1;
+	}
+
+	for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
+		if(correctionDataInitialized[grp] != 1){ //if table has not been initialized, initialize it
+			if((ret = this->loadDRS4CorrectionTables(grp, frequency)) == 0){
+				correctionDataInitialized[grp] = 1;
+				return 0;
+			}else{return ret;}
+		}
+	}
+	return 0;
+}
 
 //nEvents needs to be smaller than 255
 uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){

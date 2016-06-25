@@ -45,7 +45,9 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
   try{
     caen = new VX1742Interface();
     caen->openVME();
+    caen->initializeDRS4CorrectionTables(0);
   }
+
   catch (...){
     EUDAQ_ERROR(std::string("Error in the VX1742Producer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the VX1742Producer class constructor.");}

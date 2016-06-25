@@ -18,16 +18,28 @@ namespace vmec{
     // Constants
     const uint32_t VX1742_CHANNELS = 32;
     const uint32_t VX1742_GROUPS = 4;
+    const uint32_t VX1742_DRS4_COUNT = 4;
     const uint32_t VX1742_CHANNELS_PER_GROUP = 8;
-    const uint32_t VX1742_RESOLUTION = 12;    
+    const uint32_t VX1742_MAX_CHANNEL_SIZE = 9; //8+TRn
+    const uint32_t VX1742_RESOLUTION = 12;
+    const uint32_t VX1742_MAX_SAMPLES = 1024;    
 
     // Constants for VME master map and BlockTransfer
     const uint32_t vmebus_address = 0x32100000; 
     const uint32_t window_size = 0x10000;
     const uint32_t address_modifier = 0x2; //VME_A32
     const uint32_t options = 0;
-    const uint32_t buffer_size = 0x10000;    
-    
+    const uint32_t buffer_size = 0x10000;
+
+    const uint16_t VX1742_MAIN_MEM_PAGE_READ = 0x00D2;
+    const uint16_t VX1742_MAIN_MEM_PAGE_PROG_TH_BUF1 = 0x0082;
+
+    typedef struct{
+      int16_t     cell[VX1742_MAX_CHANNEL_SIZE][VX1742_MAX_SAMPLES];
+      int8_t      nsample[VX1742_MAX_CHANNEL_SIZE][VX1742_MAX_SAMPLES];
+      float       time[VX1742_MAX_SAMPLES];
+    }drs4_correction;
+
 
     typedef struct{
       uint32_t memory_full          :1; 
