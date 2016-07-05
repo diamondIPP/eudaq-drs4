@@ -32,7 +32,7 @@ class VX1742Interface{
 
     //correction data related
     vmec::drs4_correction corrTable[vmec::VX1742_GROUPS][vmec::VX1742_NFREQ];
-    bool correctionDataInitialized[4];
+    bool correctionDataInitialized[vmec::VX1742_GROUPS][vmec::VX1742_NFREQ];
     uint32_t FLASH(uint32_t n){return  (0x10D0 | ( n << 8));}  // base address of the flash memory (first byte)
     uint32_t SEL_FLASH(uint32_t n){return  (0x10CC | ( n << 8));}  // flash enable/disable 
     uint32_t STATUS(uint32_t n){return  (0x1088 | ( n << 8));}  // status register
@@ -87,7 +87,7 @@ class VX1742Interface{
 	uint32_t readFlashPage(uint32_t group, int8_t* page, uint32_t pagenumber);
 	uint32_t loadDRS4CorrectionTables(uint32_t grp, uint32_t frequency);	
 	uint32_t initializeDRS4CorrectionTables(uint32_t frequency);
-	//GetTimeCorrectionTable
+	void printDRS4CorrectionTables();
 
 
 	void SetMaxBLTEvents(uint32_t param);

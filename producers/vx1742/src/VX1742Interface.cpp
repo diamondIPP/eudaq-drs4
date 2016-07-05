@@ -79,8 +79,8 @@ void VX1742Interface::openVME(){
     std::cout << this->getDRS4FirmwareVersion();
     std::cout << "***********************************************************************" << std::endl << std::endl;
 
-    //initialize variables:
-    correctionDataInitialized[4] = {false};
+    //initialize variables
+    correctionDataInitialized[vmec::VX1742_GROUPS][vmec::VX1742_NFREQ] = {false};
 
   }catch(...){
   	std::cout << "Problem occured in VX1742Interface::OpenVME()" << std::endl;
@@ -457,16 +457,50 @@ uint32_t VX1742Interface::initializeDRS4CorrectionTables(uint32_t frequency){
 	}
 
 	for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
-		if(correctionDataInitialized[grp] != 1){ //if table has not been initialized, initialize it
+		if(correctionDataInitialized[grp][frequency] != 1){ //if table has not been initialized, initialize it
 			if((ret = this->loadDRS4CorrectionTables(grp, frequency)) == 0){
-				correctionDataInitialized[grp] = 1;
+				correctionDataInitialized[grp][frequency] = 1;
 				return 0;
 			}else{return ret;}
 		}
 	}
 	return 0;
-	
+
 }
+
+
+void VX1742Interface::printDRS4CorrectionTables(){
+	for(int grp=0;grp<vmec::VX1742_GROUPS;grp++){
+    	for(int freq=0;freq<vmec::VX1742_NFREQ;freq++){
+    		if(correctionDataInitialized[grp][freq] == 1){
+    			std::cout << "Cell data:" << std::endl;
+    			for(int ch=0; ch<vmec::VX1742_MAX_CHANNEL_SIZE; ch++){
+    				//cell data
+    				std::cout << "Group" << grp << ", channel " << ch << " cell data:";
+    				for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++)
+    					std::cout << "(" << sample << "," << corrTable[grp][freq].cell[ch][sample] << "), ";
+    				std::cout << "\n\n\n";
+
+    				//cell data
+    				std::cout << "Group" << grp << ", channel " << ch << " nsamples:";
+    				for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++)
+    					std::cout << "(" << sample << "," << corrTable[grp][freq].nsample[ch][sample] << "), ";
+    				std::cout << "\n\n\n";			
+    			}
+
+    			//timing data
+    			std::cout << "Group " << grp << " timing:";
+    			for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++)
+    			std::cout << "(" << sample << "," << corrTable[grp][freq].time[sample] << "), ";
+    			std::cout << "\n\n\n";	
+    		}else{
+    			std::cout << "No data for group " << grp << " and sampling speed (0=5GS/s; 1=2.5GS/s; 2=1GS/s; 3=0.75GS/s) " << freq << " initialized." << std::endl;	
+    		}
+    	}
+    }
+}
+
+    			 
 
 
 

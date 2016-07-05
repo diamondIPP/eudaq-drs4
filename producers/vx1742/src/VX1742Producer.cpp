@@ -45,7 +45,6 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
   try{
     caen = new VX1742Interface();
     caen->openVME();
-    caen->initializeDRS4CorrectionTables(0);
   }
 
   catch (...){
@@ -98,12 +97,10 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     usleep(10000);
     caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity);
 
+    caen->initializeDRS4CorrectionTables(sampling_frequency);
+    usleep(200000);
+    caen->printDRS4CorrectionTables();
 
-    //individual group configuration here
-
-    //continue here...
-    //#) DC offset
-    //#) Calibration?
 
   std::cout << " [OK]" << std::endl;
 
