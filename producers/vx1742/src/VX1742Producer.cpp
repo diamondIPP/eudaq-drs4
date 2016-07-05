@@ -40,7 +40,10 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
   m_event_type(EVENT_TYPE),
   m_ev(0), 
   m_run(0), 
-  m_running(false){
+  m_running(false),
+  cell_offset(0),
+  index_sampling(0),
+  time_correction(0){
 
   try{
     caen = new VX1742Interface();
@@ -56,7 +59,7 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
 
 
 void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
-  std::cout << "###Configure VX1742 board with: " << conf.Name() << "..";
+  std::cout << "###Configure VX1742 board with: " << conf.Name() << "..\n";
 
   m_config = conf;
   
@@ -70,6 +73,10 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     groups[3] = conf.Get("group3", 0);
     custom_size = conf.Get("custom_size", 0);
     m_group_mask = (groups[3]<<3) + (groups[2]<<2) + (groups[1]<<1) + groups[0];
+
+    cell_offset = conf.Get("cell_offset", 0);
+    index_sampling = conf.Get("index_sampling", 0);
+    time_correction = conf.Get("time_correction", 0);
 
     trn_enable[0] = conf.Get("TR01_enable", 0);
     trn_enable[1] = conf.Get("TR23_enable", 0);
@@ -98,10 +105,44 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity);
 
     caen->initializeDRS4CorrectionTables(sampling_frequency);
-    usleep(200000);
+    usleep(400000);
+
+    //copy correction tables
+    for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
+      float *payload = new float[vmec::VX1742_MAX_SAMPLES];
+      caen->getTimingCorrectionValues(grp, sampling_frequency, payload);
+      for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++)
+        time_corr[grp][idx] = payload[idx];
+      delete payload;
+
+      for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS_PER_GROUP; ch++){
+        uint32_t channel = grp*ch + ch;
+        uint16_t *cell = new uint16_t[vmec::VX1742_MAX_SAMPLES];
+        uint8_t *samples = new uint8_t[vmec::VX1742_MAX_SAMPLES];
+        caen->getCellCorrectionValues(grp, sampling_frequency, channel, cell);
+        caen->getNSamplesCorrectionValues(grp, sampling_frequency, channel, samples);
+        for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++){
+          cell_corr[channel][idx] = cell[idx];
+          index_corr[channel][idx] = samples[idx];
+        }
+        delete cell;
+        delete samples;
+      }
+    }
+
+    /*
+    for(int i=0; i<32; i++){
+      std::cout << "Channel " << i << ":" << std::endl;
+      for(int n=0; n<1024; n++){
+        std::cout << cell_corr[i][n] << ", ";
+      }
+      std::cout << "\n\n\n\n\n";
+    }
+
+
+
     caen->printDRS4CorrectionTables();
-
-
+    */
   std::cout << " [OK]" << std::endl;
 
   
@@ -132,6 +173,7 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
     bore.SetTag("device_name", "VX1742");
     bore.SetTag("group_mask", m_group_mask); //uint32_t
 
+    //fixme: set tags for time, index and sample correction
 
     if(sampling_frequency==0) bore.SetTag("sampling_speed", 5);
     if(sampling_frequency==1) bore.SetTag("sampling_speed", 2.5);
@@ -194,10 +236,6 @@ void VX1742Producer::ReadoutLoop() {
           uint32_t group_mask = vxEvent.GroupMask();
           uint32_t event_size = vxEvent.EventSize();
 
-          //fix first two redneck events
-          //if(n_groups==0){
-          //  group_mask = m_group_mask;
-          //}
 
           uint32_t block_no = 0;
           eudaq::RawDataEvent ev(m_event_type, m_run, event_counter);          
@@ -221,12 +259,6 @@ void VX1742Producer::ReadoutLoop() {
               uint32_t start_index_cell = vxEvent.GetStartIndexCell(grp);
               uint32_t event_timestamp = vxEvent.GetEventTimeStamp(grp);
 
-              //fix first two redneck events
-              //if(n_groups==0){
-              //  samples_per_channel = this->SamplesInCustomSize();
-              //  start_index_cell = 0;
-              //  event_timestamp = 0;
-              //}
 
               #ifdef DEBUG
                 std::cout << "***********************************************************************" << std::endl << std::endl;
@@ -250,15 +282,14 @@ void VX1742Producer::ReadoutLoop() {
 
               for(u_int ch = 0; ch < 8; ch++){
                 uint16_t *payload = new uint16_t[samples_per_channel];
-                  
-                //first two sucker events have no channel data for whatever reason which then fucks up the OnlineMonitor so just send zeros
-                //if(n_groups == 0){
-                //  for(int idx = 0; idx<samples_per_channel; idx++){
-                //    payload[idx] = 0;
-                //  }                   
-                //}else{
                 vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
-                //}
+
+                //apply correction factors:
+                for(u_int i=0; i<samples_per_channel; i++){
+                  payload[i] = payload[i] - cell_corr[ch][i]*cell_offset + index_corr[ch][i]*index_sampling;
+                  std::cout << payload[i] << " " << cell_corr[ch][i] << " " << index_corr[ch][i] << std::endl;
+                }
+
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;
                 delete payload;

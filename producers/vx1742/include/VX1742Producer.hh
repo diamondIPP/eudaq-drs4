@@ -39,6 +39,13 @@ private:
   uint32_t groups[4];
   uint32_t custom_size;
 
+  uint32_t cell_offset;
+  uint32_t index_sampling;
+  uint32_t time_correction;
+  uint16_t cell_corr[32][1024];
+  uint8_t index_corr[32][1024];
+  float time_corr[4][1024];
+
   uint32_t trn_enable[2];
   uint32_t trn_threshold[2];
   uint32_t trn_offset[2];
@@ -51,6 +58,7 @@ private:
   bool m_running, m_terminated;
   uint32_t m_group_mask;
   eudaq::Configuration m_config;
+
 
 };
 

@@ -396,7 +396,9 @@ uint32_t VX1742Interface::loadDRS4CorrectionTables(uint32_t group, uint32_t freq
         		return ret;
         	
         	for(uint32_t jdx=start; jdx<(start+256); jdx++){
-        		corrTable[group][frequency].nsample[ch][jdx] = p[jdx-start];
+        		corrTable[group][frequency].nsample[ch][jdx] = 0;
+        		if(isdigit(p[jdx-start]))
+        			corrTable[group][frequency].nsample[ch][jdx] = p[jdx-start];
         	}
         	start += 256;
         	pagenum++;
@@ -481,10 +483,10 @@ void VX1742Interface::printDRS4CorrectionTables(){
     					std::cout << "(" << sample << "," << corrTable[grp][freq].cell[ch][sample] << "), ";
     				std::cout << "\n\n\n";
 
-    				//cell data
+    				//nsamples
     				std::cout << "Group" << grp << ", channel " << ch << " nsamples:";
     				for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++)
-    					std::cout << "(" << sample << "," << corrTable[grp][freq].nsample[ch][sample] << "), ";
+    					std::cout << "(" << sample << "," << std::to_string(corrTable[grp][freq].nsample[ch][sample]) << "), ";
     				std::cout << "\n\n\n";			
     			}
 
@@ -500,7 +502,27 @@ void VX1742Interface::printDRS4CorrectionTables(){
     }
 }
 
-    			 
+
+void VX1742Interface::getCellCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint16_t* data){
+    for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++){
+    	data[sample] = corrTable[group][freq].cell[channel][sample];
+    	std::cout << data[sample] << ", ";}
+}
+
+
+void VX1742Interface::getNSamplesCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint8_t* data){
+    for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++){
+    	data[sample] = corrTable[group][freq].nsample[channel][sample];
+    	std::cout << data[sample] << ", ";}
+}
+
+
+void VX1742Interface::getTimingCorrectionValues(uint32_t group, uint32_t freq, float* data){
+    for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++){
+    	data[sample] = corrTable[group][freq].time[sample];
+    	std::cout << data[sample] << ", ";}
+}
+
 
 
 
@@ -560,6 +582,7 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 		head.pattern.raw= data[(++offset)];
 		head.evnt_cnt.raw= data[(++offset)];
 		head.trigger_time= data[(++offset)];
+
 
 		//#ifdef DEBUG
 			printf("******************************************************\n");

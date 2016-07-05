@@ -223,5 +223,6 @@ int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* arr
 		}
 	}
 
+
 }//method end
 
