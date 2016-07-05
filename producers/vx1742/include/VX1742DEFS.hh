@@ -22,7 +22,8 @@ namespace vmec{
     const uint32_t VX1742_CHANNELS_PER_GROUP = 8;
     const uint32_t VX1742_MAX_CHANNEL_SIZE = 9; //8+TRn
     const uint32_t VX1742_RESOLUTION = 12;
-    const uint32_t VX1742_MAX_SAMPLES = 1024;    
+    const uint32_t VX1742_MAX_SAMPLES = 1024; 
+    const uint32_t VX1742_NFREQ = 4;   
 
     // Constants for VME master map and BlockTransfer
     const uint32_t vmebus_address = 0x32100000; 

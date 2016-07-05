@@ -31,7 +31,7 @@ class VX1742Interface{
     vmec::vx1742_regs_t *vx1742;
 
     //correction data related
-    vmec::drs4_correction corrTable[vmec::VX1742_GROUPS][vmec::VX1742_DRS4_COUNT];
+    vmec::drs4_correction corrTable[vmec::VX1742_GROUPS][vmec::VX1742_NFREQ];
     bool correctionDataInitialized[4];
     uint32_t FLASH(uint32_t n){return  (0x10D0 | ( n << 8));}  // base address of the flash memory (first byte)
     uint32_t SEL_FLASH(uint32_t n){return  (0x10CC | ( n << 8));}  // flash enable/disable 

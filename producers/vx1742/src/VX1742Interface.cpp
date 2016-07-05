@@ -307,26 +307,24 @@ uint32_t VX1742Interface::readFlashPage(uint32_t group, int8_t* page, uint32_t p
 	addr1 = uint8_t(flash_addr>>8);
 	addr2 = uint8_t(flash_addr>>16);
 
-
 	while((dd>>2) & 0x1)
 		if((ret = vmm->ReadSafe(STATUS(group), &dd)) != 0){std::cout << "Digitizer memory corrupted (0)!" << std::endl; return -1;}
 		
 	if((ret = vmm->WriteSafe(SEL_FLASH(group), (uint16_t)1)) != 0){std::cout << "Digitizer memory corrupted (1)!" << std::endl; return -1;}
 	if((ret = vmm->WriteSafe(FLASH(group), vmec::VX1742_MAIN_MEM_PAGE_READ)) != 0){std::cout << "Digitizer memory corrupted (2)!" << std::endl; return -1;}
 
-	if((ret = vmm->WriteSafe(FLASH(group), addr2)) != 0){std::cout << "Digitizer memory corrupted (3)!" << std::endl; return -1;}
-	if((ret = vmm->WriteSafe(FLASH(group), addr1)) != 0){std::cout << "Digitizer memory corrupted (4)!" << std::endl; return -1;}
-	if((ret = vmm->WriteSafe(FLASH(group), addr0)) != 0){std::cout << "Digitizer memory corrupted (5)!" << std::endl; return -1;}
+	if((ret = vmm->WriteSafe(FLASH(group), (uint16_t)addr2)) != 0){std::cout << "Digitizer memory corrupted (3)!" << std::endl; return -1;}
+	if((ret = vmm->WriteSafe(FLASH(group), (uint16_t)addr1)) != 0){std::cout << "Digitizer memory corrupted (4)!" << std::endl; return -1;}
+	if((ret = vmm->WriteSafe(FLASH(group), (uint16_t)addr0)) != 0){std::cout << "Digitizer memory corrupted (5)!" << std::endl; return -1;}
 
 	for(uint32_t idx=0; idx<4; idx++){
-		if((ret = vmm->WriteSafe(SEL_FLASH(group), (uint16_t)0)) != 0){std::cout << "Digitizer memory corrupted (6)!" << std::endl; return -1;}
+		if((ret = vmm->WriteSafe(FLASH(group), (uint16_t)0)) != 0){std::cout << "Digitizer memory corrupted (6)!" << std::endl; return -1;}
 	}
 
 	for(uint32_t idx=0; idx<fl_size; idx+=2){
 		fl_a[idx] = FLASH(group);
 		fl_a[idx+1] = STATUS(group);
 	}
-
 
 	for(uint32_t rd=0; rd<fl_size; rd++){
 		if((ret = vmm->ReadSafe(fl_a[rd], &tmp[rd])) != 0){std::cout << "Digitizer memory corrupted (7)!" << std::endl; return -1;}
@@ -337,7 +335,6 @@ uint32_t VX1742Interface::readFlashPage(uint32_t group, int8_t* page, uint32_t p
 	}
 
 	if((ret = vmm->WriteSafe(SEL_FLASH(group), (uint16_t)0)) != 0){std::cout << "Digitizer memory corrupted (8)!" << std::endl; return -1;}
-
 	return 0;
 }
 
@@ -345,10 +342,10 @@ uint32_t VX1742Interface::readFlashPage(uint32_t group, int8_t* page, uint32_t p
 
 
 
-
-
 uint32_t VX1742Interface::loadDRS4CorrectionTables(uint32_t group, uint32_t frequency){
     uint32_t pagenum = 0;
+    uint32_t start;
+	uint32_t ret = 0;
     int8_t tempCell[264];
     int8_t *p;
     int8_t tmp[0x1000]; // 256byte * 16 pages
@@ -365,24 +362,78 @@ uint32_t VX1742Interface::loadDRS4CorrectionTables(uint32_t group, uint32_t freq
         uint32_t start = 0;
         for(uint32_t idx=0; idx<4; idx++){
         	uint32_t endidx = 256;
+        	if((ret = this->readFlashPage(group, p, pagenum)) != 0)
+        		return ret;
 
+       		//peak correction
+       		for(uint32_t jdx=start; jdx<(start+256); jdx++){
+       			if(p[jdx-start] != 0x7f){ //case not to be corrected
+       				corrTable[group][frequency].cell[ch][jdx] = p[jdx-start]; 
+       			}else{ //case to be corrected
+       				uint16_t cel = (uint16_t)((p[endidx+1] << 0x08) | ((uint8_t)p[endidx]));
+       				if (cel == 0) corrTable[group][frequency].cell[ch][jdx] = p[jdx-start]; else corrTable[group][frequency].cell[ch][jdx] = cel;
+       				endidx += 2;
+       				if(endidx > 263){
+       					std::cout << "Something went wrong when reading the VX1742 calibration data from the board." << std::endl;
+       					return -1;
+       				}
+       			}
+       		}
+       		start += 256;
+       		pagenum++;	
         }
 
 
-    }
-    p=tempCell;
-    this->readFlashPage(0, p, pagenum);
-    
+        //load the offset number of samples correction
+        start = 0;
+        p = tempCell;
+		pagenum &= 0xF00;
+        pagenum |= 0x40;
+        pagenum |= ch << 2;    
+
+        for(uint32_t idx=0; idx<4; idx++){
+        	if((ret = readFlashPage(group, p, pagenum)) != 0)
+        		return ret;
+        	
+        	for(uint32_t jdx=start; jdx<(start+256); jdx++){
+        		corrTable[group][frequency].nsample[ch][jdx] = p[jdx-start];
+        	}
+        	start += 256;
+        	pagenum++;
+        }
+
+
+        //load time correction
+        if(ch == (vmec::VX1742_CHANNELS_PER_GROUP)){
+   		    p = tempCell;
+            pagenum &= 0xF00;
+            pagenum |= 0xA0;
+            start = 0;     	
+
+            for (uint32_t idx=0; idx<16; idx++){
+                if ((ret = readFlashPage(group,p,pagenum)) != 0) 
+                    return ret;
+                for (uint32_t jdx=start; jdx<start+256; jdx++){
+                	tmp[jdx] = p[jdx-start];
+                }
+                start +=256;
+                pagenum++;
+            }
+
+
+            for (uint32_t idx=0; idx<1024; idx++){
+                p = (int8_t *) &(corrTable[group][frequency].time[idx]);
+                p[0] = tmp[idx*4];
+                p[1] = tmp[(idx*4)+1];
+                p[2] = tmp[(idx*4)+2];
+                p[3] = tmp[(idx*4)+3];
+            }
+        }
+
+    }//end channel for loop
+ 
     return 0;
 }	
-
-
-
-
-
-
-
-
 
 
 
@@ -414,7 +465,10 @@ uint32_t VX1742Interface::initializeDRS4CorrectionTables(uint32_t frequency){
 		}
 	}
 	return 0;
+	
 }
+
+
 
 //nEvents needs to be smaller than 255
 uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
