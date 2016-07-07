@@ -32,11 +32,14 @@ public:
   	firmware = bore.GetTag("firmware_version", " ");
   	active_channels = bore.GetTag("active_channels", 0);
   	sampling_speed = bore.GetTag("sampling_speed", 0);
-  	samples_in_channel = bore.GetTag("samples_in_channel", 0);
+    samples_in_channel = bore.GetTag("samples_in_channel", 0);
   	device_name = bore.GetTag("device_name", " ");
   	group_mask = bore.GetTag("group_mask", 0);
   	std::cout<<"Device: " << device_name << std::endl;
 	  std::cout<<"Firmware:   " << firmware << std::endl;
+    std::cout<<"Active channels: " << active_channels << std::endl;
+    std::cout<<"Sampling speed: " << sampling_speed << std::endl;
+    std::cout<<"Samples in channel: " << samples_in_channel << std::endl;
 
 	for (int ch = 0; ch < active_channels; ch++){
 		std::string tag = "CH_"+std::to_string(ch);
@@ -45,21 +48,43 @@ public:
 	}
 
     
+    const RawDataEvent & in_bore = dynamic_cast<const RawDataEvent &>(bore);
     RawDataEvent::data_t data;
     uint32_t block_no = 0;
-    data = bore.GetBlock(block_no);
 
-    float *tcorr = (float(*)[1024])(&data[0]);
+
+    //get time correction
     for(uint32_t grp=0; grp<4; grp++){
-      for(uint32_t idx=0; idx<1024; idx++)
-        time_corr[grp][idx] = tcorr[grp][idx];
-    }
+      data = in_bore.GetBlock(block_no);
+      float *tcorr = (float*)(&data[0]);
+      for(uint32_t i=0; i<1024; i++)
+        time_corr[grp][i] = tcorr[i];
+      block_no++;
+    }   
 
+    //get cell correction
+    for(uint32_t ch=0; ch<32; ch++){
+      data = in_bore.GetBlock(block_no);
+      int16_t *ccorr = (int16_t*)(&data[0]);
+      for(uint32_t i=0; i<1024; i++)
+        cell_corr[ch][i]= ccorr[i];
+      block_no++;
+    }   
 
-
+    //get index correction
+    for(uint32_t ch=0; ch<31; ch++){
+      data = in_bore.GetBlock(block_no);
+      uint8_t *icorr = (uint8_t*)(&data[0]);
+      for(uint32_t i=0; i<1024; i++){
+        index_corr[ch][i] = icorr[i];}
+      block_no++;
+    }  
+    data = in_bore.GetBlock(block_no);
+    int8_t *icorr = (int8_t*)(&data[0]);
+    for(uint32_t i=0; i<samples_in_channel; i++)
+      index_corr[31][i]=icorr[i];
 
 }
-
 
 
   virtual bool GetStandardSubEvent(StandardEvent & sev, const Event & ev) const{
@@ -139,10 +164,8 @@ public:
 
 
 
-
 private:
   VX1742ConverterPlugin():DataConverterPlugin(EVENT_TYPE){}
-
   uint64_t timestamp;
   std::string serialno;
   std::string firmware;
@@ -151,9 +174,9 @@ private:
   std::string device_name;
   uint32_t group_mask;
   std::map<int, std::string> channel_names;
-  float time_corr[4][1024]; //4 groups a 8 channels
-  uint16_t cell_corr[32][1024]; //1 for each channel
-  uint8_t index_corr[32][1024];
+  float time_corr[4][1024];
+  int16_t cell_corr[32][1024];
+  int8_t index_corr[32][1024];
   static VX1742ConverterPlugin m_instance;
 
 }; // class VX1742ConverterPlugin

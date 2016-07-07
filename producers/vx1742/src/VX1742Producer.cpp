@@ -163,16 +163,16 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
 
     //fixme: set tags for time, index and sample correction
 
-    if(sampling_frequency==0) bore.SetTag("sampling_speed", 5);
-    if(sampling_frequency==1) bore.SetTag("sampling_speed", 2.5);
-    if(sampling_frequency==2) bore.SetTag("sampling_speed", 1);
-    if(sampling_frequency==3) bore.SetTag("sampling_speed", 0);
+    if(sampling_frequency==0) bore.SetTag("sampling_speed", 5000);
+    if(sampling_frequency==1) bore.SetTag("sampling_speed", 2500);
+    if(sampling_frequency==2) bore.SetTag("sampling_speed", 1000);
+    if(sampling_frequency==3) bore.SetTag("sampling_speed", 750);
 
     uint32_t samples_c = caen->getCustomSize();
-    if(samples_c==0) bore.SetTag("samples_per_channel", 1024);
-    if(samples_c==1) bore.SetTag("samples_per_channel", 520);
-    if(samples_c==2) bore.SetTag("samples_per_channel", 256);
-    if(samples_c==3) bore.SetTag("samples_per_channel", 136);
+    if(samples_c==0) bore.SetTag("samples_in_channel", 1024);
+    if(samples_c==1) bore.SetTag("samples_in_channel", 520);
+    if(samples_c==2) bore.SetTag("samples_in_channel", 256);
+    if(samples_c==3) bore.SetTag("samples_in_channel", 136);
 
     //fixme - offset for groups other than 0
     for(int ch=0; ch < n_channels; ch++){
@@ -183,11 +183,18 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
 
     uint32_t block_no = 0;
     //sent calibration data
-    bore.AddBlock(block_no, static_cast<const void*>(&time_corr), sizeof(time_corr)); //float
-    block_no++;
-    bore.AddBlock(block_no, static_cast<const void*>(&cell_corr), sizeof(cell_corr)); //uint16_t
-    block_no++;
-    bore.AddBlock(block_no, static_cast<const void*>(&index_corr), sizeof(index_corr)); //uint8_t
+    for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&time_corr[grp]), 1024*sizeof(float)); //float
+      block_no++;
+    }
+    for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&cell_corr[ch]), 1024*sizeof(int16_t)); //uint16_t
+      block_no++;
+    }
+    for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&index_corr[ch]), 1024*sizeof(int8_t)); //uint8_t
+      block_no++;
+    }
 
     usleep(2000000);
 
