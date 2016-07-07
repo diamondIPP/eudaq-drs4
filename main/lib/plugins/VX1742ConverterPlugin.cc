@@ -35,16 +35,32 @@ public:
   	samples_in_channel = bore.GetTag("samples_in_channel", 0);
   	device_name = bore.GetTag("device_name", " ");
   	group_mask = bore.GetTag("group_mask", 0);
-  	
-	std::cout<<"Device: " << device_name << std::endl;
-	std::cout<<"Firmware:   " << firmware << std::endl;
+  	std::cout<<"Device: " << device_name << std::endl;
+	  std::cout<<"Firmware:   " << firmware << std::endl;
 
 	for (int ch = 0; ch < active_channels; ch++){
 		std::string tag = "CH_"+std::to_string(ch);
 		channel_names[ch] = bore.GetTag(tag, tag);
 		std::cout << "CH" << ch << " Name: " << channel_names[ch] << std::endl;
 	}
+
+    
+    RawDataEvent::data_t data;
+    uint32_t block_no = 0;
+    data = bore.GetBlock(block_no);
+
+    float *tcorr = (float(*)[1024])(&data[0]);
+    for(uint32_t grp=0; grp<4; grp++){
+      for(uint32_t idx=0; idx<1024; idx++)
+        time_corr[grp][idx] = tcorr[grp][idx];
+    }
+
+
+
+
 }
+
+
 
   virtual bool GetStandardSubEvent(StandardEvent & sev, const Event & ev) const{
 	const RawDataEvent &in_raw = dynamic_cast<const RawDataEvent &>(ev);
@@ -104,9 +120,6 @@ public:
           fwave_array[i] = 1000*(raw_wave_array[i]/4096.0); //convert to mV
 	   	  	}
 
-
-
-
 	  		StandardWaveform wf(ch, EVENT_TYPE, (std::string)("VX1742 - " + channel_names.at(ch)));
 	  		wf.SetChannelName(channel_names.at(ch));
 	  		wf.SetChannelNumber(grp*8+ch);
@@ -138,6 +151,9 @@ private:
   std::string device_name;
   uint32_t group_mask;
   std::map<int, std::string> channel_names;
+  float time_corr[4][1024]; //4 groups a 8 channels
+  uint16_t cell_corr[32][1024]; //1 for each channel
+  uint8_t index_corr[32][1024];
   static VX1742ConverterPlugin m_instance;
 
 }; // class VX1742ConverterPlugin

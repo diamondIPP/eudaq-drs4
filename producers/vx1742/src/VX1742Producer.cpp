@@ -40,10 +40,17 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
   m_event_type(EVENT_TYPE),
   m_ev(0), 
   m_run(0), 
-  m_running(false),
-  cell_offset(0),
-  index_sampling(0),
-  time_correction(0){
+  m_running(false){
+
+  //initialize correction arrays
+  for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++)
+    std::fill_n(time_corr[grp], vmec::VX1742_MAX_SAMPLES, 0);
+
+  for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+    std::fill_n(index_corr[ch], vmec::VX1742_MAX_SAMPLES, 0);
+    std::fill_n(cell_corr[ch], vmec::VX1742_MAX_SAMPLES, 0);
+  }
+
 
   try{
     caen = new VX1742Interface();
@@ -174,9 +181,14 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
       bore.SetTag(conf_ch, ch_name);
     }
 
-    //bore.SetTag("voltage_range", 1);
+    uint32_t block_no = 0;
+    //sent calibration data
+    bore.AddBlock(block_no, static_cast<const void*>(&time_corr), sizeof(time_corr)); //float
+    block_no++;
+    bore.AddBlock(block_no, static_cast<const void*>(&cell_corr), sizeof(cell_corr)); //uint16_t
+    block_no++;
+    bore.AddBlock(block_no, static_cast<const void*>(&index_corr), sizeof(index_corr)); //uint8_t
 
-    //time_calibration
     usleep(2000000);
 
     caen->clearBuffers();
@@ -270,7 +282,7 @@ void VX1742Producer::ReadoutLoop() {
                   //cell and nsamples correction
                   payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[ch][i])*index_sampling);
                   //time correction
-                  
+                  //fixme, or not?
 
                 }
 
