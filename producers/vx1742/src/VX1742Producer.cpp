@@ -107,46 +107,27 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     caen->initializeDRS4CorrectionTables(sampling_frequency);
     usleep(400000);
 
-    //copy correction tables
+    //copy currently used correction tables
     for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
-      float *payload = new float[vmec::VX1742_MAX_SAMPLES];
-      caen->getTimingCorrectionValues(grp, sampling_frequency, payload);
-      for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++)
-        time_corr[grp][idx] = payload[idx];
-      delete payload;
-
-      for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS_PER_GROUP; ch++){
-        uint32_t channel = grp*ch + ch;
-        uint16_t *cell = new uint16_t[vmec::VX1742_MAX_SAMPLES];
-        uint8_t *samples = new uint8_t[vmec::VX1742_MAX_SAMPLES];
-        caen->getCellCorrectionValues(grp, sampling_frequency, channel, cell);
-        caen->getNSamplesCorrectionValues(grp, sampling_frequency, channel, samples);
-        for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++){
-          cell_corr[channel][idx] = cell[idx];
-          index_corr[channel][idx] = samples[idx];
+      if(groups[grp] == 1){
+        //load time calibration
+        for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++)
+          time_corr[grp][idx] = caen->getTimingCorrectionValues(grp, sampling_frequency, idx);
+        
+        //load cell calibration
+        for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS_PER_GROUP; ch++){
+          for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++){
+            cell_corr[ch*grp+ch][idx] = caen->getCellCorrectionValues(grp, sampling_frequency, ch, idx);
+            index_corr[ch*grp+ch][idx] = caen->getNSamplesCorrectionValues(grp, sampling_frequency, ch, idx);
+          }
         }
-        delete cell;
-        delete samples;
       }
     }
 
-    /*
-    for(int i=0; i<32; i++){
-      std::cout << "Channel " << i << ":" << std::endl;
-      for(int n=0; n<1024; n++){
-        std::cout << cell_corr[i][n] << ", ";
-      }
-      std::cout << "\n\n\n\n\n";
-    }
-
-
-
-    caen->printDRS4CorrectionTables();
-    */
-  std::cout << " [OK]" << std::endl;
-
-  
-  SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() +")");
+    //caen->printDRS4CorrectionTables();
+    
+    std::cout << " [OK]" << std::endl;
+    SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() +")");
 
   }catch ( ... ){
   EUDAQ_ERROR(std::string("Error in the VX1742 configuration procedure."));
@@ -286,8 +267,11 @@ void VX1742Producer::ReadoutLoop() {
 
                 //apply correction factors:
                 for(u_int i=0; i<samples_per_channel; i++){
-                  payload[i] = payload[i] - cell_corr[ch][i]*cell_offset + index_corr[ch][i]*index_sampling;
-                  std::cout << payload[i] << " " << cell_corr[ch][i] << " " << index_corr[ch][i] << std::endl;
+                  //cell and nsamples correction
+                  payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[ch][i])*index_sampling);
+                  //time correction
+                  
+
                 }
 
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));

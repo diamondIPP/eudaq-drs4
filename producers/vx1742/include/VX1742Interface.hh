@@ -87,9 +87,9 @@ class VX1742Interface{
 	uint32_t readFlashPage(uint32_t group, int8_t* page, uint32_t pagenumber);
 	uint32_t loadDRS4CorrectionTables(uint32_t grp, uint32_t frequency);	
 	uint32_t initializeDRS4CorrectionTables(uint32_t frequency);
-	void getCellCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint16_t* data);
-	void getNSamplesCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint8_t* data);
-	void getTimingCorrectionValues(uint32_t group, uint32_t freq, float* data);
+	int16_t getCellCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint32_t idx);
+	int8_t getNSamplesCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint32_t idx);
+	float getTimingCorrectionValues(uint32_t group, uint32_t freq, uint32_t idx);
 	void printDRS4CorrectionTables();
 
 

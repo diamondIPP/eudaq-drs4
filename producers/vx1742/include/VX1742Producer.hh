@@ -42,8 +42,8 @@ private:
   uint32_t cell_offset;
   uint32_t index_sampling;
   uint32_t time_correction;
-  uint16_t cell_corr[32][1024];
-  uint8_t index_corr[32][1024];
+  int16_t cell_corr[32][1024];
+  int8_t index_corr[32][1024];
   float time_corr[4][1024];
 
   uint32_t trn_enable[2];

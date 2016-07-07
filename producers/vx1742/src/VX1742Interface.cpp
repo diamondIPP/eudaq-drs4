@@ -70,7 +70,6 @@ void VX1742Interface::openVME(){
     	std::exit(-1);
     }
     std::cout << "[OK]" << std::endl;
-    
 
     //connection is initialized at this point, print some information:
     std::cout << std::endl << "***********************************************************************" << std::endl;
@@ -81,6 +80,15 @@ void VX1742Interface::openVME(){
 
     //initialize variables
     correctionDataInitialized[vmec::VX1742_GROUPS][vmec::VX1742_NFREQ] = {false};
+    for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
+      for(uint32_t freq=0; freq<vmec::VX1742_NFREQ; freq++){
+        std::fill_n(corrTable[grp][freq].time, vmec::VX1742_MAX_SAMPLES, 0);
+        for(uint32_t ch=0; ch<vmec::VX1742_MAX_CHANNEL_SIZE; ch++){
+          std::fill_n(corrTable[grp][freq].cell[ch], vmec::VX1742_MAX_SAMPLES, 0);
+          std::fill_n(corrTable[grp][freq].nsample[ch], vmec::VX1742_MAX_SAMPLES, 0);
+        }
+      }
+    }
 
   }catch(...){
   	std::cout << "Problem occured in VX1742Interface::OpenVME()" << std::endl;
@@ -129,7 +137,6 @@ std::string VX1742Interface::getDRS4FirmwareVersion(){
 	return firmware.str();
 }
 
-
 uint32_t VX1742Interface::isRunning(){
 	return vx1742->acq_status.run; //returns 1 if running
 }
@@ -162,7 +169,6 @@ void VX1742Interface::printAcquisitionControl(){
 
 }
 
-
 void VX1742Interface::softwareReset(){
 	vx1742->software_reset = 1;
 }
@@ -185,7 +191,6 @@ bool VX1742Interface::SPIBusBusy(uint32_t grp){
 	return vx1742->group_n_conf[grp].group_status.spi_busy;
 }
 
-
 void VX1742Interface::enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity){
 	if(enable[0] || enable[1]){
 		vx1742->group_conf.trigger_trn_enable = 1;
@@ -202,7 +207,6 @@ void VX1742Interface::enableTRn(uint32_t enable[2], uint32_t threshold[2], uint3
 		}
 	}
 }
-
 
 void VX1742Interface::setPostTriggerSamples(uint32_t param){
 	vx1742->post_trigger = param;
@@ -345,7 +349,7 @@ uint32_t VX1742Interface::readFlashPage(uint32_t group, int8_t* page, uint32_t p
 uint32_t VX1742Interface::loadDRS4CorrectionTables(uint32_t group, uint32_t frequency){
     uint32_t pagenum = 0;
     uint32_t start;
-	uint32_t ret = 0;
+	  uint32_t ret = 0;
     int8_t tempCell[264];
     int8_t *p;
     int8_t tmp[0x1000]; // 256byte * 16 pages
@@ -387,7 +391,7 @@ uint32_t VX1742Interface::loadDRS4CorrectionTables(uint32_t group, uint32_t freq
         //load the offset number of samples correction
         start = 0;
         p = tempCell;
-		pagenum &= 0xF00;
+		    pagenum &= 0xF00;
         pagenum |= 0x40;
         pagenum |= ch << 2;    
 
@@ -461,7 +465,7 @@ uint32_t VX1742Interface::initializeDRS4CorrectionTables(uint32_t frequency){
 	for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
 		if(correctionDataInitialized[grp][frequency] != 1){ //if table has not been initialized, initialize it
 			if((ret = this->loadDRS4CorrectionTables(grp, frequency)) == 0){
-				correctionDataInitialized[grp][frequency] = 1;
+				correctionDataInitialized[grp][frequency] = 1; //fixme: CAEN does not give read access to groups that are not activated, this might be initialized but there's no 'real' data
 				return 0;
 			}else{return ret;}
 		}
@@ -503,27 +507,21 @@ void VX1742Interface::printDRS4CorrectionTables(){
 }
 
 
-void VX1742Interface::getCellCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint16_t* data){
-    for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++){
-    	data[sample] = corrTable[group][freq].cell[channel][sample];
-    	std::cout << data[sample] << ", ";}
+int16_t VX1742Interface::getCellCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint32_t idx){
+		//std::cout << "Group: " << group << " Frequency: " << freq << " Channel: " << channel << " idx: " << idx << " Value: " << corrTable[group][freq].cell[channel][idx] <<  std::endl;
+    //std::cout << corrTable[group][freq].cell[channel][idx] << std::endl;
+    return (uint16_t)corrTable[group][freq].cell[channel][idx];
 }
 
 
-void VX1742Interface::getNSamplesCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint8_t* data){
-    for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++){
-    	data[sample] = corrTable[group][freq].nsample[channel][sample];
-    	std::cout << data[sample] << ", ";}
+int8_t VX1742Interface::getNSamplesCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint32_t idx){
+    	return (uint8_t)corrTable[group][freq].nsample[channel][idx];
 }
 
 
-void VX1742Interface::getTimingCorrectionValues(uint32_t group, uint32_t freq, float* data){
-    for(int sample=0; sample<vmec::VX1742_MAX_SAMPLES; sample++){
-    	data[sample] = corrTable[group][freq].time[sample];
-    	std::cout << data[sample] << ", ";}
+float VX1742Interface::getTimingCorrectionValues(uint32_t group, uint32_t freq, uint32_t idx){
+    	return (float)corrTable[group][freq].time[idx];
 }
-
-
 
 
 //nEvents needs to be smaller than 255
