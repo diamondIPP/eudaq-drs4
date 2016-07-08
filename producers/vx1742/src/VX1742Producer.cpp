@@ -133,7 +133,7 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
 
     //caen->printDRS4CorrectionTables();
     
-    std::cout << " [OK]" << std::endl;
+    std::cout << "###Configuration [OK] - Ready to run!" << std::endl;
     SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() +")");
 
   }catch ( ... ){
@@ -231,7 +231,7 @@ void VX1742Producer::ReadoutLoop() {
 
         if(vxEvent.isValid()){
           unsigned int event_counter = vxEvent.EventCounter();
-          uint32_t trigger_time_tag = vxEvent.TriggerTimeTag();
+          uint32_t event_trigger_time_tag = vxEvent.TriggerTimeTag();
           uint32_t n_groups = vxEvent.Groups();
           uint32_t group_mask = vxEvent.GroupMask();
           uint32_t event_size = vxEvent.EventSize();
@@ -246,18 +246,18 @@ void VX1742Producer::ReadoutLoop() {
           block_no++;
           ev.AddBlock(block_no, static_cast<const uint32_t*>(&group_mask), sizeof(group_mask));
           block_no++;
-          ev.AddBlock(block_no, static_cast<const uint32_t*>(&trigger_time_tag), sizeof(trigger_time_tag));
+          ev.AddBlock(block_no, static_cast<const uint32_t*>(&event_trigger_time_tag), sizeof(event_trigger_time_tag));
           block_no++;
 
 
-          //loop over all groups
-          for(uint32_t grp = 0; grp < 4; grp++){
-            
+          //loop over all (activated) groups
+          for(uint32_t grp = 0; grp < vmec::VX1742_GROUPS; grp++){
             if(group_mask & (1<<grp)){ 
 
               uint32_t samples_per_channel = vxEvent.SamplesPerChannel(grp);
               uint32_t start_index_cell = vxEvent.GetStartIndexCell(grp);
               uint32_t event_timestamp = vxEvent.GetEventTimeStamp(grp);
+              uint32_t channels = vxEvent.Channels(grp);
 
 
               #ifdef DEBUG
@@ -266,7 +266,7 @@ void VX1742Producer::ReadoutLoop() {
                 std::cout << "Event size: " << event_size << std::endl;
                 std::cout << "Groups enabled: " << n_groups << std::endl;
                 std::cout << "Group mask: " << group_mask << std::endl;
-                std::cout << "Trigger time tag: " << trigger_time_tag << std::endl;
+                std::cout << "Trigger time tag: " << event_trigger_time_tag << std::endl;
                 std::cout << "Samples per channel: " << samples_per_channel << std::endl;
                 std::cout << "Start index cell : " << start_index_cell << std::endl;
                 std::cout << "Event trigger time tag: " << event_timestamp << std::endl;
@@ -279,19 +279,21 @@ void VX1742Producer::ReadoutLoop() {
               block_no++;
               ev.AddBlock(block_no, static_cast<const uint32_t*>(&event_timestamp), sizeof(event_timestamp));
               block_no++;
+              ev.AddBlock(block_no, static_cast<const uint32_t*>(&channels), sizeof(channels));
+              block_no++;
 
-              for(u_int ch = 0; ch < 8; ch++){
+              for(u_int ch = 0; ch < channels; ch++){
                 uint16_t *payload = new uint16_t[samples_per_channel];
                 vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
 
-                //apply correction factors:
-                for(u_int i=0; i<samples_per_channel; i++){
-                  //cell and nsamples correction
-                  payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[ch][i])*index_sampling);
-                  //time correction
-                  //fixme, or not?
+                //make temporary array here that can be used for time correction, copy cell and nsamples corrected values into that array
 
+                //apply cell and nsamples correction
+                for(u_int i=0; i<samples_per_channel; i++){
+                  payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[ch][i])*index_sampling);
                 }
+
+                //make time correction here
 
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;
@@ -373,7 +375,5 @@ void VX1742Producer::SetTimeStamp(){
 }
 
 
-//uint32_t VX1742Producer::SamplesInCustomSize(){
-//  uint32_t csizes[4] = {1024, 520, 256, 136};
-//  return csizes[custom_size];
-//}
+
+

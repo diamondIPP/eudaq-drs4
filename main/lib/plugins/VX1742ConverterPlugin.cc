@@ -118,9 +118,12 @@ public:
        	data = in_raw.GetBlock(id++);
        	uint32_t start_index_cell = *((uint32_t*) &data[0]);
        	  
-
        	data = in_raw.GetBlock(id++);
        	uint32_t event_timestamp = *((uint32_t*) &data[0]);
+
+        data = in_raw.GetBlock(id++);
+        uint32_t channels = *((uint32_t*) &data[0]);
+
 
         #ifdef DEBUG
           std::cout << "***********************************************************************" << std::endl << std::endl;
@@ -135,29 +138,36 @@ public:
           std::cout << "***********************************************************************" << std::endl << std::endl; 
         #endif
 
-    	  for(u_int ch = 0; ch < active_channels; ch++){
-    		data = in_raw.GetBlock(id);
-    		//uint16_t wave_array[samples_per_channel];
-        float fwave_array[samples_per_channel];
-	  		uint16_t *raw_wave_array = (uint16_t*)(&data[0]);
-			  for (int i = 0; i < samples_per_channel; i++){
-	  		  //wave_array[i] = (uint16_t)(raw_wave_array[i]);
-          fwave_array[i] = 1000*(raw_wave_array[i]/4096.0); //convert to mV
-	   	  	}
+    	  for(u_int ch = 0; ch < channels; ch++){
+    		  data = in_raw.GetBlock(id);
+    		  //uint16_t wave_array[samples_per_channel];
+          float fwave_array[samples_per_channel];
+	  		  uint16_t *raw_wave_array = (uint16_t*)(&data[0]);
+			    for (int i = 0; i < samples_per_channel; i++){
+	  		    //wave_array[i] = (uint16_t)(raw_wave_array[i]);
+            fwave_array[i] = 1000*(raw_wave_array[i]/4096.0); //convert to mV
+	   	    }
 
-	  		StandardWaveform wf(ch, EVENT_TYPE, (std::string)("VX1742 - " + channel_names.at(ch)));
-	  		wf.SetChannelName(channel_names.at(ch));
-	  		wf.SetChannelNumber(grp*8+ch);
-	  		wf.SetNSamples(samples_per_channel);
-	  		//wf.SetWaveform((uint16_t*) wave_array);
-        wf.SetWaveform((float*) fwave_array);
-	  		wf.SetTimeStamp(event_timestamp);
-	  		wf.SetTriggerCell(start_index_cell);
-	  		sev.AddWaveform(wf);
-	  		id++;
-		  }//end ch loop
-		}//end if group mask
-	}//end group loop
+          uint32_t ch_nr= channels*grp+ch;
+          std::string ch_name;
+          if (channel_names.find(ch_nr) == channel_names.end()){
+            ch_name = "no_name";
+          }else{
+            ch_name = channel_names.at(ch_nr);}
+
+	  		  StandardWaveform wf(ch_nr, EVENT_TYPE, (std::string)("VX1742 - " + ch_name));
+	  		  wf.SetChannelName(ch_name);
+	  		  wf.SetChannelNumber(ch_nr);
+	  		  wf.SetNSamples(samples_per_channel);
+	  		  //wf.SetWaveform((uint16_t*) wave_array);
+          wf.SetWaveform((float*) fwave_array);
+	  		  wf.SetTimeStamp(event_timestamp);
+	  		  wf.SetTriggerCell(start_index_cell);
+	  		  sev.AddWaveform(wf);
+	  		  id++;
+		    }//end ch loop
+		  }//end if group mask
+	  }//end group loop
 
 	return true;
 }
@@ -170,6 +180,7 @@ private:
   std::string serialno;
   std::string firmware;
   uint32_t active_channels;
+  uint32_t channels; //channels in data
   uint32_t sampling_speed, samples_in_channel;
   std::string device_name;
   uint32_t group_mask;

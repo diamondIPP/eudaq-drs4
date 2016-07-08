@@ -448,16 +448,16 @@ uint32_t VX1742Interface::initializeDRS4CorrectionTables(uint32_t frequency){
 
 	switch(frequency){
 		case 0:
-			std::cout << "Initializing correction tables for 5 GS/s sampling speed." << std::endl;
+			std::cout << "Initializing correction tables for 5 GS/s sampling speed:" << std::endl;
 			break;
 		case 1:
-			std::cout << "Initializing correction tables for 2.5 GS/s sampling speed." << std::endl;
+			std::cout << "Initializing correction tables for 2.5 GS/s sampling speed:" << std::endl;
 			break;
 		case 2:
-			std::cout << "Initializing correction tables for 1 GS/s sampling speed." << std::endl;
+			std::cout << "Initializing correction tables for 1 GS/s sampling speed:" << std::endl;
 			break;
 		case 3:
-			std::cout << "Initializing correction tables for 750 MS/s sampling speed." << std::endl;
+			std::cout << "Initializing correction tables for 750 MS/s sampling speed:" << std::endl;
 			break;
 		default: return -1;
 	}
@@ -465,9 +465,9 @@ uint32_t VX1742Interface::initializeDRS4CorrectionTables(uint32_t frequency){
 	for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
 		if(correctionDataInitialized[grp][frequency] != 1){ //if table has not been initialized, initialize it
 			if((ret = this->loadDRS4CorrectionTables(grp, frequency)) == 0){
+        std::cout << "Initializing group " << grp << " [OK]." << std::endl;
 				correctionDataInitialized[grp][frequency] = 1; //fixme: CAEN does not give read access to groups that are not activated, this might be initialized but there's no 'real' data
-				return 0;
-			}else{return ret;}
+			}else{std::cout << "ERROR in loading calibration tables!" << std::endl; return -1;}
 		}
 	}
 	return 0;

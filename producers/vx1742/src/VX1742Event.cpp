@@ -178,9 +178,9 @@ uint32_t VX1742Event::Channels(uint32_t grp) const{
 	if (groups == 0) return 0;
 	bool TRn_enabled = group_heads.grh[grp].tr;
 	if(TRn_enabled){
-		return groups*9;
+		return 9;
 	}
-	return groups*8;
+	return 8;
 }
 
 
