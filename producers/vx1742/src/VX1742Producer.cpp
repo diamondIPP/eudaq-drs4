@@ -92,6 +92,7 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     trn_offset[0] = conf.Get("TR01_offset", 0x8000);
     trn_offset[1] = conf.Get("TR23_offset", 0x8000);
     trn_polarity = conf.Get("TRn_polarity", 1);
+    trn_readout = conf.Get("TRn_readout", 1);
 
 
     if(caen->isRunning())
@@ -109,26 +110,25 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     caen->setTriggerCount(); //count just accepted triggers
     caen->disableIndividualTriggers(); //count one event only once, not per group
     usleep(10000);
-    caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity);
+    caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity, trn_readout);
 
     caen->initializeDRS4CorrectionTables(sampling_frequency);
     usleep(400000);
 
     //copy currently used correction tables
     for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
-      if(groups[grp] == 1){
-        //load time calibration
-        for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++)
-          time_corr[grp][idx] = caen->getTimingCorrectionValues(grp, sampling_frequency, idx);
-        
-        //load cell calibration
-        for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS_PER_GROUP; ch++){
-          for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++){
-            cell_corr[ch*grp+ch][idx] = caen->getCellCorrectionValues(grp, sampling_frequency, ch, idx);
-            index_corr[ch*grp+ch][idx] = caen->getNSamplesCorrectionValues(grp, sampling_frequency, ch, idx);
-          }
+      //time correction values
+      for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++)
+        time_corr[grp][idx] = caen->getTimingCorrectionValues(grp, sampling_frequency, idx);
+      
+      //load cell and index correction
+      uint32_t ch_grp = vmec::VX1742_CHANNELS_PER_GROUP + trn_readout;
+      for(uint32_t ch=0; ch<ch_grp; ch++){
+        for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++){
+          cell_corr[ch_grp*grp+ch][idx] = caen->getCellCorrectionValues(grp, sampling_frequency, ch, idx);
+          index_corr[ch_grp*grp+ch][idx] = caen->getNSamplesCorrectionValues(grp, sampling_frequency, ch, idx);
         }
-      }
+      } 
     }
 
     //caen->printDRS4CorrectionTables();
@@ -156,6 +156,7 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
     bore.SetTag("timestamp", m_timestamp); //unit64_t
     bore.SetTag("serial_number", caen->getSerialNumber()); //std::string
     bore.SetTag("firmware_version", caen->getFirmwareVersion()); //std::string
+    uint32_t trn_readout = caen->TRnReadoutEnabled();
     uint32_t n_channels = caen->getActiveChannels();
     bore.SetTag("active_channels", n_channels);
     bore.SetTag("device_name", "VX1742");
@@ -184,15 +185,15 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
     uint32_t block_no = 0;
     //sent calibration data
     for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
-      bore.AddBlock(block_no, reinterpret_cast<const char*>(&time_corr[grp]), 1024*sizeof(float)); //float
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&time_corr[grp]), 1024*sizeof(float));
       block_no++;
     }
     for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
-      bore.AddBlock(block_no, reinterpret_cast<const char*>(&cell_corr[ch]), 1024*sizeof(int16_t)); //uint16_t
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&cell_corr[ch]), 1024*sizeof(int16_t));
       block_no++;
     }
     for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
-      bore.AddBlock(block_no, reinterpret_cast<const char*>(&index_corr[ch]), 1024*sizeof(int8_t)); //uint8_t
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&index_corr[ch]), 1024*sizeof(int8_t));
       block_no++;
     }
 
@@ -290,7 +291,7 @@ void VX1742Producer::ReadoutLoop() {
 
                 //apply cell and nsamples correction
                 for(u_int i=0; i<samples_per_channel; i++){
-                  payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[ch][i])*index_sampling);
+                  payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[grp*channels+ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[grp*channels+ch][i])*index_sampling);
                 }
 
                 //make time correction here

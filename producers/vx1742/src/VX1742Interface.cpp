@@ -191,10 +191,14 @@ bool VX1742Interface::SPIBusBusy(uint32_t grp){
 	return vx1742->group_n_conf[grp].group_status.spi_busy;
 }
 
-void VX1742Interface::enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity){
+void VX1742Interface::enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity, uint32_t trn_readout){
 	if(enable[0] || enable[1]){
 		vx1742->group_conf.trigger_trn_enable = 1;
-		vx1742->group_conf.sig_trn_enable = 0; //disable readout of signal for now
+    if(trn_readout){
+		  vx1742->group_conf.sig_trn_enable = 1;
+    }else{
+      vx1742->group_conf.sig_trn_enable = 0;
+    }
 		vx1742->group_conf.trigger_polarity = polarity;
 	}
 	for(int grp=0; grp<2; grp++){
@@ -207,6 +211,13 @@ void VX1742Interface::enableTRn(uint32_t enable[2], uint32_t threshold[2], uint3
 		}
 	}
 }
+
+uint32_t VX1742Interface::TRnReadoutEnabled(){
+  if(vx1742->group_conf.sig_trn_enable){return 1;}
+  return 0;
+}
+
+
 
 void VX1742Interface::setPostTriggerSamples(uint32_t param){
 	vx1742->post_trigger = param;
@@ -247,7 +258,7 @@ void VX1742Interface::toggleGroups(uint32_t param[]){
 }
 
 uint32_t VX1742Interface::getActiveChannels(){
-	return ((vx1742->group_en_mask.group0 + vx1742->group_en_mask.group1 + vx1742->group_en_mask.group2 + vx1742->group_en_mask.group3)*8);
+	return ((vx1742->group_en_mask.group0 + vx1742->group_en_mask.group1 + vx1742->group_en_mask.group2 + vx1742->group_en_mask.group3)*(8+this->TRnReadoutEnabled()));
 }
 
 

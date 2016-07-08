@@ -198,7 +198,7 @@ uint32_t VX1742Event::GetEventTimeStamp(uint32_t grp) const{
 
 
 int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* array, unsigned int arraylen) const{
-	if (ch >= vmec::VX1742_CHANNELS_PER_GROUP){std::printf("There are only %d channels!\n", vmec::VX1742_CHANNELS_PER_GROUP); return -1;}
+	if (ch >= vmec::VX1742_MAX_CHANNEL_SIZE){std::printf("There are only %d channels!\n", vmec::VX1742_MAX_CHANNEL_SIZE); return -1;}
 	if (grp > vmec::VX1742_GROUPS){std::printf("There are only %d groups!\n", vmec::VX1742_GROUPS); return -1;}
 	
 	int grppos = getGroupIndexInBuffer(grp) + 1;
@@ -206,6 +206,11 @@ int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* arr
 	int samples = this->SamplesPerChannel(grp);
 	if(samples == -1){return -1;}
 	bool TRn_enabled = group_heads.grh[grp].tr;
+
+	//trn signal
+	if(ch==8 && TRn_enabled){
+		//fixme
+	}
 
 	uint32_t start_bit = ch*12%32;
 	uint32_t line = (uint32_t) (12*ch)/32;

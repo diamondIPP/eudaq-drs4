@@ -42,14 +42,15 @@ private:
   uint32_t cell_offset;
   uint32_t index_sampling;
   uint32_t time_correction;
-  int16_t cell_corr[32][1024];
-  int8_t index_corr[32][1024];
+  int16_t cell_corr[36][1024];
+  int8_t index_corr[36][1024];
   float time_corr[4][1024];
 
   uint32_t trn_enable[2];
   uint32_t trn_threshold[2];
   uint32_t trn_offset[2];
   uint32_t trn_polarity;
+  uint32_t trn_readout;
 
   std::string m_event_type, m_producerName;
   uint32_t m_ev;

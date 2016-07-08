@@ -63,7 +63,8 @@ class VX1742Interface{
 	uint32_t getPostTriggerSamples();
 
 	bool SPIBusBusy(uint32_t grp);
-	void enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity);
+	void enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity, uint32_t trn_readout);
+	uint32_t TRnReadoutEnabled();
 
 	void setCustomSize(uint32_t param);
 	uint32_t getCustomSize();
