@@ -198,7 +198,7 @@ uint32_t VX1742Event::GetEventTimeStamp(uint32_t grp) const{
 
 
 int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* array, unsigned int arraylen) const{
-	if (ch >= vmec::VX1742_MAX_CHANNEL_SIZE){std::printf("There are only %d channels!\n", vmec::VX1742_MAX_CHANNEL_SIZE); return -1;}
+	if (ch >= this->Channels(grp)){std::printf("There are only %d channels!\n", vmec::VX1742_MAX_CHANNEL_SIZE); return -1;}
 	if (grp > vmec::VX1742_GROUPS){std::printf("There are only %d groups!\n", vmec::VX1742_GROUPS); return -1;}
 	
 	int grppos = getGroupIndexInBuffer(grp) + 1;
@@ -207,27 +207,58 @@ int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* arr
 	if(samples == -1){return -1;}
 	bool TRn_enabled = group_heads.grh[grp].tr;
 
+
+	//std::cout << "Group position in buffer: " << grppos << std::endl;
+	//std::cout << "Group size in buffer: " << this->getGroupSizeInBuffer() << std::endl;
+	//std::cout << "Samples per channel: " << samples << std::endl;
+
 	//trn signal
-	if(ch==8 && TRn_enabled){
-		//fixme
-	}
+	if(ch==8){
+	  grppos = grppos+samples*3;
+	  std::cout << "Calculated TRn position: " << grppos << std::endl;
+	  uint32_t index = 0;
+	  uint32_t start_bit = 0;
+	  uint32_t line = 0;
+	  uint32_t it = samples;
+	  
+	  for(uint32_t idx=0; idx < it; idx++){
+	  	array[idx] = (buffer[grppos+line]>>start_bit)&0xFFF;
 
-	uint32_t start_bit = ch*12%32;
-	uint32_t line = (uint32_t) (12*ch)/32;
-	uint32_t temp = 32-start_bit;
-	if(temp<12){
-		for(uint32_t idx=0; idx < samples; idx++){
-			uint32_t low = buffer[grppos+idx*3+line]>>start_bit;
-			uint32_t high = (buffer[grppos+idx*3+line+1]&((1<<(12-temp))-1))<<temp;
-			array[idx] = high + low;
-		}
-	}
-	if(temp>=12){
-		for(uint32_t idx=0; idx < samples; idx++){
-			array[idx] = (buffer[grppos+idx*3+line]>>start_bit)&0xFFF;
-		}
-	}
+	  	index += 12;
+	  	start_bit = index%32;
+	  	line = (uint32_t) index/32;
+	  	std::cout << "Index: " << index << " start bit: " << start_bit << " line: " << line << std::endl;
 
+
+	  	if(start_bit > 20){
+	  		uint32_t low = (buffer[grppos+line]>>start_bit);
+	  		uint32_t high = buffer[grppos+line+1]&((1<<(start_bit-20))-1);
+	  		array[idx+1] = high+low;
+	  		it--;
+	  		index += 12;
+	  		start_bit = index%32;
+	  		line = (uint32_t) index/32;
+	  	    std::cout << "Index (if): " << index << " start bit: " << start_bit << " line: " << line << std::endl;
+	  	}
+	  }
+
+	}else{ //all other channels
+	  uint32_t start_bit = ch*12%32;
+	  uint32_t line = (uint32_t) (12*ch)/32;
+	  uint32_t temp = 32-start_bit;
+	  if(temp<12){
+		for(uint32_t idx=0; idx < samples; idx++){
+		  uint32_t low = buffer[grppos+idx*3+line]>>start_bit;
+		  uint32_t high = (buffer[grppos+idx*3+line+1]&((1<<(12-temp))-1))<<temp;
+		  array[idx] = high + low;
+		}
+	  }
+	  if(temp>=12){
+		for(uint32_t idx=0; idx < samples; idx++){
+		  array[idx] = (buffer[grppos+idx*3+line]>>start_bit)&0xFFF;
+		}
+	  }
+	}
 
 }//method end
 
