@@ -27,6 +27,7 @@ public:
   void SetTimeStamp();
   void ReadoutLoop();
   void CAENPeakCorrection(uint32_t channels, uint32_t nsamples);
+  void CAENTimeCorrection(uint32_t grp, uint32_t channels, uint32_t nsamples, uint32_t freq, uint32_t st_index);
 
 
 private:

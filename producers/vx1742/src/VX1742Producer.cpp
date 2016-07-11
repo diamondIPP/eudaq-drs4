@@ -305,6 +305,7 @@ void VX1742Producer::ReadoutLoop() {
                 uint16_t *payload = new uint16_t[samples_per_channel];
                 for(u_int i=0; i<samples_per_channel; i++){
                   payload[i] = wf_storage[ch][i];
+                  std::cout << "Payload[" << i << "]: " << payload[i] << std::endl;
                 }
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;
@@ -469,5 +470,54 @@ void VX1742Producer::CAENPeakCorrection(uint32_t channels, uint32_t nsamples){
 }
 
 
+//called once for each group
+void VX1742Producer::CAENTimeCorrection(uint32_t grp, uint32_t channels, uint32_t nsamples, uint32_t freq, uint32_t st_index){
+    float t0, vcorr, Tsamp;
+    float Time[1024];
+    float wave_tmp[1024]; 
+    uint32_t i, j, k;
+
+    switch(freq){
+    case 0:
+        Tsamp =(float)((1.0/5000.0)*1000.0); //0.2ns
+        break;
+    case 1:
+        Tsamp =(float)((1.0/2500.0)*1000.0); //0.4ns
+        break;
+    case 2:
+        Tsamp =(float)((1.0/1000.0)*1000.0); //1.0ns
+        break;
+    default:
+        Tsamp =(float)((1.0/750.0)*1000.0); //1.33ns
+        break;
+    }
 
 
+    t0=time_corr[grp][st_index];
+    Time[0]=0.0;
+
+    for(j=1; j< nsamples; j++) {
+        t0 = time_corr[grp][(st_index+j)%1024]-t0;
+        if(t0 >0){Time[j] =  Time[j-1]+ t0;} 
+        else{Time[j] =  Time[j-1]+ t0 + (Tsamp*1024);}
+        t0 = time_corr[grp][(st_index+j)%1024];
+    }
+
+    for (j=0; j<channels; j++) {
+        wf_storage[j][0] = wf_storage[j][1];
+        wave_tmp[0] = wf_storage[j][0];
+        vcorr = 0.0;
+        k=0;
+        i=0;
+
+        for(i=1; i<nsamples; i++) {
+            while ((k<nsamples-1) && (Time[k]<(i*Tsamp)))  k++;
+            vcorr =(((float)(wf_storage[j][k] - wf_storage[j][k-1])/(Time[k]-Time[k-1]))*((i*Tsamp)-Time[k-1]));
+            wave_tmp[i]=wf_storage[j][k-1] + vcorr;
+            k--;                                
+        }
+
+        for(i=1; i<nsamples; i++)
+            wf_storage[j][i] = wave_tmp[i];
+    }
+}
