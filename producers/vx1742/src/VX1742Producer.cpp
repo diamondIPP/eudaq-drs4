@@ -294,7 +294,7 @@ void VX1742Producer::ReadoutLoop() {
                   payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[grp*channels+ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[grp*channels+ch][i])*index_sampling);
                 }
 
-                //make time correction here
+                //make time correction here?
 
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;

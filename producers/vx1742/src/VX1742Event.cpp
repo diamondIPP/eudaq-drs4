@@ -208,37 +208,31 @@ int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* arr
 	bool TRn_enabled = group_heads.grh[grp].tr;
 
 
-	//std::cout << "Group position in buffer: " << grppos << std::endl;
-	//std::cout << "Group size in buffer: " << this->getGroupSizeInBuffer() << std::endl;
-	//std::cout << "Samples per channel: " << samples << std::endl;
-
 	//trn signal
 	if(ch==8){
 	  grppos = grppos+samples*3;
-	  std::cout << "Calculated TRn position: " << grppos << std::endl;
 	  uint32_t index = 0;
 	  uint32_t start_bit = 0;
 	  uint32_t line = 0;
-	  uint32_t it = samples;
+	  uint32_t idx = 0;
 	  
-	  for(uint32_t idx=0; idx < it; idx++){
+	  while(idx < samples){
 	  	array[idx] = (buffer[grppos+line]>>start_bit)&0xFFF;
+	  	idx++;
 
 	  	index += 12;
 	  	start_bit = index%32;
 	  	line = (uint32_t) index/32;
-	  	std::cout << "Index: " << index << " start bit: " << start_bit << " line: " << line << std::endl;
 
 
 	  	if(start_bit > 20){
 	  		uint32_t low = (buffer[grppos+line]>>start_bit);
-	  		uint32_t high = buffer[grppos+line+1]&((1<<(start_bit-20))-1);
-	  		array[idx+1] = high+low;
-	  		it--;
+	  		uint32_t high = (buffer[grppos+line+1]&((1<<(start_bit-20))-1))<<(32-start_bit); //fixme?
+	  		array[idx] = high + low;
+	  		idx++;
 	  		index += 12;
 	  		start_bit = index%32;
 	  		line = (uint32_t) index/32;
-	  	    std::cout << "Index (if): " << index << " start bit: " << start_bit << " line: " << line << std::endl;
 	  	}
 	  }
 
