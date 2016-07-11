@@ -227,14 +227,14 @@ int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* arr
 
 	  	if(start_bit > 20){
 	  		uint32_t low = (buffer[grppos+line]>>start_bit);
-	  		uint32_t high = (buffer[grppos+line+1]&((1<<(start_bit-20))-1))<<(32-start_bit); //fixme?
+	  		uint32_t high = (buffer[grppos+line+1]&((1<<(start_bit-20))-1))<<(32-start_bit);
 	  		array[idx] = high + low;
 	  		idx++;
 	  		index += 12;
 	  		start_bit = index%32;
 	  		line = (uint32_t) index/32;
 	  	}
-	  }
+	  }//end while
 
 	}else{ //all other channels
 	  uint32_t start_bit = ch*12%32;

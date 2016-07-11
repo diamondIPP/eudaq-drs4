@@ -561,8 +561,7 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 			if(ret != 0){std::printf("Error in BlockTransfer!"); return -1;}
 		}
 
-		std::cout << "size of u_long" << sizeof(u_long) << " ,size of uint32_t: " << sizeof(uint32_t) << std::endl;
-		//uint32_t* data = (uint32_t*)seg->VirtualAddress();
+
 		uint32_t* data = (uint32_t*)(seg->VirtualAddress());
 
     	
@@ -593,7 +592,7 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 		head.trigger_time= data[(++offset)];
 
 
-		//#ifdef DEBUG
+		#ifdef DEBUG
 			printf("******************************************************\n");
 			printf("RAW header:         0x%08X\n", head.size.raw);
 			printf("0xA:                0x%01X\n", head.size.A);
@@ -609,7 +608,7 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 			printf("------------------------------------------------------\n");
 			printf("Trigger time:       %u\n", head.trigger_time);
 			printf("******************************************************\n\n");
-		//#endif
+		#endif
 
 		vxEvent->setData(&head, data+4, (head.size.eventSize-4));
 	}
