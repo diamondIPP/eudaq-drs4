@@ -51,6 +51,8 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
     std::fill_n(cell_corr[ch], vmec::VX1742_MAX_SAMPLES, 0);
   }
 
+  for(uint32_t ch=0; ch<vmec::VX1742_MAX_CHANNEL_SIZE; ch++)
+    std::fill_n(wf_storage[ch], vmec::VX1742_MAX_SAMPLES,0);
 
   try{
     caen = new VX1742Interface();
@@ -283,23 +285,33 @@ void VX1742Producer::ReadoutLoop() {
               ev.AddBlock(block_no, static_cast<const uint32_t*>(&channels), sizeof(channels));
               block_no++;
 
+
+              //apply cell and nsamples correction and store it to temporary array
               for(u_int ch = 0; ch < channels; ch++){
                 uint16_t *payload = new uint16_t[samples_per_channel];
                 vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
-
-                //make temporary array here that can be used for time correction, copy cell and nsamples corrected values into that array
-
-                //apply cell and nsamples correction
                 for(u_int i=0; i<samples_per_channel; i++){
-                  payload[i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[grp*channels+ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[grp*channels+ch][i])*index_sampling);
+                  wf_storage[ch][i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[grp*channels+ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[grp*channels+ch][i])*index_sampling);
                 }
+                delete payload;
+              }  
 
-                //make time correction here?
+              //CEAN spike correction
+              this->CAENPeakCorrection(channels, samples_per_channel);
 
+
+              //time correction 
+              for(u_int ch = 0; ch < channels; ch++){
+                uint16_t *payload = new uint16_t[samples_per_channel];
+                for(u_int i=0; i<samples_per_channel; i++){
+                  payload[i] = wf_storage[ch][i];
+                }
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;
                 delete payload;
-              }//end loop over channels
+              }  
+
+
             }//end if
           }//end for
   
@@ -373,6 +385,87 @@ void VX1742Producer::SetTimeStamp(){
   auto now = std::chrono::high_resolution_clock::now();
   auto elapsed = now - epoch;
   m_timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count()/100u;
+}
+
+
+//from CAEN Digitizer library:
+void VX1742Producer::CAENPeakCorrection(uint32_t channels, uint32_t nsamples){
+    uint32_t offset;
+    uint32_t i;
+    uint32_t j;
+
+    for(j=0; j<channels; j++){
+        wf_storage[j][0] = wf_storage[j][1];
+    }
+
+    for(i=1; i<nsamples; i++){ //loop over samples
+        offset=0;
+
+        for(j=0; j<8; j++){ //and over all channels
+            if (i==1){
+                if ((wf_storage[j][2]-wf_storage[j][1])>30){  //if (sample 3 - sample 2)>30                               
+                    offset++;
+                }
+
+                else {
+                    if (((wf_storage[j][3]- wf_storage[j][1])>30)&&((wf_storage[j][3]- wf_storage[j][2])>30)){  //if((s3-s2) > 30 AND (s4-s3) > 30)                             
+                        offset++;
+                    }
+                }
+            }
+            else{
+                if ((i==nsamples-1)&&((wf_storage[j][nsamples-2]- wf_storage[j][nsamples-1])>30)){  
+                    offset++;                                                                             
+                }
+                else{
+                    if ((wf_storage[j][i-1]- wf_storage[j][i])>30){ 
+                        if ((wf_storage[j][i+1]- wf_storage[j][i])>30)
+                            offset++;
+                        else {
+                            if ((i==nsamples-2)||((wf_storage[j][i+2]-wf_storage[j][i])>30))
+                                offset++;
+                        }                                     
+                    }
+                }
+            }
+        }                                
+
+
+        if (offset==8){
+            for(j=0; j<channels; j++){
+                if (i==1){
+                    if ((wf_storage[j][2]- wf_storage[j][1])>30) {
+                        wf_storage[j][0]=wf_storage[j][2];
+                        wf_storage[j][1]=wf_storage[j][2];
+                    }
+                    else{
+                        wf_storage[j][0]=wf_storage[j][3];
+                        wf_storage[j][1]=wf_storage[j][3];
+                        wf_storage[j][2]=wf_storage[j][3];
+                    }
+                }
+                else{
+                    if (i==nsamples-1){
+                        wf_storage[j][nsamples-1]=wf_storage[j][nsamples-2];
+                    }
+                    else{
+                        if ((wf_storage[j][i+1]- wf_storage[j][i])>30)
+                            wf_storage[j][i]=((wf_storage[j][i+1]+wf_storage[j][i-1])/2);
+                        else {
+                            if (i==nsamples-2){
+                                wf_storage[j][nsamples-2]=wf_storage[j][nsamples-3];
+                                wf_storage[j][nsamples-1]=wf_storage[j][nsamples-3];
+                            }
+                            else {
+                                wf_storage[j][i]=((wf_storage[j][i+2]+wf_storage[j][i-1])/2);
+                                wf_storage[j][i+1]=( (wf_storage[j][i+2]+wf_storage[j][i-1])/2);
+                            }
+                        }
+                    }
+                }
+            }
+        }                                
+    }
 }
 
 

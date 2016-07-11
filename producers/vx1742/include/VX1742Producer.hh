@@ -26,7 +26,8 @@ public:
   void OnTerminate();
   void SetTimeStamp();
   void ReadoutLoop();
-  //uint32_t SamplesInCustomSize();
+  void CAENPeakCorrection(uint32_t channels, uint32_t nsamples);
+
 
 private:
   VX1742Interface *caen;
@@ -45,6 +46,7 @@ private:
   int16_t cell_corr[36][1024];
   int8_t index_corr[36][1024];
   float time_corr[4][1024];
+  uint16_t wf_storage[9][1024]; //for peak correction according to CAEN
 
   uint32_t trn_enable[2];
   uint32_t trn_threshold[2];
