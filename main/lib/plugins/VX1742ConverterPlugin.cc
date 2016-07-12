@@ -140,15 +140,13 @@ public:
 
     	  for(u_int ch = 0; ch < channels; ch++){
     		  data = in_raw.GetBlock(id);
-    		  //uint16_t wave_array[samples_per_channel];
-          float fwave_array[samples_per_channel];
+          float wave_array[samples_per_channel];
 	  		  uint16_t *raw_wave_array = (uint16_t*)(&data[0]);
 			    for (int i = 0; i < samples_per_channel; i++){
-	  		    //wave_array[i] = (uint16_t)(raw_wave_array[i]);
-            fwave_array[i] = 1000*(raw_wave_array[i]/4096.0); //convert to mV
+            wave_array[i] = (1000.0*(raw_wave_array[i]/4096.0)); //convert to mV
 	   	    }
 
-          uint32_t ch_nr= channels*grp+ch;
+          uint32_t ch_nr = channels*grp+ch;
           std::string ch_name;
           if (channel_names.find(ch_nr) == channel_names.end()){
             ch_name = "no_name";
@@ -159,8 +157,7 @@ public:
 	  		  wf.SetChannelName(ch_name);
 	  		  wf.SetChannelNumber(ch_nr);
 	  		  wf.SetNSamples(samples_per_channel);
-	  		  //wf.SetWaveform((uint16_t*) wave_array);
-          wf.SetWaveform((float*) fwave_array);
+          wf.SetWaveform((float*) wave_array);
 	  		  wf.SetTimeStamp(event_timestamp);
 	  		  wf.SetTriggerCell(start_index_cell);
 	  		  sev.AddWaveform(wf);

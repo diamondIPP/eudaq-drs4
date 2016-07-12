@@ -287,15 +287,14 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
       if (waveform.GetChannelName() == "PULSER"){
         SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
-    simpWaveform.addData(&(*waveform.GetData())[0]);
-    simpWaveform.Calculate();
-    float integral = simpWaveform.getIntegral(700,900);
-    float pulserMin = simpWaveform.getMinimum(700, 900);
-    if( pulserMin < -100.)
-        isPulserEvent = true;
-      }
+        simpWaveform.addData(&(*waveform.GetData())[0]);
+        simpWaveform.Calculate();
+        float integral = simpWaveform.getIntegral(700,900);
+        float pulserMin = simpWaveform.getMinimum(700, 900);
+        if( pulserMin < -100.)
+          isPulserEvent = true;
+        }
     }//end for
-
 
     for (unsigned int i = 0; i < nwf;i++){
       const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
@@ -312,13 +311,12 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
        cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
       #endif
 
-
       std::string sensorname;
       sensorname = waveform.GetType();
       SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);
       simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
       simpWaveform.setNSamples(waveform.GetNSamples());
-      simpWaveform.addData(&(*waveform.GetData())[0]);       
+      simpWaveform.addData(&(*waveform.GetData())[0]);      
       simpWaveform.Calculate();
       simpWaveform.setTimestamp(waveform.GetTimeStamp());
       simpWaveform.setEvent(ev.GetEventNumber());
@@ -326,6 +324,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       simpWaveform.setChannelNumber(waveform.GetChannelNumber());
       simpWaveform.setPulserEvent(isPulserEvent);
       simpEv.addWaveform(simpWaveform);
+
 
 
 /************************************** Start TU Event Stuff **************************************/

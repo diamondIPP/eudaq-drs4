@@ -85,7 +85,7 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
 
     cell_offset = conf.Get("cell_offset", 0);
     index_sampling = conf.Get("index_sampling", 0);
-    time_correction = conf.Get("time_correction", 0);
+    spike_correction = conf.Get("spike_correction", 0);
 
     trn_enable[0] = conf.Get("TR01_enable", 0);
     trn_enable[1] = conf.Get("TR23_enable", 0);
@@ -287,25 +287,37 @@ void VX1742Producer::ReadoutLoop() {
 
 
               //apply cell and nsamples correction and store it to temporary array
-              for(u_int ch = 0; ch < channels; ch++){
+              for(uint32_t ch = 0; ch < channels; ch++){
                 uint16_t *payload = new uint16_t[samples_per_channel];
                 vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
-                for(u_int i=0; i<samples_per_channel; i++){
+                for(uint32_t i=0; i<samples_per_channel; i++){
                   wf_storage[ch][i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[grp*channels+ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[grp*channels+ch][i])*index_sampling);
                 }
                 delete payload;
               }  
 
+              //uint16_t test[1024];
+              //for(uint32_t id=0; id<1024; id++)
+              //  test[id] = wf_storage[0][id];
+
+
               //CEAN spike correction
-              this->CAENPeakCorrection(channels, samples_per_channel);
+              if(spike_correction)
+                this->CAENPeakCorrection(channels, samples_per_channel);
+
+              //for(uint32_t id=0; id<1024; id++){
+              //  if(wf_storage[0][id]-test[id] != 0)
+              //    std::cout << "diff: " << wf_storage[0][id]-test[id] << std::endl;
+
+              //}
 
 
-              //time correction 
-              for(u_int ch = 0; ch < channels; ch++){
+
+              //copy waveforms back
+              for(uint32_t ch = 0; ch < channels; ch++){
                 uint16_t *payload = new uint16_t[samples_per_channel];
-                for(u_int i=0; i<samples_per_channel; i++){
+                for(uint32_t i=0; i<samples_per_channel; i++){
                   payload[i] = wf_storage[ch][i];
-                  std::cout << "Payload[" << i << "]: " << payload[i] << std::endl;
                 }
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;
@@ -402,7 +414,7 @@ void VX1742Producer::CAENPeakCorrection(uint32_t channels, uint32_t nsamples){
     for(i=1; i<nsamples; i++){ //loop over samples
         offset=0;
 
-        for(j=0; j<8; j++){ //and over all channels
+        for(j=0; j<channels; j++){ //and over all channels
             if (i==1){
                 if ((wf_storage[j][2]-wf_storage[j][1])>30){  //if (sample 3 - sample 2)>30                               
                     offset++;
@@ -432,10 +444,10 @@ void VX1742Producer::CAENPeakCorrection(uint32_t channels, uint32_t nsamples){
         }                                
 
 
-        if (offset==8){
+        if (offset==channels){
             for(j=0; j<channels; j++){
                 if (i==1){
-                    if ((wf_storage[j][2]- wf_storage[j][1])>30) {
+                    if ((wf_storage[j][2]-wf_storage[j][1])>30) {
                         wf_storage[j][0]=wf_storage[j][2];
                         wf_storage[j][1]=wf_storage[j][2];
                     }

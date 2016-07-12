@@ -430,7 +430,6 @@ void WaveformHistos::Fill(const SimpleStandardWaveform & wf)
     //     this->FillSignalEvent(wf);
 }
 void WaveformHistos::FillEvent(const SimpleStandardWaveform & wf, bool isPulserEvent){
-//    std::cout<<"WaveformHistos::FillSignalEvent "<<std::endl;
     int event_no = wf.getEvent();
     ULong64_t timestamp = wf.getTimestamp();
     int sign = wf.getSign(); //why is this here? it's never properly assigned
@@ -446,9 +445,8 @@ void WaveformHistos::FillEvent(const SimpleStandardWaveform & wf, bool isPulserE
     histos["nFlatLineEvents"]->Fill((bool)(cat == FLAT_EVENT));
     histos["CategoryVsEvent"]->Fill(event_no,(int)cat);
     histos["Category"]->Fill((int)cat);
-    if (cat == FLAT_EVENT)
-            return;
-
+    //if (cat == FLAT_EVENT) //whoever idiot wrote this should be punished..
+    //        return;
 
     float min      = wf.getMin();
     float max      = wf.getMax();
@@ -545,11 +543,12 @@ void WaveformHistos::FillEvent(const SimpleStandardWaveform & wf, bool isPulserE
         }
     }
 
+
     UpdateRanges();
     // all waveforms
     TH1F* gr = _Waveforms[n_fills%_n_wfs];
-    for (int n = 0; n < wf.getNSamples();n++)
-        gr->SetBinContent(n+1,wf.getData()[n]);
+    for (int n = 0; n < wf.getNSamples();n++){
+        gr->SetBinContent(n+1,wf.getData()[n]);}
     for (int i = 0; i < _n_wfs; i++)
         _Waveforms[(n_fills-i)%_n_wfs]->SetLineColor(kAzure+i);
     gr->SetEntries(event_no);
@@ -579,6 +578,7 @@ void WaveformHistos::FillEvent(const SimpleStandardWaveform & wf, bool isPulserE
     }
 
 }
+
 
 void WaveformHistos::Reset() {
     for (int i = 0; i < _Waveforms.size(); i++)
