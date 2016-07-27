@@ -158,7 +158,6 @@ namespace eudaq {
       return;
 
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
-
     f_event_number = sev.GetEventNumber();
     f_time = sev.GetTimestamp()/384066.;
 
@@ -168,18 +167,38 @@ namespace eudaq {
     f_adc->clear();
     f_charge->clear();
 
+    uint8_t ind = 0;
     for (size_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
 
       const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
-      std::vector<double> cds = plane.GetPixels<double>();
+      if(plane.Sensor() == "DUT") {
+        std::vector<double> cds = plane.GetPixels<double>();
 
-      for (size_t ipix = 0; ipix < cds.size(); ++ipix) {
+        for (size_t ipix = 0; ipix < cds.size(); ++ipix) {
+          f_plane->push_back(ind);
+          f_col->push_back(plane.GetX(ipix));
+          f_row->push_back(plane.GetY(ipix));
+          f_adc->push_back((int) plane.GetPixel(ipix));
+          f_charge->push_back(42);
+        }
+        ind++;
+      }
+    }
+    for (size_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
 
-	f_plane->push_back(iplane);
-	f_col->push_back(plane.GetX(ipix));
-	f_row->push_back(plane.GetY(ipix));
-	f_adc->push_back((int)plane.GetPixel(ipix));
-	f_charge->push_back(42);
+      const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
+      if(plane.Sensor() != "DUT") {
+        std::vector<double> cds = plane.GetPixels<double>();
+
+        for (size_t ipix = 0; ipix < cds.size(); ++ipix) {
+
+          f_plane->push_back(ind);
+          f_col->push_back(plane.GetX(ipix));
+          f_row->push_back(plane.GetY(ipix));
+          f_adc->push_back((int) plane.GetPixel(ipix));
+          f_charge->push_back(42);
+        }
+        ind++;
       }
     }
 
