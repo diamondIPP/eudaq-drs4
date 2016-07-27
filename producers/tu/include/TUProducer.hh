@@ -4,7 +4,7 @@
 **
 ** <TUProducer>.hh
 ** 
-** Date: March 2015
+** Date: March 2016
 ** Author: Christian Dorfer (dorfer@phys.ethz.ch)
 ** ---------------------------------------------------------------------------------*/
 
@@ -13,9 +13,10 @@
 #define TUPRODUCER_HH
 
 //Readout_Data struct defined here:
+#include "eudaq/Producer.hh"
 #include "triger_logic_tpc_stream.h"
+#include <deque>
 
-class Producer;
 class Configuration;
 class trigger_controll;
 
@@ -35,17 +36,16 @@ public:
 
 private:
 	std::string event_type;
-	unsigned int m_run, m_ev, m_ev_prev, prev_coincidence_count; //run & event number
+	unsigned int m_run, m_ev, m_ev_prev, prev_handshake_count; //run & event number
 	bool done, TUStarted, TUJustStopped;
 	trigger_controll *tc; //class for TU control from trigger_controll.h
 	Triger_Logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
 	int trg_mask;
 	float cal_beam_current;
 	std::deque<float> avg;
-	eudaq::Configuration m_config;
 
 	//data read back from TU
-	unsigned int trigger_counts[10];
+	unsigned long trigger_counts[10];
 	unsigned int prev_trigger_counts[10];
 	unsigned int input_frequencies[10];
 	unsigned int trigger_counts_multiplicity[10];
@@ -54,7 +54,8 @@ private:
 	unsigned int beam_current[2]; //first entry = old, second entry = new
 	unsigned int prescaler_count;
 	unsigned int prescaler_count_xor_pulser_count;
-	unsigned int pulser_delay_and_xor_pulser_count;
+	unsigned int accepted_pulser_events;
+	unsigned int accepted_prescaled_events;
 	unsigned int handshake_count;
 	unsigned long time_stamps[2]; //first entry = old, second entry = new timestamp
 

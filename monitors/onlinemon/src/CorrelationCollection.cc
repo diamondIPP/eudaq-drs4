@@ -7,6 +7,7 @@
 
 #include "CorrelationCollection.hh"
 #include "OnlineMon.hh"
+#include "OnlineMonWindow.hh"
 
 CorrelationCollection::CorrelationCollection()
 : BaseCollection(),

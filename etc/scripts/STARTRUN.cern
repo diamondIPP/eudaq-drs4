@@ -1,27 +1,35 @@
 #!/bin/sh
 
-if [ -z "$DRS" ]; then export DRS=true; fi;
-if [ -z "$CMS" ]; then export CMS=true; fi;
-if [ -z "$TLU" ]; then export TLU=true; fi;
+# count windows and start with one for the DataCollector
+wd=1
+ws=78
+wg=482
+if [ -z "$DRS" ]; then export DRS=true; wd=$((wd+1)); fi;
+if [ -z "$CMS" ]; then export CMS=true; wd=$((wd+1)); fi;
+if [ -z "$CMS_DIG" ]; then export CMS_DIG=true; wd=$((wd+1)); fi;
+if [ -z "$TL" ]; then export TL=true; wd=$((wd+1)); fi;
+if [ -z "$CLK" ]; then export CLK=true; wd=$((wd+1)); fi;
 
+if [ $wd -eq 5 ]; then ws=62; wg=385; fi;
 
 export HOSTNAME=192.168.1.102
 export ROOTSYS=/home/testbeam/sdvlp/root/build-new
 export RCPORT=44000
+export QT_GRAPHICSSYSTEM=native
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/sdvlp/eudaq-drs4/bin:/usr/local/lib/root
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/eudaq-drs4/bin:/usr/local/lib/root
 
 
 echo $(pwd)
 echo 'STARTING DAQ'
 echo '    Cleaning up first...'
-/bin/bash ~/sdvlp/eudaq-drs4/etc/scripts/KILLRUN.local
-/bin/bash ~/sdvlp/eudaq-drs4/etc/scripts/KILLRUN.psi
-cd ~/sdvlp/eudaq-drs4/bin
+/bin/bash ~/eudaq-drs4/etc/scripts/KILLRUN.cern
+#cd `dirname $1`/bin
+cd ~/eudaq-drs4/bin
 
 sleep 1
 echo '    Making sure all data files are properly writeprotected'
-chmod a=r /data/run*.raw
+chmod a=r ~/eudaq-drs4/data/run*.raw
 echo '\033[1;32;48m    ...Done!\033[0m'
 #cd bin
 echo 'pwd' $(pwd)
@@ -30,44 +38,56 @@ ls
 echo '    Starting Subprocesses'
 
 echo '        RunControl'
-~/sdvlp/eudaq-drs4/bin/euRun.exe -x 0 -y 0 -w 600 -g 500 -a tcp://$RCPORT  &
+~/eudaq-drs4/bin/euRun.exe -x 5 -y -28 -w 500 -g 600 -a tcp://$RCPORT  &
 sleep 2
 
 echo '        LogCollector'
-~/sdvlp/eudaq-drs4/bin/euLog.exe -l DEBUG -x 900 -y 0 -w 1000 -g 550 -r  tcp://$HOSTNAME:$RCPORT &
+~/eudaq-drs4/bin/euLog.exe -l DEBUG -x 700 -y -28 -w 600 -g 784 -r  tcp://$HOSTNAME:$RCPORT &
 echo '\033[1;36;48m PLEASE WAIT...\033[0m'
 sleep 2
 
-echo '        DataCollector @ daq'
-xterm -geom 78x20+10-30 -hold -e 
-~/sdvlp/eudaq-drs4/bin/TestDataCollector.exe -r tcp://$HOSTNAME:$RCPORT &
+echo '        DataCollector'
+~/eudaq-drs4/bin/TestDataCollector.exe -r tcp://$HOSTNAME:$RCPORT &
 echo '\033[1;36;48m PLEASE WAIT...\033[0m'
 sleep 2
 
-if [ "$TLU" = true ]; then
-    echo '        TLU @ PiM1'
-    xterm -geom 78x20+490-30 -hold -e 'ssh -tY pim1 scripts/StartTLU.sh' &
-    #echo '\033[1;36;48m PLEASE WAIT...\033[0m'
-    sleep 0.2
+echo '        TUProducer'
+xterm -geom $ws'x20+'$((1921+wg*4))'-0' -hold -T 'TU' -e '~/eudaq-drs4/bin/TUProducer.exe -r tcp://$HOSTNAME:$RCPORT'  &
+echo '\033[1;36;48m PLEASE WAIT...\033[0m'
+sleep 2
+
+
+#echo '        DataCollector @ rapidshare'
+#xterm -geom $ws'x20+1921-0' -hold -e 'ssh -tY rapidshare scripts/StartDataCollector.sh' &
+#echo '\033[1;36;48m PLEASE WAIT...\033[0m'
+#sleep 2
+
+
+if [ "$CLK" = true ]; then
+    echo '     ClockGen @ DAQ'
+    xterm -geom $ws'x20+'$((1921+wg*4))'-0' -hold -e '/home/testbeam/scripts/clockgen.sh'  &
+    echo '\033[1;36;48m PLEASE WAIT...\033[0m'
+    sleep 2
 fi
 
 if [ "$CMS" = true ]; then
-    echo '        CMSPixel analogue @ PiM1'
-    xterm -geom 78x20+970-30 -hold -e 'ssh -tY pim1 scripts/StartCMSPixel.sh' &
+    echo '        CMSPixel @ PiM1'
+    xterm -geom $ws'x20+'$((1921+wg*1))'-0' -hold -e 'ssh -tY pim1 scripts/StartCMSPixel.sh' &
     #echo '\033[1;36;48m PLEASE WAIT...\033[0m'
-    sleep 0.2
 fi
 
-if [ "$CMS" = true ]; then
-    echo '        CMSPixel digital @ PiM1'
-    xterm -geom 78x20+1450-30 -hold -e 'ssh -tY pim1 scripts/StartCMSPixelDig.sh' &
+
+if [ "$CMS_DIG" = true ]; then
+    sleep 2
+    echo '        CMSPixel digital@ PiM1'
+    xterm -geom $ws'x20+'$((1921+wg*2))'-0' -hold -e 'ssh -tY pim1 scripts/StartCMSPixelDig.sh' &
     #echo '\033[1;36;48m PLEASE WAIT...\033[0m'
-    sleep 0.2
+    sleep .5
 fi
 
 if [ "$DRS" = true ]; then
     echo '        DRS4 @ PiM1'
-    xterm -geom 78x20+10-30 -hold -e 'ssh -tY pim1 scripts/StartDRS4.sh' &
+    xterm -geom $ws'x20+'$((1921+wg*2))'-0' -hold -e 'ssh -tY pim1 scripts/StartDRS4.sh' &
     echo '\033[1;36;48m PLEASE WAIT...\033[0m'
 fi
 

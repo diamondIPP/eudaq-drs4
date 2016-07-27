@@ -1,7 +1,7 @@
 #include "eudaq/DataConverterPlugin.hh"
-#include "eudaq/TUEvent.hh"
 #include "eudaq/StandardEvent.hh"
 #include <string>
+#include <cstdint>
 
 namespace eudaq{
 
@@ -13,45 +13,91 @@ namespace eudaq{
             virtual unsigned GetTriggerID(const eudaq::Event & ev) const{return ev.GetEventNumber();}
             
             virtual void Initialize(const Event & bore, const Configuration & cnf){
-                std::cout << bore.GetTag("FirmwareID") << std::endl;
+                //std::cout << bore.GetTag("FirmwareID") << std::endl;
 
             }
+
             virtual bool GetStandardSubEvent(eudaq::StandardEvent &sev, const eudaq::Event &ev) const{
                 const RawDataEvent & in_raw = dynamic_cast<const RawDataEvent &>(ev);
-                
                 int valid = std::stoi(in_raw.GetTag("valid"));
+                int nblocks = in_raw.NumBlocks();
+
                 if(valid){
-                     int id = 0;
-                     RawDataEvent::data_t data = in_raw.GetBlock(id);
-                     int64_t time_stamp = static_cast<int64_t>(data[0]);
-                     id++;
+                    unsigned int id = 0;
+                    RawDataEvent::data_t data = in_raw.GetBlock(id);
 
-                     data = in_raw.GetBlock(id);
-                     unsigned int coincidence_count = static_cast<unsigned int>(data[0]);
-                     id++;
+                    uint64_t time_stamp = *((uint64_t*)&data[0]);
+                    id++;
+                  
+                    data = in_raw.GetBlock(id);
+                    uint32_t coincidence_count = *((uint32_t*)&data[0]);
+                    id++;
 
-                     data = in_raw.GetBlock(id);
-                     unsigned int coincidence_count_no_sin = static_cast<unsigned int>(data[0]);
-                     id++;
+                    data = in_raw.GetBlock(id);
+                    uint32_t coincidence_count_no_sin = *((uint32_t*)&data[0]);
+                    id++;
 
-                     data = in_raw.GetBlock(id);
-                     unsigned int prescaler_count = static_cast<unsigned int>(data[0]);
-                     id++;
+                    data = in_raw.GetBlock(id);
+                    uint32_t prescaler_count = *((uint32_t*)&data[0]);
+                    id++;
 
-                     data = in_raw.GetBlock(id);
-                     unsigned int handshake_count = static_cast<unsigned int>(data[0]);
-                     id++;
+                    data = in_raw.GetBlock(id);
+                    uint32_t prescaler_count_xor_pulser_count = *((uint32_t*)&data[0]);
+                    id++;
 
-                     data = in_raw.GetBlock(id);
-                     unsigned int cal_beam_current = static_cast<unsigned int>(data[0]);
-                     id++;
+                    data = in_raw.GetBlock(id);
+                    uint32_t accepted_prescaled_events = *((uint32_t*)&data[0]);
+                    id++;
 
-                     //add data to the StandardEvent:
-                     sev.SetTimestamp(time_stamp);
-                     StandardTUEvent tuev(EVENT_TYPE);
-                     tuev.SetValid(1);
+                    data = in_raw.GetBlock(id);
+                    uint32_t accepted_pulser_events = *((uint32_t*)&data[0]);
+                    id++;
+
+                    data = in_raw.GetBlock(id);
+                    uint32_t handshake_count = *((uint32_t*)&data[0]);
+                    id++;
+
+
+                    data = in_raw.GetBlock(id);
+                    uint32_t cal_beam_current = *((float*)&data[0]);
+                    id++;
+
+
+                    //#ifdef DEBUG
+                        std::cout << "************************************************************************************" << std::endl;
+                        std::cout << "nblocks: " << nblocks << std::endl;
+                        std::cout << "time stamp: " << time_stamp << std::endl;
+                        std::cout << "coincidence_count: " << coincidence_count << std::endl;
+                        std::cout << "coincidence_count_no_sin: " << coincidence_count_no_sin << std::endl;
+                        std::cout << "prescaler_count: " << prescaler_count << std::endl;
+                        std::cout << "prescaler_count_xor_pulser_count: " << prescaler_count_xor_pulser_count << std::endl;
+                        std::cout << "accepted_prescaled_events: " << accepted_prescaled_events << std::endl;
+                        std::cout << "accepted_pulser_events: " << accepted_pulser_events << std::endl;
+                        std::cout << "handshake_count: " << handshake_count << std::endl;
+                        std::cout << "cal_beam_current: " << cal_beam_current << std::endl;
+                        std::cout << "************************************************************************************" << std::endl;
+                    //#endif
+
+                    //add data to the StandardEvent:
+                    sev.SetTimestamp(time_stamp);
+                    StandardTUEvent tuev(EVENT_TYPE);
+                    tuev.SetValid(1);
+
+
+                    //get individual scaler values
+                    data = in_raw.GetBlock(id);
+                    int data_size = data.size(); 
+                    int n_samples = data_size/sizeof(uint64_t);
+                    for(int idx=0; idx<n_samples; idx++){
+                        uint64_t *sc_val = (uint64_t*)(&data[0]);
+                        //std::cout << "some output" << sc_val[idx] << std::endl;
+                        tuev.SetScalerValue(idx, sc_val[idx]);
+                     }
+
                      tuev.SetTimeStamp(time_stamp);
                      tuev.SetCoincCount(coincidence_count);
+                     tuev.SetPrescalerCountXorPulserCount(prescaler_count_xor_pulser_count);
+                     tuev.SetAcceptedPrescaledEvents(accepted_prescaled_events);
                      tuev.SetCoincCountNoSin(coincidence_count_no_sin);
                      tuev.SetPrescalerCount(prescaler_count);
                      tuev.SetHandshakeCount(handshake_count);
@@ -62,7 +108,6 @@ namespace eudaq{
                      tuev.SetValid(0);
                      sev.AddTUEvent(tuev);
                 }
-
                 return true;
             }
 

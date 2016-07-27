@@ -178,6 +178,7 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     }
     iptr = (unsigned int *) (start +TRIGGER_LOGIC_COINCIDENCE_CNT_NO_SIN);
     readout->coincidence_count_no_sin =  *iptr;
+    
     iptr = (unsigned int *) (start +TRIGGER_LOGIC_COINCIDENCE_CNT);
     readout->coincidence_count =  *iptr;
 //    printf("coincidence_count %d, \n",*iptr);
@@ -188,20 +189,33 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     readout->prescaler_count = *iptr;
 //    printf("prescaler_count %d, \n",*iptr);
 
-
     iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_XOR_PULSER_CNT);
     readout->prescaler_count_xor_pulser_count = *iptr;
+
+
+    //start altered by cdorfer
+    //iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_XOR_PULSER_AND_PRESCALER_DELAYED_CNT);
+    //readout->pulser_delay_and_xor_pulser_count = *iptr;
     iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_XOR_PULSER_AND_PRESCALER_DELAYED_CNT);
+    readout->prescaler_xor_pulser_and_prescaler_delayed_count = *iptr;
+
+    iptr = (unsigned int *) (start + TRIGGER_LOGIC_PULSER_DELAY_AND_XOR_PULSER_CNT);
     readout->pulser_delay_and_xor_pulser_count = *iptr;
+    //end altered
+
     iptr = (unsigned int *) (start +TRIGGER_LOGIC_HANDSHAKE_CNT);
     readout->handshake_count = *iptr;
+
     iptr = (unsigned int *) (start + TRIGGER_LOGIC_COINCIDENCE_CNT);
     readout->coincidence_count = *iptr;
+
     iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_CNT);
     readout->prescaler_count = *iptr;
+
     iptr = (unsigned int *) (start + TRIGGER_LOGIC_TIME_STAMP_HIGH);
     i = *iptr;
     readout->time_stamp = ((unsigned long)i)<<32;
+
     iptr = (unsigned int *) (start + TRIGGER_LOGIC_TIME_STAMP_LOW);
     i = *iptr;
     readout->time_stamp =  readout->time_stamp | (((unsigned long)i) & 0xFFFFFFFF);

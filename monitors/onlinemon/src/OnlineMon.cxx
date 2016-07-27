@@ -1,6 +1,21 @@
+//whoever wrote this file (especially the corresponding header file) should be beaten up
+//number of wasted hours = 6 (increase counter)
+
 #ifdef WIN32
 #include <Windows4Root.h>
 #endif
+
+#include "OnlineMon.hh"
+#include "HitmapCollection.hh"
+#include "MonitorPerformanceCollection.hh"
+#include "EUDAQMonitorCollection.hh"
+#include "WaveformCollection.hh"
+#include "HitmapHistos.hh"
+#include "CorrelationHistos.hh"
+#include "OnlineMonWindow.hh"
+#include "TUCollection.hh"
+
+
 
 // ROOT includes
 #include "TROOT.h"
@@ -38,71 +53,69 @@
 #include <stdio.h>
 #include <string.h>
 
+
 #ifdef WIN32
 #define EUDAQ_SLEEP(x) Sleep(x*1000)
 #else
 #define EUDAQ_SLEEP(x) sleep(x)
 #endif
 
+
 //ONLINE MONITOR Includes
-#include "OnlineMon.hh"
+
 
 using namespace std;
 
 RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & datafile, int /*x*/, int /*y*/, int /*w*/,
-			 int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
-			 const std::string & conffile)
-  : eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false), _fft_resets(0){
+       int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
+       const std::string & conffile):eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false){
 
-  if (_offline <= 0)
-  {
+  if (_offline <= 0){
     onlinemon = new OnlineMonWindow(gClient->GetRoot(),800,600);
-    if (onlinemon==NULL)
-    {
+    if (onlinemon==NULL){
       cerr<< "Error Allocationg OnlineMonWindow"<<endl;
-      exit(-1);
-    }
+      exit(-1);}
   }
 
   hmCollection = new HitmapCollection();
   corrCollection = new CorrelationCollection();
   wfCollection = new WaveformCollection();
-
-  MonitorPerformanceCollection *monCollection =new MonitorPerformanceCollection();
+  tuCollection = new TUCollection();
+  MonitorPerformanceCollection *monCollection = new MonitorPerformanceCollection();
   eudaqCollection = new EUDAQMonitorCollection();
 
-  cout << "--- Done ---"<<endl<<endl;
 
-	// put collections into the vector
-	_colls.push_back(hmCollection);
-	_colls.push_back(corrCollection);
-	_colls.push_back(wfCollection);
-	_colls.push_back(monCollection);
-	_colls.push_back(eudaqCollection);
-	// set the root Monitor
-	if (_offline <= 0) {
-		hmCollection->setRootMonitor(this);
-		corrCollection->setRootMonitor(this);
-		monCollection->setRootMonitor(this);
-		wfCollection->setRootMonitor(this);
-		eudaqCollection->setRootMonitor(this);
-		onlinemon->setCollections(_colls);
-	}
+  // put collections into the vector
+  _colls.push_back(hmCollection);
+  _colls.push_back(corrCollection);
+  _colls.push_back(wfCollection);
+  _colls.push_back(tuCollection);
+  _colls.push_back(monCollection);
+  _colls.push_back(eudaqCollection);
+  // set the root Monitor
 
-	//initialize with default configuration
-	mon_configdata.SetDefaults();
-	configfilename.assign(conffile);
-	cout << "Set OnlineMonitor Configfile: \""<<configfilename<<"\""<<endl;
+  if (_offline <= 0) {
+    hmCollection->setRootMonitor(this);
+    corrCollection->setRootMonitor(this);
+    monCollection->setRootMonitor(this);
+    wfCollection->setRootMonitor(this);
+    tuCollection->setRootMonitor(this);
+    eudaqCollection->setRootMonitor(this);
+    onlinemon->setCollections(_colls);
+  }
 
-  if (configfilename.length()>1)
-  {
+  //initialize with default configuration
+  mon_configdata.SetDefaults();
+  configfilename.assign(conffile);
+
+  cout << "Set OnlineMonitor Configfile: \""<<configfilename<<"\""<<endl;
+
+  if (configfilename.length()>1){
     mon_configdata.setConfigurationFileName(configfilename);
-    if (mon_configdata.ReadConfigurationFile()!=0)
-    {
+    if (mon_configdata.ReadConfigurationFile()!=0){
       // reset defaults, as Config file is bad
       cerr <<" As Config file can't be found, re-applying hardcoded defaults"<<endl;
-      mon_configdata.SetDefaults();
-    }
+      mon_configdata.SetDefaults();}
   }
 
 
@@ -152,15 +165,7 @@ RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & dat
 
   cout << "End of Constructor" << endl;
 
-  // construct the FFT stuff
-  int n_samples = 1024;
-  Int_t n_size = n_samples+1;
-  fft_own = TVirtualFFT::FFT(1, &n_size, "R2C P K");
-  if (!fft_own) {
-      cout << "something went wrong with the fft creation" << endl;
-      return;
-  }
-
+  
 
   //set a few defaults
   snapshotdir=mon_configdata.getSnapShotDir();
@@ -174,7 +179,6 @@ RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & dat
 }
 
 
-
 void RootMonitor::setReduce(const unsigned int red) {
   if (_offline <= 0) onlinemon->setReduce(red);
   for (unsigned int i = 0 ; i < _colls.size(); ++i)
@@ -183,25 +187,24 @@ void RootMonitor::setReduce(const unsigned int red) {
   }
 }
 
+
 void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
-#ifdef DEBUG
-  cout << "Called onEvent " << ev.GetEventNumber()<< endl;
-  cout << "Number of Planes " << ev.NumPlanes()<< endl;
-#endif
+  #ifdef DEBUG
+    cout << "Called onEvent " << ev.GetEventNumber()<< endl;
+    cout << "Number of Planes " << ev.NumPlanes()<< endl;
+  #endif
+
   _checkEOF.EventReceived();
 
-  if (ev.IsBORE())
-  {
-    std::cout << "This is a BORE" << std::endl;
-  }
-  if (ev.GetEventNumber()<10)
-      if (ev.GetRunNumber()!=0)
-          this->onlinemon->setRunNumber(ev.GetRunNumber());
-  if (ev.GetEventNumber() < this->start_event){
-      return;
-  }
+  if (ev.IsBORE()){
+    std::cout << "This is a BORE" << std::endl;}
 
-  //    cout << "Called onEvent " << ev.GetEventNumber()<< endl;
+  if (ev.GetEventNumber()<10 && ev.GetRunNumber()!=0)
+   this->onlinemon->setRunNumber(ev.GetRunNumber());
+  
+  if (ev.GetEventNumber() < this->start_event){
+      return;}
+
 
   //start timing to measure processing time
   my_event_processing_time.Start(true);
@@ -209,49 +212,37 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
   bool reduce=false; //do we use Event reduction
   bool skip_dodgy_event=false; // do we skip this event because we consider it dodgy
 
-  if (_offline > 0) //are we in offline mode , activated with -o
-  {
-    if (_offline <(int)  ev.GetEventNumber())
-    {
+  if (_offline > 0){
+    if (_offline < (int)ev.GetEventNumber()){
       TFile *f = new TFile(rootfilename.c_str(),"RECREATE");
-      if (f!=NULL)
-      {
-        for (unsigned int i = 0 ; i < _colls.size(); ++i)
-        {
-          _colls.at(i)->Write(f);
-        }
+      if (f!=NULL){
+        for (unsigned int i = 0 ; i < _colls.size(); ++i){
+          _colls.at(i)->Write(f);}
         f->Close();
-      }
-      else
-      {
-        cout<< "Can't open "<<rootfilename<<endl;
-      }
-      exit(0); // Kill the program
+      }else{
+        cout<< "Can't open "<<rootfilename<<endl;}
+      exit(0);
     }
     reduce = true;
 
-  }
-  else
-  {
-    reduce = (ev.GetEventNumber() % onlinemon->getReduce() == 0);
-  }
+  }else{
+    reduce = (ev.GetEventNumber() % onlinemon->getReduce() == 0);}
 
-
-
-
-  if (reduce)
-  {
+  if (reduce){
     unsigned int num = (unsigned int) ev.NumPlanes();
-	unsigned int nwf = (unsigned int) ev.NumWaveforms();
+    unsigned int nwf = (unsigned int) ev.NumWaveforms();
+    unsigned int ntu = (unsigned int) ev.NumTUEvents();
+    //std::cout << "Number of TU events: " << ntu << std::endl;
+
     // Initialize the geometry with the first event received:
-    if(!_planesInitialized) {
+    if(!_planesInitialized){
       myevent.setNPlanes(num);
       myevent.setNWaveforms(nwf);
-      std::cout << "Initialized geometry. Nplanes: " << num <<", NWaveforms: "<< nwf << std::endl;
-    }
-    else {
-      if (myevent.getNPlanes()!=num) {
 
+      std::cout << "Initialized geometry. Nplanes: " << num <<", NWaveforms: "<< nwf << std::endl;
+    
+    }else {
+      if (myevent.getNPlanes()!=num) {
         cout << "Plane Mismatch on " <<ev.GetEventNumber()<<endl;
         cout << "Current/Previous " <<num<<"/"<<myevent.getNPlanes()<<endl;
         skip_dodgy_event=true; //we may want to skip this FIXME
@@ -259,216 +250,186 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
         eudaq_warn_message << "Plane Mismatch in Event "<<ev.GetEventNumber() <<" "<<num<<"/"<<myevent.getNPlanes();
         EUDAQ_LOG(WARN,(eudaq_warn_message.str()).c_str());
 
-      }
-      else {
-        myevent.setNPlanes(num);
-      }
-      if (myevent.getNWaveforms()!=nwf)
-			{
-				cout << "Waveform Mismatch on " <<ev.GetEventNumber()<<endl;
-				cout << "Current/Previous " <<nwf<<"/"<<myevent.getNWaveforms()<<endl;
-				skip_dodgy_event=true; //we may want to skip this FIXME
-				ostringstream eudaq_warn_message;
-				eudaq_warn_message << "Waveform Mismatch in Event "<<ev.GetEventNumber() <<" "<<nwf<<"/"<<myevent.getNWaveforms()<< ", Updating NWaveforms";
-				EUDAQ_LOG(WARN,(eudaq_warn_message.str()).c_str());
-			}
-		else
-			{
-				myevent.setNWaveforms(nwf);
-			}
-    }
+      }else{
+        myevent.setNPlanes(num);}
 
-    SimpleStandardEvent simpEv;
-    if ((ev.GetEventNumber() == 1) && (_offline <0)) //only update Display, when GUI is active
-    {
-      onlinemon->UpdateStatus("Getting data..");
-    }
-    // store the processing time of the previous EVENT, as we can't track this during the  processing
+      if (myevent.getNWaveforms()!=nwf){
+        cout << "Waveform Mismatch on " <<ev.GetEventNumber()<<endl;
+        cout << "Current/Previous " <<nwf<<"/"<<myevent.getNWaveforms()<<endl;
+        skip_dodgy_event=true; //we may want to skip this FIXME
+        ostringstream eudaq_warn_message;
+        eudaq_warn_message << "Waveform Mismatch in Event "<<ev.GetEventNumber() <<" "<<nwf<<"/"<<myevent.getNWaveforms()<< ", Updating NWaveforms";
+        EUDAQ_LOG(WARN,(eudaq_warn_message.str()).c_str());
+      
+      }else{
+        //bruder problem:
+        myevent.setNWaveforms(nwf);}
+    }//end else
+
+
+    if ((ev.GetEventNumber() == 1) && (_offline <0)){ //only update Display, when GUI is active
+      onlinemon->UpdateStatus("Getting data..");}
+
+
+    SimpleStandardEvent simpEv;      
+    // store the processing time of the previous EVENT, as we can't track this during the processing
     simpEv.setMonitor_eventanalysistime(previous_event_analysis_time);
     simpEv.setMonitor_eventfilltime(previous_event_fill_time);
     simpEv.setMonitor_eventclusteringtime(previous_event_clustering_time);
     simpEv.setMonitor_eventcorrelationtime(previous_event_correlation_time);
-    // add some info into the simple event header
     simpEv.setEvent_number(ev.GetEventNumber());
     simpEv.setEvent_timestamp(ev.GetTimestamp());
+
     // Get Information wheater this event is an Pulser event
     // this is a hardcoded fix for setup at psi, think about a different option
     bool isPulserEvent = false;
     for (unsigned int i = 0; i < nwf;i++){
-    	const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
-    	if (waveform.GetChannelName() == "PULSER"){
-    		SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
-		simpWaveform.addData(&(*waveform.GetData())[0]);
-		simpWaveform.Calculate();
-		float integral = simpWaveform.getIntegral(700,900);
-		//if (TMath::Abs(integral) > 40) //mon_configdata.getPulserThreshold())
-		//	isPulserEvent = true;
-		float pulserMin = simpWaveform.getMinimum(700, 900);
-//            cout << "pulserMin: " << pulserMin << endl;
-            if( pulserMin < -100.)
-	      isPulserEvent = true;
-            // if (isPulserEvent)
-            //     cout << "PulserEvent, minimum is " << pulserMin << std::endl;
-    	}
-    }
-    if (_last_fft_min.size() <nwf)_last_fft_min.resize(nwf,-1);
-    if (_last_fft_max.size() <nwf)_last_fft_max.resize(nwf,-1);
-    if (_last_fft_mean.size() <nwf)_last_fft_mean.resize(nwf,-1);
-	for (unsigned int i = 0; i < nwf;i++){
-			const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
-#ifdef DEBUG
-			cout << "Waveform ID          " << waveform.ID()<<endl;
-			cout << "Waveform Size        " << sizeof(waveform) <<endl;
-//			cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
-			cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
-			cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
-			cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
-			cout << "Waveform Type        " << waveform.GetType() << endl;
-			cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
-#endif
-            // cout << "
-			std::string sensorname;
-			sensorname = waveform.GetType();
-			SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);//,plane.XSize(),plane.YSize(), plane.TLUEvent(),plane.PivotPixel(),&mon_configdata);
-			simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
-			simpWaveform.setNSamples(waveform.GetNSamples());
-			simpWaveform.addData(&(*waveform.GetData())[0]);
-            // perform the fft and put it into the simpleWF directly
-            simpWaveform.performFFT(fft_own);
-            int count = 0;
-            //cout<<"Bla"<<endl;
-            if (simpWaveform.getMeanFFT() == _last_fft_mean.at(i)){
-                //cout<<i<<"FFT Means disagree\t";
-                count+=1;
-            }
-            if (simpWaveform.getMaxFFT() == _last_fft_max.at(i)){
-                //cout<<i<<"FFT Max disagree\t";
-                count+=1;
-            }
-            if (simpWaveform.getMinFFT() == _last_fft_min.at(i)){
-                //cout<<i<<"FFT Min disagree\t";
-                count+=1;
-            }
-            if (count!=0){
-                if (fft_own){
-                    delete fft_own;
-                    _fft_resets+=1;
-                    cout<<ev.GetEventNumber()<<" Reinitialized FFT "<<_fft_resets<<endl;
-                    int n_samples = 1024;
-                    Int_t n_size = n_samples+1;
-                    fft_own = TVirtualFFT::FFT(1, &n_size, "R2C P K");
-                }
-                simpWaveform.performFFT(fft_own);
-            }
-            _last_fft_min[i] = simpWaveform.getMinFFT();
-            _last_fft_max[i] = simpWaveform.getMaxFFT();
-            _last_fft_mean[i] = simpWaveform.getMeanFFT();
+      const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
+      if (waveform.GetChannelName() == "PULSER"){
+        SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
+        simpWaveform.addData(&(*waveform.GetData())[0]);
+        simpWaveform.Calculate();
+        float integral = simpWaveform.getIntegral(700,900);
+        float pulserMin = simpWaveform.getMinimum(700, 900);
+        if( pulserMin < -100.)
+          isPulserEvent = true;
+        }
+    }//end for
 
-			simpWaveform.Calculate();
-			//simpWaveform.setTimestamp(ev.GetTimestamp());
-			simpWaveform.setTimestamp(waveform.GetTimeStamp());
-			simpWaveform.setEvent(ev.GetEventNumber());
-			simpWaveform.setChannelName(waveform.GetChannelName());
-			simpWaveform.setChannelNumber(waveform.GetChannelNumber());
-			simpWaveform.setPulserEvent(isPulserEvent);
-            //std::cout<<"isPulser Event: "<<isPulserEvent<<"/"<<simpWaveform.isPulserEvent()<<std::endl;
-//			waveform.GetNSamples();
-//			cout<<"simpWaveform no"<<i<<" name \""<<simpWaveform.getName()
-//					<<"\" ID: "<<simpWaveform.getID()
-//					<<" ch name \""<<simpWaveform.getChannelName()<<"\""<<endl;//<<"\" mon:"<<_mon<<endl;
-			simpEv.addWaveform(simpWaveform);
-		}
+    for (unsigned int i = 0; i < nwf;i++){
+      const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
 
 
-    if (skip_dodgy_event)
-    {
-      return; //don't process any further
+      #ifdef DEBUG
+       cout << "Waveform ID          " << waveform.ID()<<endl;
+       cout << "Waveform Size        " << sizeof(waveform) <<endl;
+       //cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
+       cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
+       cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
+       cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
+       cout << "Waveform Type        " << waveform.GetType() << endl;
+       cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
+      #endif
+
+      std::string sensorname;
+      sensorname = waveform.GetType();
+      SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);
+      simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
+      simpWaveform.setNSamples(waveform.GetNSamples());
+      simpWaveform.addData(&(*waveform.GetData())[0]);      
+      simpWaveform.Calculate();
+      simpWaveform.setTimestamp(waveform.GetTimeStamp());
+      simpWaveform.setEvent(ev.GetEventNumber());
+      simpWaveform.setChannelName(waveform.GetChannelName());
+      simpWaveform.setChannelNumber(waveform.GetChannelNumber());
+      simpWaveform.setPulserEvent(isPulserEvent);
+      simpEv.addWaveform(simpWaveform);
+
+
+
+/************************************** Start TU Event Stuff **************************************/
+//don't blame me for this code ..
+
+      unsigned int ntu = (unsigned int) ev.NumTUEvents();
+
+      if(ntu > 0){
+
+        if(ntu > 1){std::cout << "There is more than 1 TUEvent in the vector. Not good.." << std::endl;}
+        const eudaq::StandardTUEvent &tuev = ev.GetTUEvent(0);
+        SimpleStandardTUEvent simpleTUEvent(tuev.GetType());
+ 
+        //just transfer data to SimpleStandardTUEvent for processing:
+        bool valid = tuev.GetValid();
+        if(valid){
+          simpleTUEvent.SetValid(1);
+          simpleTUEvent.SetTimeStamp(tuev.GetTimeStamp());
+          simpleTUEvent.SetCoincCount(tuev.GetCoincCount());
+          simpleTUEvent.SetCoincCountNoSin(tuev.GetCoincCountNoSin());
+          simpleTUEvent.SetPrescalerCount(tuev.GetPrescalerCount());
+          simpleTUEvent.SetPrescalerCountXorPulserCount(tuev.GetPrescalerCountXorPulserCount());
+          simpleTUEvent.SetAcceptedPrescaledEvents(tuev.GetAcceptedPrescaledEvents());
+          simpleTUEvent.SetAcceptedPulserCount(tuev.GetAcceptedPulserCount());
+          simpleTUEvent.SetHandshakeCount(tuev.GetHandshakeCount());
+          simpleTUEvent.SetBeamCurrent(tuev.GetBeamCurrent());
+          for(int idx=0; idx<10; idx++){ //hard coded beause..., that's why
+            simpleTUEvent.SetScalerValue(idx, tuev.GetScalerValue(idx));
+          }
+        }else{
+          simpleTUEvent.SetValid(0);
+        }
+
+        simpEv.addTUEvent(simpleTUEvent);//send new
+
+      }//if ntu > 0
+
+/************************************** End TU Event Stuff **************************************/
+
+
     }
 
-    for (unsigned int i = 0; i < num;i++)
-    {
+
+    if (skip_dodgy_event){
+      return;} //don't process any further
+
+    for (unsigned int i = 0; i < num;i++){
       const eudaq::StandardPlane & plane = ev.GetPlane(i);
 
-#ifdef DEBUG
+      #ifdef DEBUG
       cout << "Plane ID         " << plane.ID()<<endl;
       cout << "Plane Size       " << sizeof(plane) <<endl;
       cout << "Plane Frames     " << plane.NumFrames() <<endl;
-      for (unsigned int nframes=0; nframes<plane.NumFrames(); nframes++)
-      {
-        cout << "Plane Pixels Hit Frame " << nframes <<" "<<plane.HitPixels(0) <<endl;
-      }
-      cout << i << " "<<plane.TLUEvent() << " "<< plane.PivotPixel() <<endl;
-#endif
+      for (unsigned int nframes=0; nframes<plane.NumFrames(); nframes++){
+        cout << "Plane Pixels Hit Frame " << nframes <<" "<<plane.HitPixels(0) <<endl;}
+        cout << i << " "<<plane.TLUEvent() << " "<< plane.PivotPixel() <<endl;
+      #endif
 
 
       string sensorname;
-      if ((plane.Type() == std::string("DEPFET")) &&(plane.Sensor().length()==0)) // FIXME ugly hack for the DEPFET
-      {
+      if ((plane.Type() == std::string("DEPFET")) &&(plane.Sensor().length()==0)){
         sensorname=plane.Type();
-      }
-      else
-      {
-        sensorname=plane.Sensor();
+      }else{
+        sensorname=plane.Sensor();}
 
-      }
-      // DEAL with Fortis ...
-      if (strcmp(plane.Sensor().c_str(), "FORTIS") == 0 )
-      {
-        continue;
-      }
+
+      if (strcmp(plane.Sensor().c_str(), "FORTIS") == 0 ){
+        continue;}
+
+
       SimpleStandardPlane simpPlane(sensorname,plane.ID(),plane.XSize(),plane.YSize(), plane.TLUEvent(),plane.PivotPixel(),&mon_configdata);
-
-      for (unsigned int lvl1 = 0; lvl1 < plane.NumFrames(); lvl1++)
-      {
+      for (unsigned int lvl1 = 0; lvl1 < plane.NumFrames(); lvl1++){
         // if (lvl1 > 2 && plane.HitPixels(lvl1) > 0) std::cout << "LVLHits: " << lvl1 << ": " << plane.HitPixels(lvl1) << std::endl;
-
-        for (unsigned int index = 0; index < plane.HitPixels(lvl1);index++)
-        {
+        for (unsigned int index = 0; index < plane.HitPixels(lvl1);index++){
           SimpleStandardHit hit((int)plane.GetX(index,lvl1),(int)plane.GetY(index,lvl1));
           hit.setTOT((int)plane.GetPixel(index,lvl1)); //this stores the analog information if existent, else it stores 1
           hit.setLVL1(lvl1);
-
-
-
-          if (simpPlane.getAnalogPixelType()) //this is analog pixel, apply threshold
-          {
-            if (simpPlane.is_DEPFET)
-            {
-              if ((hit.getTOT()< -20) || (hit.getTOT()>120))
-              {
-                continue;
-              }
+          if (simpPlane.getAnalogPixelType()){ //this is analog pixel, apply threshold
+            if (simpPlane.is_DEPFET){
+              if ((hit.getTOT()< -20) || (hit.getTOT()>120)){
+                continue;}
             }
-	    if (simpPlane.is_EXPLORER)
-	    {
-	      if (lvl1!=0) continue;
-	      hit.setTOT((int)plane.GetPixel(index));
-	      //if (hit.getTOT() < -20 || hit.getTOT() > 20) {
-		//std::cout << hit.getTOT() << std::endl;
-	      //}
-	      if (hit.getTOT() < 20)
-	      {
-		continue;
-	      }
-	    }
+            if (simpPlane.is_EXPLORER){
+              if (lvl1!=0) continue;
+              hit.setTOT((int)plane.GetPixel(index));
+              if (hit.getTOT() < 20){
+                continue;}
+            }
             simpPlane.addHit(hit);
           }
-          else //purely digital pixel
-          {
-            simpPlane.addHit(hit);
-          }
+          else{ //purely digital pixel
+            simpPlane.addHit(hit);}
 
-        }
-      }
+        }//inner for end
+      }//outer for end
+
       if (simpPlane.is_CMSPIXEL){
-          simpPlane.setTriggerPhase(plane.GetTrigPhase());
-      }
+          simpPlane.setTriggerPhase(plane.GetTrigPhase());}
       simpEv.addPlane(simpPlane);
-#ifdef DEBUG
-      cout << "Type: " << plane.Type() << endl;
-      cout << "StandardPlane: "<< plane.Sensor() <<  " " << plane.ID() << " " << plane.XSize() << " " << plane.YSize() << endl;
-      cout << "PlaneAddress: " << &plane << endl;
-#endif
+
+      #ifdef DEBUG
+        cout << "Type: " << plane.Type() << endl;
+        cout << "StandardPlane: "<< plane.Sensor() <<  " " << plane.ID() << " " << plane.XSize() << " " << plane.YSize() << endl;
+        cout << "PlaneAddress: " << &plane << endl;
+      #endif
     }
 
     my_event_inner_operations_time.Start(true);
@@ -476,91 +437,82 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
     my_event_inner_operations_time.Stop();
     previous_event_clustering_time = my_event_inner_operations_time.RealTime();
 
-    if(!_planesInitialized)
-    {
-#ifdef DEBUG
+    if(!_planesInitialized){
+      #ifdef DEBUG
       cout << "Waiting for booking of Histograms..." << endl;
-#endif
+      #endif
       EUDAQ_SLEEP(1);
-#ifdef DEBUG
+      #ifdef DEBUG
       cout << "...long enough"<< endl;
-#endif
-      _planesInitialized = true;
-    }
+      #endif
+      _planesInitialized = true;}
+
 
     //stop the Stop watch
     my_event_processing_time.Stop();
-#ifdef DEBUG
-    cout << "Analysing"<<   " "<< my_event_processing_time.RealTime()<<endl;
-#endif
+
+    #ifdef DEBUG
+      cout << "Analysing"<<   " "<< my_event_processing_time.RealTime()<<endl;
+    #endif
     previous_event_analysis_time=my_event_processing_time.RealTime();
+
+
     //Filling
     my_event_processing_time.Start(true); //start the stopwatch again
-    for (unsigned int i = 0 ; i < _colls.size(); ++i)
-    {
-      if (_colls.at(i) == corrCollection)
-      {
+    for (unsigned int i = 0 ; i < _colls.size(); ++i){
+      if (_colls.at(i) == corrCollection){
         my_event_inner_operations_time.Start(true);
-        if (getUseTrack_corr() == true)
-        {
+        if (getUseTrack_corr() == true){
           tracksPerEvent = corrCollection->FillWithTracks(simpEv);
           if (eudaqCollection->getEUDAQMonitorHistos() != NULL) //workaround because Correlation Collection is before EUDAQ Mon collection
             eudaqCollection->getEUDAQMonitorHistos()->Fill(simpEv.getEvent_number(), tracksPerEvent);
-
         }
         else
           _colls.at(i)->Fill(simpEv);
-        my_event_inner_operations_time.Stop();
-        previous_event_correlation_time = my_event_inner_operations_time.RealTime();
+          my_event_inner_operations_time.Stop();
+          previous_event_correlation_time = my_event_inner_operations_time.RealTime();
       }
       else
         _colls.at(i)->Fill(simpEv);
 
       // CollType is used to check which kind of Collection we are having
-      if (_colls.at(i)->getCollectionType()==HITMAP_COLLECTION_TYPE) // Calculate is only implemented for HitMapCollections
-      {
+      if (_colls.at(i)->getCollectionType()==HITMAP_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
+        _colls.at(i)->Calculate(ev.GetEventNumber());}
+
+      if (_colls.at(i)->getCollectionType()==WAVEFORM_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
         _colls.at(i)->Calculate(ev.GetEventNumber());
       }
+    }//end for
 
-			if (_colls.at(i)->getCollectionType()==WAVEFORM_COLLECTION_TYPE) // Calculate is only implemented for HitMapCollections
-			{
-				_colls.at(i)->Calculate(ev.GetEventNumber());
-			}
-    }
-
-    if (_offline <= 0)
-    {
+    if (_offline <= 0){
       onlinemon->setEventNumber(ev.GetEventNumber());
-      onlinemon->increaseAnalysedEventsCounter();
-    }
+      onlinemon->increaseAnalysedEventsCounter();}
   } // end of reduce if
+
+
+
   my_event_processing_time.Stop();
-#ifdef DEBUG
-  cout << "Filling " << " "<< my_event_processing_time.RealTime()<<endl;
-  cout << "----------------------------------------"  <<endl<<endl;
-#endif
+  #ifdef DEBUG
+    cout << "Filling " << " "<< my_event_processing_time.RealTime()<<endl;
+    cout << "----------------------------------------"  <<endl<<endl;
+  #endif
   previous_event_fill_time=my_event_processing_time.RealTime();
 
-  if (ev.IsBORE())
-  {
+  if (ev.IsBORE()){
     std::cout << "This is a BORE" << std::endl;
-//ev.GetRunNumber();
     if (ev.GetRunNumber() != 0)
-        this->onlinemon->setRunNumber(ev.GetRunNumber());
+        this->onlinemon->setRunNumber(ev.GetRunNumber());}
+}//end of the whole bloody method
 
-  }
 
 
-}
-
-void RootMonitor::autoReset(const bool reset) {
+void RootMonitor::autoReset(const bool reset){
   //_autoReset = reset;
   if (_offline <= 0) onlinemon->setAutoReset(reset);
 
 }
 
-void RootMonitor::OnStopRun()
-{
+void RootMonitor::OnStopRun(){
   if (_writeRoot)
   {
     TFile *f = new TFile(rootfilename.c_str(),"RECREATE");
@@ -573,13 +525,12 @@ void RootMonitor::OnStopRun()
   onlinemon->UpdateStatus("Run stopped");
 }
 
-void RootMonitor::OnStartRun(unsigned param) {
 
-  if (onlinemon->getAutoReset())
-  {
+void RootMonitor::OnStartRun(unsigned param){
+
+  if (onlinemon->getAutoReset()){
     onlinemon->UpdateStatus("Resetting..");
-    for (unsigned int i = 0 ; i < _colls.size(); ++i)
-    {
+    for (unsigned int i = 0 ; i < _colls.size(); ++i){
       if (_colls.at(i) != NULL)
         _colls.at(i)->Reset();
     }
@@ -593,7 +544,7 @@ void RootMonitor::OnStartRun(unsigned param) {
   rootfilename = std::string(out);
   runnumber = param;
 
-  if (_offline <= 0) {
+  if (_offline <= 0){
     onlinemon->setRunNumber(runnumber);
     onlinemon->setRootFileName(rootfilename);
   }
@@ -604,26 +555,23 @@ void RootMonitor::OnStartRun(unsigned param) {
   SetStatus(eudaq::Status::LVL_OK);
 }
 
-void RootMonitor::setUpdate(const unsigned int up) {
+
+void RootMonitor::setUpdate(const unsigned int up){
   if (_offline <= 0) onlinemon->setUpdate(up);
 }
 
 
 //sets the location for the snapshots
-void RootMonitor::SetSnapShotDir(string s)
-{
+void RootMonitor::SetSnapShotDir(string s){
   snapshotdir=s;
 }
 
-
 //gets the location for the snapshots
-string RootMonitor::GetSnapShotDir()
-{
+string RootMonitor::GetSnapShotDir(){
   return snapshotdir;
 }
 
 int main(int argc, const char ** argv) {
-
   eudaq::OptionParser op("EUDAQ Root Monitor", "1.0", "A Monitor using root for gui and graphics");
   eudaq::Option<std::string> rctrl(op, "r", "runcontrol", "tcp://localhost:44000", "address",
       "The address of the RunControl application");
@@ -655,36 +603,27 @@ int main(int argc, const char ** argv) {
     op.Parse(argv);
     EUDAQ_LOG_LEVEL(level.Value());
     if (file.IsSet() && !rctrl.IsSet()) rctrl.SetValue("null://");
-    if (gROOT!=NULL)
-    {
-    //  gROOT->Reset();
-     // gROOT->SetStyle("Plain"); //$$ change
-    }
-    else
-    {
+
+    if (gROOT==NULL){
       cout<<"Global gROOT Object not found" <<endl;
-      exit(-1);
-    }
-    if (gStyle!=NULL)
-    {
+      exit(-1);}
+
+    if (gStyle!=NULL){
       gStyle->SetPalette(1);
       gStyle->SetNumberContours(99);
-      // gStyle->SetOptStat(111111);
       gStyle->SetOptStat(1101);
       gStyle->SetStatH(0.07);
       gStyle->SetStatW(0.12);
       gStyle->SetStatX(0.20);
       gStyle->SetStatY(1.00);
-      gStyle->SetPadRightMargin(0.12);
-    }
-    else
-    {
+      gStyle->SetPadRightMargin(0.12);}
+
+    else{
       cout<<"Global gStyle Object not found" <<endl;
-      exit(-1);
-    }
+      exit(-1);}
+
 
     // start the GUI
-    //    cout<< "DEBUG: LIMIT VALUE " << (unsigned)limit.Value();
     TApplication theApp("App", &argc, const_cast<char**>(argv),0,0);
     RootMonitor mon(rctrl.Value(), file.Value(), x.Value(), y.Value(),
         w.Value(), h.Value(), argc, offline.Value(), limit.Value(),
@@ -701,18 +640,17 @@ int main(int argc, const char ** argv) {
     cout <<"Monitor Settings:" <<endl;
     cout <<"Update Interval :" <<update.Value() <<" ms" <<endl;
     cout <<"Reduce Events   :" <<reduce.Value() <<endl;
-    if (offline.Value() >0)
-    {
-      //cout <<"Offline Mode   :" <<"active" <<endl;
-      //cout <<"Events         :" <<offline.Value()<<endl;
+    
+    if (offline.Value() > 0){
       cout <<"Offline Mode not supported"<<endl;
-      exit(-1);
-    }
+      exit(-1);}
+
 
     theApp.Run(); //execute
+
   } catch (...) {
-    return op.HandleMainException();
-  }
+    return op.HandleMainException();}
+
   return 0;
 }
 

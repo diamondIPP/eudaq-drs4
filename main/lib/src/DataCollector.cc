@@ -20,7 +20,7 @@ namespace eudaq {
   } // anonymous namespace
 
   DataCollector::DataCollector(const std::string & name, const std::string & runcontrol, const std::string & listenaddress, const std::string & runnumberfile) :
-    CommandReceiver("DataCollector", name, runcontrol, false), m_runnumberfile(runnumberfile), m_done(false), m_listening(true), m_dataserver(TransportFactory::CreateServer(listenaddress)), m_thread(), m_numwaiting(0), m_itu((size_t) -1), m_runnumber(
+    CommandReceiver("DataCollector", name, runcontrol, false), m_runnumberfile(runnumberfile), m_done(false), m_listening(true), m_dataserver(TransportFactory::CreateServer(listenaddress)), m_thread(), m_numwaiting(0), m_itlu((size_t) -1), m_runnumber(
      ReadFromFile(runnumberfile, 0U)), m_eventnumber(0), m_runstart(0) {
       m_dataserver->SetCallback(TransportCallback(this, &DataCollector::DataHandler));
       EUDAQ_DEBUG("Instantiated datacollector with name: " + name);
@@ -50,17 +50,17 @@ namespace eudaq {
     info.id = std::shared_ptr<ConnectionInfo>(id.Clone());
     m_buffer.push_back(info);
     if (id.GetType() == "Producer" && id.GetName() == "TU") {
-      m_itu = m_buffer.size() - 1;
+      m_itlu = m_buffer.size() - 1;
     }
   }
 
   void DataCollector::OnDisconnect(const ConnectionInfo & id) {
     EUDAQ_INFO("Disconnected: " + to_string(id));
     size_t i = GetInfo(id);
-    if (i == m_itu) {
-      m_itu = (size_t) -1;
-    } else if (i < m_itu) {
-      --m_itu;
+    if (i == m_itlu) {
+      m_itlu = (size_t) -1;
+    } else if (i < m_itlu) {
+      --m_itlu;
     }
     m_buffer.erase(m_buffer.begin() + i);
     // if (during run) THROW
@@ -152,8 +152,8 @@ namespace eudaq {
       }
       unsigned n_run = m_runnumber, n_ev = m_eventnumber;
       uint64_t n_ts = (uint64_t) -1;
-      if (m_itu != (size_t) -1) {
-        TUEvent * ev = static_cast<TUEvent*>(m_buffer[m_itu].events.front().get());
+      if (m_itlu != (size_t) -1) {
+        TLUEvent * ev = static_cast<TLUEvent*>(m_buffer[m_itlu].events.front().get());
         n_run = ev->GetRunNumber();
         n_ev = ev->GetEventNumber();
         n_ts = ev->GetTimestamp();
@@ -166,7 +166,7 @@ namespace eudaq {
         std::cout << "buffere event nr: " << m_buffer[i].events.front()->GetEventNumber() << " m_ev nr: " << m_eventnumber << std::endl;
         if ((m_buffer[i].events.front()->GetEventNumber() != m_eventnumber) && (m_buffer[i].events.front()->GetEventNumber() != m_eventnumber - 1)) {
           if (ev.GetEventNumber() % 1000 == 0) {
-            // dhaas: added if-statement to filter out TU event number 0, in case of bad clocking out
+            // dhaas: added if-statement to filter out TLU event number 0, in case of bad clocking out
             if (m_buffer[i].events.front()->GetEventNumber() != 0)
               EUDAQ_WARN("Event number mismatch > 2 in event " + to_string(ev.GetEventNumber()) + " " + to_string(m_buffer[i].events.front()->GetEventNumber()) + " " + to_string(m_eventnumber));
             if (m_buffer[i].events.front()->GetEventNumber() == 0)

@@ -28,7 +28,11 @@ struct RET_DATA{
     unsigned int prescaler_count; 
     //! 28 bit count of prescaler xor pulser
     unsigned int prescaler_count_xor_pulser_count;
-   
+
+    //added by cdorfer
+    unsigned int prescaler_xor_pulser_and_prescaler_delayed_count;
+    //end added
+    
     unsigned int pulser_delay_and_xor_pulser_count;
     //! raw 28 bit counter output form the handshake unit
     unsigned int handshake_count;

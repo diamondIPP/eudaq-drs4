@@ -23,6 +23,7 @@ namespace eudaq {
     ds.read(m_flags);
     ds.read(m_runnumber);
     ds.read(m_eventnumber);
+//    std::cout << "m_flags: " << m_flags << ", m_runnumber: " << m_runnumber << ", m_eventnumber: " << m_eventnumber << std::endl;
     std::string additional_timeStamps;
     if ((m_flags& Event::FLAG_EUDAQ2) != 0)
     {
@@ -48,7 +49,9 @@ namespace eudaq {
     {
       SetTag("TimeStamps", additional_timeStamps);
     }
+//    std::cout << "This is the timestamp: " << m_timestamp << std::endl;
   }
+  
 
   void Event::Serialize(Serializer & ser) const {
     //std::cout << "Serialize id = " << std::hex << get_id() << std::endl;

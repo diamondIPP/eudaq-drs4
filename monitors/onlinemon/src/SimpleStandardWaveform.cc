@@ -70,39 +70,6 @@ float SimpleStandardWaveform::getAbsMaximum(float min, float max) const {
     return maxVal;
 }
 
-void SimpleStandardWaveform::performFFT(TVirtualFFT *fft_own) {
-    float mean_fft=0; float max_fft=0; float min_fft=0;
-
-    Double_t *re_full = new Double_t[1024];
-    Double_t *im_full = new Double_t[1024];
-    Double_t *in = new Double_t[1024];
-
-    // fill the values into the input
-    for (int j = 0; j < 1024; ++j) {
-        in[j] = _data[j];
-    }
-    //set points and transform
-    fft_own->SetPoints(in);
-    fft_own->Transform();
-    //get the transformed values
-    fft_own->GetPointsComplex(re_full,im_full);
-
-    float abs_fft;
-    std::vector<float> fft_vals;
-    for (int j = 0; j < 513; ++j) {
-        abs_fft = TMath::Sqrt(re_full[j]*re_full[j] + im_full[j]*im_full[j]);
-        fft_vals.push_back( abs_fft );
-    }
-    _mean_fft = std::accumulate (fft_vals.begin(), fft_vals.end(), 0.0)  / fft_vals.size();
-    _max_fft = *std::max_element(fft_vals.begin(), fft_vals.end());
-    _min_fft = *std::min_element(fft_vals.begin(), fft_vals.end());
-
-    delete re_full;
-    delete im_full;
-    delete in;
-
-}
-
 
 float SimpleStandardWaveform::getMaximum(float min, float max) const {
     int imax = min;

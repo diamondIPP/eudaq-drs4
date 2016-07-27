@@ -27,6 +27,13 @@ void SimpleStandardEvent::addWaveform(SimpleStandardWaveform & wf){
 	_waveforms.push_back(wf);
 }
 
+
+void SimpleStandardEvent::addTUEvent(SimpleStandardTUEvent & tuev){
+	//FIXME?
+	_tuev.push_back(tuev);
+}
+
+
 void SimpleStandardEvent::addPlane(SimpleStandardPlane &plane) {
 	// Checks if plane with same name and id is registered already
 	bool found = false;

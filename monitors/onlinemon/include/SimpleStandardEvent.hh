@@ -23,6 +23,7 @@ typedef unsigned long long uint64_t
 
 #include "include/SimpleStandardPlane.hh"
 #include "include/SimpleStandardWaveform.hh"
+#include "include/SimpleStandardTUEvent.hh"
 
 inline bool operator==(SimpleStandardPlane const &a, SimpleStandardPlane const &b) {
   return (a.getName()==b.getName() && a.getID() == b.getID());
@@ -40,21 +41,27 @@ inline bool operator<(SimpleStandardWaveform const &a, SimpleStandardWaveform co
   return a.getName()<b.getName() || ( a.getName()==b.getName() && a.getID() < b.getID());
 }
 
+
 class SimpleStandardEvent {
   protected:
     //int _nr;
     std::vector<SimpleStandardPlane> _planes;
     std::vector<SimpleStandardWaveform> _waveforms;
+    std::vector<SimpleStandardTUEvent> _tuev;
 
   public:
     SimpleStandardEvent();
 
     void addPlane(SimpleStandardPlane &plane);
     void addWaveform(SimpleStandardWaveform &wf);
+    void addTUEvent(SimpleStandardTUEvent &tuev);
     SimpleStandardPlane getPlane (const int i) const {return _planes.at(i);}
     SimpleStandardWaveform getWaveform (const int i) const {return _waveforms.at(i);}
+    SimpleStandardTUEvent getTUEvent(const int i) const {return _tuev.at(i);}
     int getNPlanes() const {return _planes.size(); }
     int getNWaveforms() const {return _waveforms.size();}
+    int getNTUEvent() const {return _tuev.size();}
+
     void doClustering();
     double getMonitor_eventanalysistime() const;
     double getMonitor_eventfilltime() const;

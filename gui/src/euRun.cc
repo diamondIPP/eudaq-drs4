@@ -197,7 +197,6 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
   if (!registered) {
     qRegisterMetaType<QModelIndex>("QModelIndex");
     registered = true;}
-  
 
   if (id.GetType() == "DataCollector") {
     m_filebytes = from_string(status->GetTag("FILEBYTES"), 0LL);
@@ -207,7 +206,9 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
 
   else if (id.GetType() == "Producer" && id.GetName() == "TU"){
     EmitStatus("TUSTAT", status->GetTag("STATUS"));
-    EmitStatus("BEAMCURR", status->GetTag("BEAM_CURR") + " mA");
+    std::string beam_current = status->GetTag("BEAM_CURR");
+    beam_current.resize (5,'0');
+    EmitStatus("BEAMCURR", beam_current + " mA");
     EmitStatus("COINCCOUNT", status->GetTag("COINC_COUNT"));
 
     //update Scaler Status
