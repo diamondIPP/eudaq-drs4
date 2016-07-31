@@ -342,9 +342,12 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 
     f_event_number = sev.GetEventNumber();
-    if (sev.GetTUEvent(0).GetValid())
-        f_time = sev.GetTimestamp();
-//        f_time = sev.GetTimestamp() / float(384066.);
+    if (sev.hasTUEvent()){
+        if (sev.GetTUEvent(0).GetValid())
+            f_time = sev.GetTimestamp();
+    }
+    else
+        f_time = sev.GetTimestamp() / float(384066.);
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
