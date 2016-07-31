@@ -526,7 +526,7 @@ size_t StandardEvent::NumTUEvents() const{
 	return m_tuevent.size();
 }
 
-StandardTUEvent & StandardEvent::GetTUEvent(size_t i){ 
+StandardTUEvent & StandardEvent::GetTUEvent(size_t i){
 	return m_tuevent[i];
 }
 
@@ -538,9 +538,12 @@ StandardTUEvent & StandardEvent::AddTUEvent(const StandardTUEvent & tuev){
 	m_tuevent.push_back(tuev);
 	return m_tuevent.back();
 }
+
 //end added CD
 
-
+bool StandardEvent::hasTUEvent() {
+	return m_tuevent.size() !=0;
+}
 
 size_t StandardEvent::NumWaveforms() const {//ok
 	return m_waveforms.size();

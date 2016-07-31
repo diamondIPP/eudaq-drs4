@@ -304,6 +304,7 @@ public:
 	size_t GetNWaveforms() const {return NumWaveforms();}
 	const StandardWaveform & GetWaveform(size_t i) const;
 	StandardWaveform & GetWaveform(size_t i);
+	bool hasTUEvent();
 
 
 private:
