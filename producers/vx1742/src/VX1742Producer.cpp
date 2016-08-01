@@ -12,7 +12,6 @@
 //software trigger
 //trigger on signal
 //calibration
-//readout TRn
 //send info in bore event!
 //give channels names!
 
@@ -43,10 +42,23 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
   m_run(0), 
   m_running(false){
 
+  //initialize correction arrays
+  for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++)
+    std::fill_n(time_corr[grp], vmec::VX1742_MAX_SAMPLES, 0);
+
+  for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+    std::fill_n(index_corr[ch], vmec::VX1742_MAX_SAMPLES, 0);
+    std::fill_n(cell_corr[ch], vmec::VX1742_MAX_SAMPLES, 0);
+  }
+
+  for(uint32_t ch=0; ch<vmec::VX1742_MAX_CHANNEL_SIZE; ch++)
+    std::fill_n(wf_storage[ch], vmec::VX1742_MAX_SAMPLES,0);
+
   try{
     caen = new VX1742Interface();
     caen->openVME();
   }
+
   catch (...){
     EUDAQ_ERROR(std::string("Error in the VX1742Producer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the VX1742Producer class constructor.");}
@@ -56,7 +68,7 @@ VX1742Producer::VX1742Producer(const std::string & name, const std::string & run
 
 
 void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
-  std::cout << "###Configure VX1742 board with: " << conf.Name() << "..";
+  std::cout << "###Configure VX1742 board with: " << conf.Name() << "..\n";
 
   m_config = conf;
   
@@ -71,6 +83,19 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     custom_size = conf.Get("custom_size", 0);
     m_group_mask = (groups[3]<<3) + (groups[2]<<2) + (groups[1]<<1) + groups[0];
 
+    cell_offset = conf.Get("cell_offset", 0);
+    index_sampling = conf.Get("index_sampling", 0);
+    spike_correction = conf.Get("spike_correction", 0);
+
+    trn_enable[0] = conf.Get("TR01_enable", 0);
+    trn_enable[1] = conf.Get("TR23_enable", 0);
+    trn_threshold[0] = conf.Get("TR01_threshold", 0x51C6);
+    trn_threshold[1] = conf.Get("TR23_threshold", 0x51C6);
+    trn_offset[0] = conf.Get("TR01_offset", 0x8000);
+    trn_offset[1] = conf.Get("TR23_offset", 0x8000);
+    trn_polarity = conf.Get("TRn_polarity", 1);
+    trn_readout = conf.Get("TRn_readout", 1);
+
 
     if(caen->isRunning())
       caen->stopAcquisition();
@@ -84,20 +109,34 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     caen->toggleGroups(groups);
     caen->setCustomSize(custom_size);
     caen->sendBusyToTRGout();
-    caen->setTriggerCount(); //count all, not just accepted triggers
+    caen->setTriggerCount(); //count just accepted triggers
     caen->disableIndividualTriggers(); //count one event only once, not per group
+    usleep(10000);
+    caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity, trn_readout);
 
+    caen->initializeDRS4CorrectionTables(sampling_frequency);
+    usleep(400000);
 
-    //individual group configuration here
+    //copy currently used correction tables
+    for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
+      //time correction values
+      for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++)
+        time_corr[grp][idx] = caen->getTimingCorrectionValues(grp, sampling_frequency, idx);
+      
+      //load cell and index correction
+      uint32_t ch_grp = vmec::VX1742_CHANNELS_PER_GROUP + trn_readout;
+      for(uint32_t ch=0; ch<ch_grp; ch++){
+        for(uint32_t idx=0; idx<vmec::VX1742_MAX_SAMPLES; idx++){
+          cell_corr[ch_grp*grp+ch][idx] = caen->getCellCorrectionValues(grp, sampling_frequency, ch, idx);
+          index_corr[ch_grp*grp+ch][idx] = caen->getNSamplesCorrectionValues(grp, sampling_frequency, ch, idx);
+        }
+      } 
+    }
 
-    //continue here...
-    //#) DC offset
-    //#) Calibration?
-
-  std::cout << " [OK]" << std::endl;
-
-  
-  SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() +")");
+    //caen->printDRS4CorrectionTables();
+    
+    std::cout << "###Configuration [OK] - Ready to run!" << std::endl;
+    SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() +")");
 
   }catch ( ... ){
   EUDAQ_ERROR(std::string("Error in the VX1742 configuration procedure."));
@@ -116,24 +155,27 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
     //create BORE
     std::cout<<"VX1742: Create " << m_event_type << "BORE EVENT for run " << m_run <<  " @time: " << m_timestamp << "." << std::endl;
     eudaq::RawDataEvent bore(eudaq::RawDataEvent::BORE(m_event_type, m_run));
-    bore.SetTag("timestamp", std::to_string(m_timestamp));
-    bore.SetTag("serial_number", caen->getSerialNumber());
-    bore.SetTag("firmware_version", caen->getFirmwareVersion());
+    bore.SetTag("timestamp", m_timestamp); //unit64_t
+    bore.SetTag("serial_number", caen->getSerialNumber()); //std::string
+    bore.SetTag("firmware_version", caen->getFirmwareVersion()); //std::string
+    uint32_t trn_readout = caen->TRnReadoutEnabled();
     uint32_t n_channels = caen->getActiveChannels();
-    bore.SetTag("active_channels", std::to_string(n_channels));
+    bore.SetTag("active_channels", n_channels);
     bore.SetTag("device_name", "VX1742");
+    bore.SetTag("group_mask", m_group_mask); //uint32_t
 
-    uint32_t s_freq = caen->getSamplingFrequency();
-    if(s_freq==0) bore.SetTag("sampling_speed", std::to_string(5));
-    if(s_freq==1) bore.SetTag("sampling_speed", std::to_string(2.5));
-    if(s_freq==2) bore.SetTag("sampling_speed", std::to_string(1));
-    if(s_freq==3) bore.SetTag("sampling_speed", std::to_string(0));
+    //fixme: set tags for time, index and sample correction
+
+    if(sampling_frequency==0) bore.SetTag("sampling_speed", 5000);
+    if(sampling_frequency==1) bore.SetTag("sampling_speed", 2500);
+    if(sampling_frequency==2) bore.SetTag("sampling_speed", 1000);
+    if(sampling_frequency==3) bore.SetTag("sampling_speed", 750);
 
     uint32_t samples_c = caen->getCustomSize();
-    if(samples_c==0) bore.SetTag("samples_per_channel", std::to_string(1024));
-    if(samples_c==1) bore.SetTag("samples_per_channel", std::to_string(520));
-    if(samples_c==2) bore.SetTag("samples_per_channel", std::to_string(256));
-    if(samples_c==3) bore.SetTag("samples_per_channel", std::to_string(136));
+    if(samples_c==0) bore.SetTag("samples_in_channel", 1024);
+    if(samples_c==1) bore.SetTag("samples_in_channel", 520);
+    if(samples_c==2) bore.SetTag("samples_in_channel", 256);
+    if(samples_c==3) bore.SetTag("samples_in_channel", 136);
 
     //fixme - offset for groups other than 0
     for(int ch=0; ch < n_channels; ch++){
@@ -142,11 +184,22 @@ void VX1742Producer::OnStartRun(unsigned runnumber){
       bore.SetTag(conf_ch, ch_name);
     }
 
-    bore.SetTag("voltage_range", std::to_string(1));
+    uint32_t block_no = 0;
+    //sent calibration data
+    for(uint32_t grp=0; grp<vmec::VX1742_GROUPS; grp++){
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&time_corr[grp]), 1024*sizeof(float));
+      block_no++;
+    }
+    for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&cell_corr[ch]), 1024*sizeof(int16_t));
+      block_no++;
+    }
+    for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+      bore.AddBlock(block_no, reinterpret_cast<const char*>(&index_corr[ch]), 1024*sizeof(int8_t));
+      block_no++;
+    }
 
-
-    //time_calibration
-    
+    usleep(2000000);
 
     caen->clearBuffers();
     caen->startAcquisition();
@@ -174,22 +227,18 @@ void VX1742Producer::ReadoutLoop() {
   while(m_running){
     try{
       //std::cout << "Events stored: " << caen->getEventsStored() << ", size of next event: " << caen->getNextEventSize() << std::endl;
-      //usleep(500);
+      //usleep(500000);
       if(caen->eventReady()){
         VX1742Event vxEvent;
         caen->BlockTransferEventD64(&vxEvent);
 
         if(vxEvent.isValid()){
           unsigned int event_counter = vxEvent.EventCounter();
-          uint32_t trigger_time_tag = vxEvent.TriggerTimeTag();
+          uint32_t event_trigger_time_tag = vxEvent.TriggerTimeTag();
           uint32_t n_groups = vxEvent.Groups();
           uint32_t group_mask = vxEvent.GroupMask();
           uint32_t event_size = vxEvent.EventSize();
 
-          //fix first two redneck events
-          if(n_groups==0){
-            group_mask = m_group_mask;
-          }
 
           uint32_t block_no = 0;
           eudaq::RawDataEvent ev(m_event_type, m_run, event_counter);          
@@ -200,25 +249,19 @@ void VX1742Producer::ReadoutLoop() {
           block_no++;
           ev.AddBlock(block_no, static_cast<const uint32_t*>(&group_mask), sizeof(group_mask));
           block_no++;
-          ev.AddBlock(block_no, static_cast<const uint32_t*>(&trigger_time_tag), sizeof(trigger_time_tag));
+          ev.AddBlock(block_no, static_cast<const uint32_t*>(&event_trigger_time_tag), sizeof(event_trigger_time_tag));
           block_no++;
 
 
-          //loop over all groups
-          for(uint32_t grp = 0; grp < 4; grp++){
-            
+          //loop over all (activated) groups
+          for(uint32_t grp = 0; grp < vmec::VX1742_GROUPS; grp++){
             if(group_mask & (1<<grp)){ 
 
               uint32_t samples_per_channel = vxEvent.SamplesPerChannel(grp);
               uint32_t start_index_cell = vxEvent.GetStartIndexCell(grp);
               uint32_t event_timestamp = vxEvent.GetEventTimeStamp(grp);
+              uint32_t channels = vxEvent.Channels(grp);
 
-              //fix first two redneck events
-              if(n_groups==0){
-                samples_per_channel = this->SamplesInCustomSize();
-                start_index_cell = 0;
-                event_timestamp = 0;
-              }
 
               #ifdef DEBUG
                 std::cout << "***********************************************************************" << std::endl << std::endl;
@@ -226,7 +269,7 @@ void VX1742Producer::ReadoutLoop() {
                 std::cout << "Event size: " << event_size << std::endl;
                 std::cout << "Groups enabled: " << n_groups << std::endl;
                 std::cout << "Group mask: " << group_mask << std::endl;
-                std::cout << "Trigger time tag: " << trigger_time_tag << std::endl;
+                std::cout << "Trigger time tag: " << event_trigger_time_tag << std::endl;
                 std::cout << "Samples per channel: " << samples_per_channel << std::endl;
                 std::cout << "Start index cell : " << start_index_cell << std::endl;
                 std::cout << "Event trigger time tag: " << event_timestamp << std::endl;
@@ -239,22 +282,49 @@ void VX1742Producer::ReadoutLoop() {
               block_no++;
               ev.AddBlock(block_no, static_cast<const uint32_t*>(&event_timestamp), sizeof(event_timestamp));
               block_no++;
+              ev.AddBlock(block_no, static_cast<const uint32_t*>(&channels), sizeof(channels));
+              block_no++;
 
-              for(u_int ch = 0; ch < 8; ch++){
+
+              //apply cell and nsamples correction and store it to temporary array
+              for(uint32_t ch = 0; ch < channels; ch++){
                 uint16_t *payload = new uint16_t[samples_per_channel];
-                  
-                //first two sucker events have no channel data for whatever reason which then fucks up the OnlineMonitor so just send zeros
-                if(n_groups == 0){
-                  for(int idx = 0; idx<samples_per_channel; idx++){
-                    payload[idx] = 0;
-                  }                   
-                }else{
-                  vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
+                vxEvent.getChannelData(grp, ch, payload, samples_per_channel);
+                for(uint32_t i=0; i<samples_per_channel; i++){
+                  wf_storage[ch][i] = (uint16_t)(((int16_t)payload[i]) - cell_corr[grp*channels+ch][(i+start_index_cell)%1024]*cell_offset + ((int16_t)index_corr[grp*channels+ch][i])*index_sampling);
+                }
+                delete payload;
+              }  
+
+              //uint16_t test[1024];
+              //for(uint32_t id=0; id<1024; id++)
+              //  test[id] = wf_storage[0][id];
+
+
+              //CEAN spike correction
+              if(spike_correction)
+                this->CAENPeakCorrection(channels, samples_per_channel);
+
+              //for(uint32_t id=0; id<1024; id++){
+              //  if(wf_storage[0][id]-test[id] != 0)
+              //    std::cout << "diff: " << wf_storage[0][id]-test[id] << std::endl;
+
+              //}
+
+
+
+              //copy waveforms back
+              for(uint32_t ch = 0; ch < channels; ch++){
+                uint16_t *payload = new uint16_t[samples_per_channel];
+                for(uint32_t i=0; i<samples_per_channel; i++){
+                  payload[i] = wf_storage[ch][i];
                 }
                 ev.AddBlock(block_no, reinterpret_cast<const char*>(payload), samples_per_channel*sizeof(uint16_t));
                 block_no++;
                 delete payload;
-              }//end loop over channels
+              }  
+
+
             }//end if
           }//end for
   
@@ -331,7 +401,135 @@ void VX1742Producer::SetTimeStamp(){
 }
 
 
-uint32_t VX1742Producer::SamplesInCustomSize(){
-  uint32_t csizes[4] = {1024, 520, 256, 136};
-  return csizes[custom_size];
+//from CAEN Digitizer library:
+void VX1742Producer::CAENPeakCorrection(uint32_t channels, uint32_t nsamples){
+    uint32_t offset;
+    uint32_t i;
+    uint32_t j;
+
+    for(j=0; j<channels; j++){
+        wf_storage[j][0] = wf_storage[j][1];
+    }
+
+    for(i=1; i<nsamples; i++){ //loop over samples
+        offset=0;
+
+        for(j=0; j<channels; j++){ //and over all channels
+            if (i==1){
+                if ((wf_storage[j][2]-wf_storage[j][1])>30){  //if (sample 3 - sample 2)>30                               
+                    offset++;
+                }
+
+                else {
+                    if (((wf_storage[j][3]- wf_storage[j][1])>30)&&((wf_storage[j][3]- wf_storage[j][2])>30)){  //if((s3-s2) > 30 AND (s4-s3) > 30)                             
+                        offset++;
+                    }
+                }
+            }
+            else{
+                if ((i==nsamples-1)&&((wf_storage[j][nsamples-2]- wf_storage[j][nsamples-1])>30)){  
+                    offset++;                                                                             
+                }
+                else{
+                    if ((wf_storage[j][i-1]- wf_storage[j][i])>30){ 
+                        if ((wf_storage[j][i+1]- wf_storage[j][i])>30)
+                            offset++;
+                        else {
+                            if ((i==nsamples-2)||((wf_storage[j][i+2]-wf_storage[j][i])>30))
+                                offset++;
+                        }                                     
+                    }
+                }
+            }
+        }                                
+
+
+        if (offset==channels){
+            for(j=0; j<channels; j++){
+                if (i==1){
+                    if ((wf_storage[j][2]-wf_storage[j][1])>30) {
+                        wf_storage[j][0]=wf_storage[j][2];
+                        wf_storage[j][1]=wf_storage[j][2];
+                    }
+                    else{
+                        wf_storage[j][0]=wf_storage[j][3];
+                        wf_storage[j][1]=wf_storage[j][3];
+                        wf_storage[j][2]=wf_storage[j][3];
+                    }
+                }
+                else{
+                    if (i==nsamples-1){
+                        wf_storage[j][nsamples-1]=wf_storage[j][nsamples-2];
+                    }
+                    else{
+                        if ((wf_storage[j][i+1]- wf_storage[j][i])>30)
+                            wf_storage[j][i]=((wf_storage[j][i+1]+wf_storage[j][i-1])/2);
+                        else {
+                            if (i==nsamples-2){
+                                wf_storage[j][nsamples-2]=wf_storage[j][nsamples-3];
+                                wf_storage[j][nsamples-1]=wf_storage[j][nsamples-3];
+                            }
+                            else {
+                                wf_storage[j][i]=((wf_storage[j][i+2]+wf_storage[j][i-1])/2);
+                                wf_storage[j][i+1]=( (wf_storage[j][i+2]+wf_storage[j][i-1])/2);
+                            }
+                        }
+                    }
+                }
+            }
+        }                                
+    }
+}
+
+
+//called once for each group
+void VX1742Producer::CAENTimeCorrection(uint32_t grp, uint32_t channels, uint32_t nsamples, uint32_t freq, uint32_t st_index){
+    float t0, vcorr, Tsamp;
+    float Time[1024];
+    float wave_tmp[1024]; 
+    uint32_t i, j, k;
+
+    switch(freq){
+    case 0:
+        Tsamp =(float)((1.0/5000.0)*1000.0); //0.2ns
+        break;
+    case 1:
+        Tsamp =(float)((1.0/2500.0)*1000.0); //0.4ns
+        break;
+    case 2:
+        Tsamp =(float)((1.0/1000.0)*1000.0); //1.0ns
+        break;
+    default:
+        Tsamp =(float)((1.0/750.0)*1000.0); //1.33ns
+        break;
+    }
+
+
+    t0=time_corr[grp][st_index];
+    Time[0]=0.0;
+
+    for(j=1; j< nsamples; j++) {
+        t0 = time_corr[grp][(st_index+j)%1024]-t0;
+        if(t0 >0){Time[j] =  Time[j-1]+ t0;} 
+        else{Time[j] =  Time[j-1]+ t0 + (Tsamp*1024);}
+        t0 = time_corr[grp][(st_index+j)%1024];
+    }
+
+    for (j=0; j<channels; j++) {
+        wf_storage[j][0] = wf_storage[j][1];
+        wave_tmp[0] = wf_storage[j][0];
+        vcorr = 0.0;
+        k=0;
+        i=0;
+
+        for(i=1; i<nsamples; i++) {
+            while ((k<nsamples-1) && (Time[k]<(i*Tsamp)))  k++;
+            vcorr =(((float)(wf_storage[j][k] - wf_storage[j][k-1])/(Time[k]-Time[k-1]))*((i*Tsamp)-Time[k-1]));
+            wave_tmp[i]=wf_storage[j][k-1] + vcorr;
+            k--;                                
+        }
+
+        for(i=1; i<nsamples; i++)
+            wf_storage[j][i] = wave_tmp[i];
+    }
 }

@@ -21,7 +21,6 @@
 
 #include <TROOT.h>
 #include "include/OnlineMonConfiguration.hh"
-#include <TVirtualFFT.h>
 #include <TMath.h>
 
 //!Simple Standard Waveform Class
@@ -72,21 +71,12 @@ public:
 	bool isPulserEvent() const{ return _PulserEvent;}
 	void setPulserEvent() {setPulserEvent(true);}
 	void setPulserEvent(bool pulserEvent) {_PulserEvent = pulserEvent;}//std::cout<<"setPulser:"<<_PulserEvent<<std::endl;}
-    void setMeanFFT(float mean_fft) {_mean_fft = mean_fft;}
-    void setMaxFFT(float max_fft)   {_max_fft = max_fft;}
-    void setMinFFT(float min_fft)   {_min_fft = min_fft;}
-    float getMeanFFT() const{return _mean_fft;}
-    float getMaxFFT () const{return _max_fft;}
-    float getMinFFT () const{return _min_fft;}
-    void performFFT(TVirtualFFT *);
+
 private:
 	int _sign;
 	bool calculated;
 	bool _PulserEvent;
 	float *_data;
-	float _mean_fft;
-	float _max_fft;
-	float _min_fft;
 	float _max;
 	float _min;
 	float _integral;

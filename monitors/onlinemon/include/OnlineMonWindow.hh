@@ -16,7 +16,6 @@
 
 #ifndef __CINT__
 #include <TTimer.h>
-
 #include <TGLayout.h>
 #include <TGWindow.h>
 #include <TRootEmbeddedCanvas.h>
@@ -26,6 +25,7 @@
 #include <TApplication.h>
 #include <TGToolBar.h>
 #include <TGButton.h>
+#include <THStack.h>
 #include <TGStatusBar.h>
 #include <TGNumberEntry.h>
 #include <TH1.h>

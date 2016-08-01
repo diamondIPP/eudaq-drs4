@@ -1,9 +1,19 @@
+//whoever wrote this file (especially the corresponding header file) should be beaten up
+//number of wasted hours = 6 (increase counter)
+
 #ifdef WIN32
 #include <Windows4Root.h>
 #endif
 
-//whoever wrote this file (especially the corresponding header file) should be beaten up
-//number of wasted hours = 4 (increase counter)
+#include "OnlineMon.hh"
+#include "HitmapCollection.hh"
+#include "MonitorPerformanceCollection.hh"
+#include "EUDAQMonitorCollection.hh"
+#include "WaveformCollection.hh"
+#include "HitmapHistos.hh"
+#include "CorrelationHistos.hh"
+#include "OnlineMonWindow.hh"
+#include "TUCollection.hh"
 
 
 
@@ -43,23 +53,22 @@
 #include <stdio.h>
 #include <string.h>
 
+
 #ifdef WIN32
 #define EUDAQ_SLEEP(x) Sleep(x*1000)
 #else
 #define EUDAQ_SLEEP(x) sleep(x)
 #endif
 
-#include "TUCollection.hh"
-
 
 //ONLINE MONITOR Includes
-#include "OnlineMon.hh"
+
 
 using namespace std;
 
 RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & datafile, int /*x*/, int /*y*/, int /*w*/,
        int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
-       const std::string & conffile):eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false), _fft_resets(0){
+       const std::string & conffile):eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false){
 
   if (_offline <= 0){
     onlinemon = new OnlineMonWindow(gClient->GetRoot(),800,600);
@@ -156,15 +165,7 @@ RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & dat
 
   cout << "End of Constructor" << endl;
 
-  // construct the FFT stuff
-  int n_samples = 1024;
-  Int_t n_size = n_samples+1;
-  fft_own = TVirtualFFT::FFT(1, &n_size, "R2C P K");
-  if (!fft_own) {
-      cout << "something went wrong with the fft creation" << endl;
-      return;
-  }
-
+  
 
   //set a few defaults
   snapshotdir=mon_configdata.getSnapShotDir();
@@ -261,6 +262,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
         EUDAQ_LOG(WARN,(eudaq_warn_message.str()).c_str());
       
       }else{
+        //bruder problem:
         myevent.setNWaveforms(nwf);}
     }//end else
 
@@ -285,18 +287,15 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
       if (waveform.GetChannelName() == "PULSER"){
         SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
-    simpWaveform.addData(&(*waveform.GetData())[0]);
-    simpWaveform.Calculate();
-    float integral = simpWaveform.getIntegral(700,900);
-    float pulserMin = simpWaveform.getMinimum(700, 900);
-    if( pulserMin < -100.)
-        isPulserEvent = true;
-      }
+        simpWaveform.addData(&(*waveform.GetData())[0]);
+        simpWaveform.Calculate();
+        float integral = simpWaveform.getIntegral(700,900);
+        float pulserMin = simpWaveform.getMinimum(700, 900);
+        if( pulserMin < -100.)
+          isPulserEvent = true;
+        }
     }//end for
 
-    if (_last_fft_min.size() <nwf)_last_fft_min.resize(nwf,-1);
-    if (_last_fft_max.size() <nwf)_last_fft_max.resize(nwf,-1);
-    if (_last_fft_mean.size() <nwf)_last_fft_mean.resize(nwf,-1);
     for (unsigned int i = 0; i < nwf;i++){
       const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
 
@@ -312,56 +311,20 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
        cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
       #endif
 
-
       std::string sensorname;
       sensorname = waveform.GetType();
       SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);
       simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
       simpWaveform.setNSamples(waveform.GetNSamples());
-      simpWaveform.addData(&(*waveform.GetData())[0]);
-            // perform the fft and put it into the simpleWF directly
-            simpWaveform.performFFT(fft_own);
-            int count = 0;
-            if (simpWaveform.getMeanFFT() == _last_fft_mean.at(i)){
-                //cout<<i<<"FFT Means disagree\t";
-                count+=1;
-            }
-            if (simpWaveform.getMaxFFT() == _last_fft_max.at(i)){
-                //cout<<i<<"FFT Max disagree\t";
-                count+=1;
-            }
-            if (simpWaveform.getMinFFT() == _last_fft_min.at(i)){
-                //cout<<i<<"FFT Min disagree\t";
-                count+=1;
-            }
-            if (count!=0){
-                if (fft_own){
-                    delete fft_own;
-                    _fft_resets+=1;
-                    cout<<ev.GetEventNumber()<<" Reinitialized FFT "<<_fft_resets<<endl;
-                    int n_samples = 1024;
-                    Int_t n_size = n_samples+1;
-                    fft_own = TVirtualFFT::FFT(1, &n_size, "R2C P K");
-                }
-                simpWaveform.performFFT(fft_own);
-            }
-            _last_fft_min[i] = simpWaveform.getMinFFT();
-            _last_fft_max[i] = simpWaveform.getMaxFFT();
-            _last_fft_mean[i] = simpWaveform.getMeanFFT();
-
+      simpWaveform.addData(&(*waveform.GetData())[0]);      
       simpWaveform.Calculate();
-      //simpWaveform.setTimestamp(ev.GetTimestamp());
       simpWaveform.setTimestamp(waveform.GetTimeStamp());
       simpWaveform.setEvent(ev.GetEventNumber());
       simpWaveform.setChannelName(waveform.GetChannelName());
       simpWaveform.setChannelNumber(waveform.GetChannelNumber());
       simpWaveform.setPulserEvent(isPulserEvent);
-            //std::cout<<"isPulser Event: "<<isPulserEvent<<"/"<<simpWaveform.isPulserEvent()<<std::endl;
-//      waveform.GetNSamples();
-//      cout<<"simpWaveform no"<<i<<" name \""<<simpWaveform.getName()
-//          <<"\" ID: "<<simpWaveform.getID()
-//          <<" ch name \""<<simpWaveform.getChannelName()<<"\""<<endl;//<<"\" mon:"<<_mon<<endl;
       simpEv.addWaveform(simpWaveform);
+
 
 
 /************************************** Start TU Event Stuff **************************************/

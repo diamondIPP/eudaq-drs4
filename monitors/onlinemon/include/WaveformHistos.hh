@@ -35,10 +35,8 @@ class WaveformHistos {
     bool _wait;
     std::vector<TH1F*> _Waveforms;
     std::vector<TH1F*> _GoodWaveforms;
-    std::vector<TH1F*> _BadFFTWaveforms;
     THStack* h_wf_stack;
     THStack* h_goodwf_stack;
-    THStack* h_badfftwf_stack;
     int _n_wfs;
     unsigned int _n_samples;
     std::map<std::string, TH1*> profiles;
@@ -50,15 +48,11 @@ class WaveformHistos {
     // categories:
     // 0: good Event
     // 1: flat line Event
-    // 2: badFFt Event
     // 3: pulser Event
     enum EventCategroy{
         UNKNOWN_EVENT = -1,
         GOOD_EVENT=0,
         FLAT_EVENT=1,
-        BAD_FFT_MAX_EVENT=2,
-        BAD_FFT_MEAN_EVENT=3,
-        BAD_FFT_BOTH_EVENT=4,
         PULSER_EVENT=5,
     };
   public:
@@ -75,9 +69,7 @@ class WaveformHistos {
     void Write();
     unsigned int GetNWaveforms() const {return _n_wfs;};
     TH1F * getWaveformGraph(int i) { return _Waveforms[i%_n_wfs]; }
-    TH1F * getBadFFTWaveformGraph(int i) { return _BadFFTWaveforms[i%_n_wfs]; }
     THStack* getWaveformStack(){return h_wf_stack;}
-    THStack* getBadFFTWaveformStack(){return h_badfftwf_stack;}
     THStack* getGoodWaveformStack(){return h_goodwf_stack;}
     void setRootMonitor(RootMonitor *mon)  {_mon = mon; };
     // signal histos   
@@ -122,8 +114,6 @@ class WaveformHistos {
     unsigned int n_fills_bad;
     void InitHistos();
     void InitIntegralHistos();
-    void InitFFTHistos();
-    void InitBadFFTHistos();
     void InitSpreadHistos();
     void InitProfiles();
     void InitTimeProfiles();
@@ -132,7 +122,6 @@ class WaveformHistos {
     void InitPedestalProfiles();
     void InitWaveformStacks();
     void Reinitialize_Waveforms();
-    void Reinitialize_BadFFTWaveforms();
     void Reinitialize_GoodWaveforms();
     void UpdateRanges();
     void UpdateRange(TH1* histo);

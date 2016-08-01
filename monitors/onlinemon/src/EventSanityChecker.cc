@@ -20,7 +20,7 @@ EventSanityChecker::EventSanityChecker(int nplanes, int nwaveforms)
 {
   NPlanes=nplanes;
   NWaveforms=nwaveforms;
-  std::cout << "##Number of waveforms set in EventSanityChecker constructor: " << NWaveforms << std::endl;
+  //std::cout << "##Number of waveforms set in EventSanityChecker constructor: " << NWaveforms << std::endl;
 }
 
 EventSanityChecker::~EventSanityChecker()
@@ -53,7 +53,7 @@ unsigned int EventSanityChecker::getNWaveforms() const
 void EventSanityChecker::setNWaveforms(int NWaveforms)
 {
   this->NWaveforms = NWaveforms;
-  std::cout << "##Number of waveforms set in EventSanityChecker set method: " << NWaveforms << std::endl;
+  //std::cout << "##Number of waveforms set in EventSanityChecker set method: " << NWaveforms << std::endl;
 }
 
 

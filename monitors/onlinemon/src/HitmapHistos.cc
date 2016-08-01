@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <TStyle.h>
 #include <TROOT.h>
+#include <TProfile.h>
+#include "OnlineMonWindow.hh"
 
 HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.getName()), _id(p.getID()), _maxX(p.getMaxX()), _maxY(p.getMaxY()), _wait(false),
 								     _hitmap(NULL),_chargemap(NULL),_hitXmap(NULL),_hitYmap(NULL),_clusterMap(NULL),_lvl1Distr(NULL), _lvl1Width(NULL),_lvl1Cluster(NULL),_totSingle(NULL),_totCluster(NULL),

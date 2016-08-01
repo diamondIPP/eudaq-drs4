@@ -178,9 +178,9 @@ uint32_t VX1742Event::Channels(uint32_t grp) const{
 	if (groups == 0) return 0;
 	bool TRn_enabled = group_heads.grh[grp].tr;
 	if(TRn_enabled){
-		return groups*9;
+		return 9;
 	}
-	return groups*8;
+	return 8;
 }
 
 
@@ -198,7 +198,7 @@ uint32_t VX1742Event::GetEventTimeStamp(uint32_t grp) const{
 
 
 int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* array, unsigned int arraylen) const{
-	if (ch >= vmec::VX1742_CHANNELS_PER_GROUP){std::printf("There are only %d channels!\n", vmec::VX1742_CHANNELS_PER_GROUP); return -1;}
+	if (ch >= this->Channels(grp)){std::printf("There are only %d channels!\n", vmec::VX1742_MAX_CHANNEL_SIZE); return -1;}
 	if (grp > vmec::VX1742_GROUPS){std::printf("There are only %d groups!\n", vmec::VX1742_GROUPS); return -1;}
 	
 	int grppos = getGroupIndexInBuffer(grp) + 1;
@@ -207,20 +207,51 @@ int VX1742Event::getChannelData(unsigned int grp, unsigned int ch, uint16_t* arr
 	if(samples == -1){return -1;}
 	bool TRn_enabled = group_heads.grh[grp].tr;
 
-	uint32_t start_bit = ch*12%32;
-	uint32_t line = (uint32_t) (12*ch)/32;
-	uint32_t temp = 32-start_bit;
-	if(temp<12){
+
+	//trn signal
+	if(ch==8){
+	  grppos = grppos+samples*3;
+	  uint32_t index = 0;
+	  uint32_t start_bit = 0;
+	  uint32_t line = 0;
+	  uint32_t idx = 0;
+	  
+	  while(idx < samples){
+	  	array[idx] = (buffer[grppos+line]>>start_bit)&0xFFF;
+	  	idx++;
+
+	  	index += 12;
+	  	start_bit = index%32;
+	  	line = (uint32_t) index/32;
+
+
+	  	if(start_bit > 20){
+	  		uint32_t low = (buffer[grppos+line]>>start_bit);
+	  		uint32_t high = (buffer[grppos+line+1]&((1<<(start_bit-20))-1))<<(32-start_bit);
+	  		array[idx] = high + low;
+	  		idx++;
+	  		index += 12;
+	  		start_bit = index%32;
+	  		line = (uint32_t) index/32;
+	  	}
+	  }//end while
+
+	}else{ //all other channels
+	  uint32_t start_bit = ch*12%32;
+	  uint32_t line = (uint32_t) (12*ch)/32;
+	  uint32_t temp = 32-start_bit;
+	  if(temp<12){
 		for(uint32_t idx=0; idx < samples; idx++){
-			uint32_t low = buffer[grppos+idx*3+line]>>start_bit;
-			uint32_t high = (buffer[grppos+idx*3+line+1]&((1<<(12-temp))-1))<<temp;
-			array[idx] = high + low;
+		  uint32_t low = buffer[grppos+idx*3+line]>>start_bit;
+		  uint32_t high = (buffer[grppos+idx*3+line+1]&((1<<(12-temp))-1))<<temp;
+		  array[idx] = high + low;
 		}
-	}
-	if(temp>=12){
+	  }
+	  if(temp>=12){
 		for(uint32_t idx=0; idx < samples; idx++){
-			array[idx] = (buffer[grppos+idx*3+line]>>start_bit)&0xFFF;
+		  array[idx] = (buffer[grppos+idx*3+line]>>start_bit)&0xFFF;
 		}
+	  }
 	}
 
 }//method end

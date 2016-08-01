@@ -80,7 +80,7 @@ public:
 	  wf.SetChannelName("CH" + std::to_string(ch));
 	  wf.SetChannelNumber(ch);
 	  wf.SetNSamples(n_samples);
-	  wf.SetWaveform((uint16_t*) wave_array);
+	  wf.SetWaveform((float*) wave_array);
 	  sev.AddWaveform(wf);
 	  id++;
 	}//end ch loop

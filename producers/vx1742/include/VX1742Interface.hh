@@ -30,6 +30,14 @@ class VX1742Interface{
     RCD::CMEMSegment* seg;
     vmec::vx1742_regs_t *vx1742;
 
+    //correction data related
+    vmec::drs4_correction corrTable[vmec::VX1742_GROUPS][vmec::VX1742_NFREQ];
+    bool correctionDataInitialized[vmec::VX1742_GROUPS][vmec::VX1742_NFREQ];
+    uint32_t FLASH(uint32_t n){return  (0x10D0 | ( n << 8));}  // base address of the flash memory (first byte)
+    uint32_t SEL_FLASH(uint32_t n){return  (0x10CC | ( n << 8));}  // flash enable/disable 
+    uint32_t STATUS(uint32_t n){return  (0x1088 | ( n << 8));}  // status register
+
+
   public:
 	VX1742Interface();
 	~VX1742Interface(); //if mapping not yet destroyed do it
@@ -54,6 +62,10 @@ class VX1742Interface{
 	void setPostTriggerSamples(uint32_t param);
 	uint32_t getPostTriggerSamples();
 
+	bool SPIBusBusy(uint32_t grp);
+	void enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity, uint32_t trn_readout);
+	uint32_t TRnReadoutEnabled();
+
 	void setCustomSize(uint32_t param);
 	uint32_t getCustomSize();
 
@@ -71,6 +83,16 @@ class VX1742Interface{
 	bool eventReady();
 	uint32_t getEventsStored();
 	uint32_t getNextEventSize();
+
+	//deal with correction data:
+	uint32_t readFlashPage(uint32_t group, int8_t* page, uint32_t pagenumber);
+	uint32_t loadDRS4CorrectionTables(uint32_t grp, uint32_t frequency);	
+	uint32_t initializeDRS4CorrectionTables(uint32_t frequency);
+	int16_t getCellCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint32_t idx);
+	int8_t getNSamplesCorrectionValues(uint32_t group, uint32_t freq, uint32_t channel, uint32_t idx);
+	float getTimingCorrectionValues(uint32_t group, uint32_t freq, uint32_t idx);
+	void printDRS4CorrectionTables();
+
 
 	void SetMaxBLTEvents(uint32_t param);
 	uint32_t BlockTransferEventD64(VX1742Event *vxEvent);

@@ -18,21 +18,49 @@ namespace vmec{
     // Constants
     const uint32_t VX1742_CHANNELS = 32;
     const uint32_t VX1742_GROUPS = 4;
+    const uint32_t VX1742_DRS4_COUNT = 4;
     const uint32_t VX1742_CHANNELS_PER_GROUP = 8;
-    const uint32_t VX1742_RESOLUTION = 12;    
+    const uint32_t VX1742_MAX_CHANNEL_SIZE = 9; //8+TRn
+    const uint32_t VX1742_RESOLUTION = 12;
+    const uint32_t VX1742_MAX_SAMPLES = 1024; 
+    const uint32_t VX1742_NFREQ = 4;   
 
     // Constants for VME master map and BlockTransfer
     const uint32_t vmebus_address = 0x32100000; 
     const uint32_t window_size = 0x10000;
     const uint32_t address_modifier = 0x2; //VME_A32
     const uint32_t options = 0;
-    const uint32_t buffer_size = 0x10000;    
-    
+    const uint32_t buffer_size = 0x10000;
+
+    const uint16_t VX1742_MAIN_MEM_PAGE_READ = 0x00D2;
+    const uint16_t VX1742_MAIN_MEM_PAGE_PROG_TH_BUF1 = 0x0082;
+
+    typedef struct{
+      int16_t     cell[VX1742_MAX_CHANNEL_SIZE][VX1742_MAX_SAMPLES];
+      int8_t      nsample[VX1742_MAX_CHANNEL_SIZE][VX1742_MAX_SAMPLES];
+      float       time[VX1742_MAX_SAMPLES];
+    }drs4_correction;
+
+
+    typedef struct{
+      uint32_t memory_full          :1; 
+      uint32_t memory_empty         :1;
+      uint32_t spi_busy             :1;
+      uint32_t group_even_enable    :1; 
+      uint32_t group_odd_enable     :1; 
+      uint32_t reserved             :1;
+      uint32_t group_even_pll_lock  :1; 
+      uint32_t group_odd_pll_lock   :1; 
+      uint32_t drs4_busy            :1;
+      uint32_t mezzanine_rev        :1;
+      uint32_t reserved_1           :22;
+    }st_group_status;   
+
 
     typedef struct{
       uint32_t ch_thres;                                       //0x1080
       uint32_t reserved1;                                      //0x1084 - 0x1088
-      uint32_t status;                                         //0x1088
+      st_group_status group_status;                            //0x1088
       uint32_t daugther_board_fw;                              //0x108C
       uint32_t reserved2;                                      //0x1090 - 0x1094
       uint32_t buffer_occupation;                              //0x1094
@@ -44,9 +72,9 @@ namespace vmec{
       uint32_t reserved4[8];                                   //0x10AC - 0x10CC
       uint32_t mem_calib_tables_enable;                        //0x10CC
       uint32_t mem_calib_tables_data;                          //0x10D0
-      uint32_t trigger_threshold;                              //0x10D4
+      uint32_t trn_threshold;                                  //0x10D4
       uint32_t reserved5;                                      //0x10D8 - 0x10DC
-      uint32_t trigger_dc_offset;                              //0x10DC
+      uint32_t trn_dc_offset;                                  //0x10DC
       uint32_t reserved6[40];                                  //0x10E0 - 0x1180
     }st_group_n_conf; //used for group 0-3 (for <group n variable address> add n*0x100 to the addresses listed)    
     
