@@ -296,22 +296,9 @@ void VX1742Producer::ReadoutLoop() {
                 delete payload;
               }  
 
-              //uint16_t test[1024];
-              //for(uint32_t id=0; id<1024; id++)
-              //  test[id] = wf_storage[0][id];
-
-
               //CEAN spike correction
               if(spike_correction)
                 this->CAENPeakCorrection(channels, samples_per_channel);
-
-              //for(uint32_t id=0; id<1024; id++){
-              //  if(wf_storage[0][id]-test[id] != 0)
-              //    std::cout << "diff: " << wf_storage[0][id]-test[id] << std::endl;
-
-              //}
-
-
 
               //copy waveforms back
               for(uint32_t ch = 0; ch < channels; ch++){
