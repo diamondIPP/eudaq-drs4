@@ -32,7 +32,7 @@ namespace { static RegisterFileWriter<FileWriterTreeCAEN> reg("caentree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
-: m_tfile(0), m_ttree(0), m_noe(0), chan(4), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0) {
+: m_tfile(0), m_ttree(0), m_noe(0), chan(9), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0) {
 
     gROOT->ProcessLine("#include <vector>");
 //    gROOT->ProcessLine(".L ~/lib/root_loader.c+"); // what is that for? MR
@@ -42,8 +42,8 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     gROOT->ProcessLine("#include <map>");
     gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >,vector<vector<Float_t> >","vector;string;map");
     //Polarities of signals, default is positive signals
-    polarities.resize(4, 1);
-    pulser_polarities.resize(4, 1);
+    polarities.resize(9, 1);
+    pulser_polarities.resize(9, 1);
 
     //how many events will be analyzed, 0 = all events
     max_event_number = 0;
@@ -74,22 +74,22 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     v_is_saturated = new vector<bool>;
     v_median = new vector<float>;
     v_average = new vector<float>;
-    v_peak_positions.resize(4, new vector<uint16_t>);
-    v_peak_timings.resize(4, new vector<float>);
+    v_peak_positions.resize(9, new vector<uint16_t>);
+    v_peak_timings.resize(9, new vector<float>);
 
     // waveforms
-    for (uint8_t i = 0; i < 4; i++) f_wf[i] = new vector<float>;
+    for (uint8_t i = 0; i < 9; i++) f_wf[i] = new vector<float>;
     f_isDa = new vector<bool>;
-    wf_thr = {125, 10, 40, 300};
+    wf_thr = {125, 10, 40, 300, 200, 300, 200, 200, 200};
 
     // spectrum vectors
-    peaks_x.resize(4, new std::vector<uint16_t>);
-    peaks_x_time.resize(4, new std::vector<float>);
-    peaks_y.resize(4, new std::vector<float>);
+    peaks_x.resize(9, new std::vector<uint16_t>);
+    peaks_x_time.resize(9, new std::vector<float>);
+    peaks_y.resize(9, new std::vector<float>);
 
     // fft analysis
-    fft_modes.resize(4, new std::vector<float>);
-    fft_values.resize(4, new std::vector<float>);
+    fft_modes.resize(9, new std::vector<float>);
+    fft_values.resize(9, new std::vector<float>);
     fft_mean = new std::vector<float>;
     fft_mean_freq = new std::vector<float>;
     fft_max = new std::vector<float>;
@@ -137,7 +137,7 @@ void FileWriterTreeCAEN::Configure(){
         EUDAQ_WARN("Configuration class instance m_config does not exist!");
         return;
     }
-    m_config->SetSection("Converter.drs4tree");
+    m_config->SetSection("Converter.caentree");
     if (m_config->NSections()==0){
         EUDAQ_WARN("Config file has no sections!");
         return;
@@ -187,7 +187,7 @@ void FileWriterTreeCAEN::Configure(){
     // regions todo: add default range
     active_regions = m_config->Get("active_regions", uint16_t(0));
     macro->AddLine(TString::Format("active_regions: %d", active_regions));
-    for (uint8_t i = 0; i < 4; i++)
+    for (uint8_t i = 0; i < 9; i++)
         if (UseWaveForm(active_regions, i)) (*regions)[i] = new WaveformSignalRegions(i, polarities.at(i), pulser_polarities.at(i));
     macro->AddLine("");
     macro->AddLine("Signal Windows");
@@ -213,7 +213,7 @@ void FileWriterTreeCAEN::Configure(){
                 region.AddIntegral(integralDef);
             }
         }
-        for (uint8_t i = 0; i< 4;i++)
+        for (uint8_t i = 0; i < 9;i++)
             if ((active_regions & 1<<i) == 1<<i)
                 regions->at(i)->AddRegion(region);
     }
@@ -278,7 +278,7 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("trigger_cell", &f_trigger_cell, "trigger_cell/s");
 
     // waveforms
-    for (uint8_t i_wf = 0; i_wf < 4; i_wf++)
+    for (uint8_t i_wf = 0; i_wf < 9; i_wf++)
         if ((save_waveforms & 1 << i_wf) == 1 << i_wf)
             m_ttree->Branch(TString::Format("wf%i", i_wf), &f_wf.at(i_wf));
     m_ttree->Branch("wf_isDA", &f_isDa);
@@ -297,7 +297,7 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("is_saturated", &v_is_saturated);
     m_ttree->Branch("median", &v_median);
     m_ttree->Branch("average", &v_average);
-    for (uint8_t i_wf = 0; i_wf < 4; i_wf++)
+    for (uint8_t i_wf = 0; i_wf < 9; i_wf++)
         if ((active_regions & 1 << i_wf) == 1 << i_wf){
             m_ttree->Branch(TString::Format("peak_positions%i", i_wf), &v_peak_positions.at(i_wf));
             m_ttree->Branch(TString::Format("peak_timings%i", i_wf), &v_peak_timings.at(i_wf));
@@ -312,7 +312,7 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
         m_ttree->Branch("fft_min", &fft_min);
         m_ttree->Branch("fft_min_freq", &fft_min_freq);
     }
-    for (uint8_t i_wf = 0; i_wf < 4; i_wf++){
+    for (uint8_t i_wf = 0; i_wf < 9; i_wf++){
         if (UseWaveForm(spectrum_waveforms, i_wf)){
             m_ttree->Branch(TString::Format("peaks%d_x", i_wf), &peaks_x.at(i_wf));
             m_ttree->Branch(TString::Format("peaks%d_x_time", i_wf), &peaks_x_time.at(i_wf));
@@ -344,17 +344,6 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         PluginManager::SetConfig(ev, m_config);
         eudaq::PluginManager::Initialize(ev);
         tcal = PluginManager::GetTimeCalibration(ev);
-        cout << "Start reading channels: " << endl;
-        n_channels = ReadNChannels(ev);
-        cout << n_channels << endl;
-        // DIRTY FIX PUT IN THE REAL TCAL HERE!!!
-        if (tcal.at(0).at(0) == -1){
-            map<uint8_t, std::vector<float> > new_tcal;
-            for (uint8_t ich = 0; ich < 4; ich++)
-                for (uint16_t ibin = 0; ibin < 2048; ibin++)
-                    new_tcal[ich].push_back(.5);
-            tcal = new_tcal;
-        }
         FillFullTime();
         stringstream ss;
         ss << "tcal [";
@@ -411,11 +400,13 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
 
 
-    //use different order of wfs in order to 'know' if its a pulser event or not.
-    vector<uint8_t > wf_order = {2,1,0,3};
+    //start with the pulser wf
+    vector<uint8_t> wf_order = {2};
+    for (uint8_t iwf = 0; iwf < sev.GetNWaveforms(); iwf++)
+        if (iwf != 2)
+            wf_order.push_back(iwf);
     ResizeVectors(sev.GetNWaveforms());
     for (auto iwf:wf_order){
-
         const eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
         // save the sensor names
         if (f_event_number == 0) {
@@ -758,7 +749,7 @@ void FileWriterTreeCAEN::FillRegionVectors(){
     IntegralPeakTime->clear();
     IntegralLength->clear();
 
-    for (uint8_t iwf = 0; iwf < 4; iwf++){
+    for (uint8_t iwf = 0; iwf < 9; iwf++){
         if (regions->count(iwf) == 0) continue;
         WaveformSignalRegions *this_regions = (*regions)[iwf];
         for (UInt_t i = 0; i < this_regions->GetNRegions(); i++){
@@ -787,7 +778,6 @@ void FileWriterTreeCAEN::FillRegionVectors(){
 }
 
 void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf){
-
     signed char pol = polarities.at(iwf);
     v_is_saturated->at(iwf) = wf->getAbsMaxInRange(0, 1023) > 498; // indicator if saturation is reached in sampling region (1-1024)
     v_median->at(iwf) = pol * wf->getMedian(0, 1023); // Median over whole sampling region
@@ -850,7 +840,7 @@ inline void FileWriterTreeCAEN::ExtractForcTiming(vector<float> * data) {
 } //end ExtractForcTiming()
 
 void FileWriterTreeCAEN::FillFullTime(){
-    uint16_t n_waveform_samples = uint16_t(tcal.at(0).size() / 2);  // tcal vec is two times to big atm, todo: fix that!
+    uint16_t n_waveform_samples = 1024;
     for (auto i_ch:tcal){
         i_ch.second.resize(n_waveform_samples);
         float sum = 0;
@@ -873,7 +863,7 @@ float FileWriterTreeCAEN::getTimeDifference(uint8_t ch, uint16_t bin_low, uint16
 
 string FileWriterTreeCAEN::GetBitMask(uint16_t bitmask){
     stringstream ss;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < 9; i++) {
         string bit = to_string(UseWaveForm(bitmask, i));
         ss << string(3 - bit.size(), ' ') << bit;
     }
