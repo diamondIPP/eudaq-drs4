@@ -189,8 +189,8 @@ namespace eudaq {
       const RawDataEvent & in_raw = dynamic_cast<const RawDataEvent &>(in);
       // Check of we have more than one data block:
       if(in_raw.NumBlocks() > 1) {
-	EUDAQ_ERROR("Only one data block is expected!");
-	return false;
+        EUDAQ_ERROR("Only one data block is expected!");
+        return false;
       }
 
       unsigned plane_id;
