@@ -1,55 +1,32 @@
 #ifndef ONLINE_MON_H
 #define ONLINE_MON_H
 
-#include <cmath>
-
-//ROOT includes
-#include <TSystem.h>
-#include <TInterpreter.h>
-#include <TQObject.h>
-#include <RQ_OBJECT.h>
-#include <TPRegexp.h>
-#include <TObjString.h>
-#include <TStopwatch.h>
-#include <TVirtualFFT.h>
-#include <TMath.h>
-
 //EUDAQ includes
 #ifndef __CINT__
 #include "eudaq/Configuration.hh"
 #include "eudaq/Monitor.hh"
-#include "eudaq/DetectorEvent.hh"
-#include "eudaq/TLUEvent.hh"
 #include "eudaq/Logger.hh"
 #include "eudaq/Utils.hh"
 #include "eudaq/OptionParser.hh"
 #endif
 
-//Project Includes
-
-#include "BaseCollection.hh"
-#include "HitmapHistos.hh"
-#include "CorrelationHistos.hh"
 #include "EUDAQMonitorHistos.hh"
-
-#include "HitmapCollection.hh"
-#include "CorrelationCollection.hh"
-#include "MonitorPerformanceCollection.hh"
-#include "EUDAQMonitorCollection.hh"
-
-#include "WaveformCollection.hh"
-
-#include "OnlineMonWindow.hh"
-//#include "OnlineHistograms.hh"
-#include "SimpleStandardEvent.hh"
-#include "EventSanityChecker.hh"
-#include "OnlineMonConfiguration.hh"
+#include "BaseCollection.hh"
 #include "CheckEOF.hh"
+#include "CorrelationCollection.hh"
+#include "OnlineMonConfiguration.hh"
+#include "EventSanityChecker.hh"
+#include <TStopwatch.h>
+#include <TApplication.h>
 
+//ROOT includes
+#include <TSystem.h>
+#include <RQ_OBJECT.h>
 
 //STL includes
 #include <string>
 #include <memory>
+
 
 #ifdef WIN32
 #define EUDAQ_SLEEP(x) Sleep(x*1000)
@@ -57,12 +34,14 @@
 #define EUDAQ_SLEEP(x) sleep(x)
 #endif
 
-//using namespace std;
+
 
 class OnlineMonWindow;
-class BaseCollection;
 class CheckEOF;
-class TUCollection; //first proper forward declaration in this freaking file
+class TUCollection;
+class HitmapCollection;
+class EUDAQMonitorCollection;
+class WaveformCollection;
 
 
 
@@ -84,7 +63,6 @@ class RootMonitor : private eudaq::Holder<int>,
       CheckEOF _checkEOF;
 
       bool _planesInitialized;
-      //bool _autoReset;
 
     public:
       RootMonitor(const std::string & runcontrol, const std::string & datafile, int x, int y,
@@ -98,9 +76,6 @@ class RootMonitor : private eudaq::Holder<int>,
       WaveformCollection *wfCollection;
       TUCollection *tuCollection;
 
-      TVirtualFFT *fft_own;
-      std::vector< float > * fft_vals;
-      float abs_fft, mean_fft, max_fft, min_fft;
 
       virtual void StartIdleing() { }
       OnlineMonWindow * getOnlineMon() { return onlinemon; }
@@ -143,13 +118,6 @@ class RootMonitor : private eudaq::Holder<int>,
       string GetSnapShotDir();
       OnlineMonConfiguration mon_configdata;
 
-      unsigned int _fft_resets;
-      std::vector<float> _last_fft_min;
-      std::vector<float> _last_fft_max;
-      std::vector<float> _last_fft_mean;
-
-
-
 
     private:
       string snapshotdir;
@@ -163,8 +131,6 @@ class RootMonitor : private eudaq::Holder<int>,
       double previous_event_clustering_time;
       double previous_event_correlation_time;
       unsigned int tracksPerEvent;
-
-
 
   };
 

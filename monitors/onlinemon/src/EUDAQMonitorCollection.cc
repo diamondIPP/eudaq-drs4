@@ -7,6 +7,7 @@
 
 #include "../include/EUDAQMonitorCollection.hh"
 #include "OnlineMon.hh"
+#include "OnlineMonWindow.hh"
 
 EUDAQMonitorCollection::EUDAQMonitorCollection(): BaseCollection()
 {

@@ -15,6 +15,7 @@
 #include "include/SimpleStandardEvent.hh"
 
 // ROOT imports
+#include "TVirtualFFT.h"
 #include "TStopwatch.h"
 #include "TFile.h"
 #include "TTree.h"

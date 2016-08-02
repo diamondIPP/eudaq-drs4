@@ -11,11 +11,11 @@
 #include "eudaq/WaveformSignalRegions.hh"
 
 #include "TStopwatch.h"
+#include "TVirtualFFT.h"
 class TTree;
 class TFile;
 class TH1F;
 class TSpectrum;
-class TVirtualFFT;
 class TCanvas;
 class TMacro;
 

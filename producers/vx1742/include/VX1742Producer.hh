@@ -26,18 +26,34 @@ public:
   void OnTerminate();
   void SetTimeStamp();
   void ReadoutLoop();
-  uint32_t SamplesInCustomSize();
+  void CAENPeakCorrection(uint32_t channels, uint32_t nsamples);
+  void CAENTimeCorrection(uint32_t grp, uint32_t channels, uint32_t nsamples, uint32_t freq, uint32_t st_index);
+
 
 private:
   VX1742Interface *caen;
 
   //config values
-  u_int sampling_frequency;
-  u_int post_trigger_samples;
-  u_int trigger_source;
-  u_int active_groups;
-  u_int groups[4];
-  u_int custom_size;
+  uint32_t sampling_frequency;
+  uint32_t post_trigger_samples;
+  uint32_t trigger_source;
+  uint32_t active_groups;
+  uint32_t groups[4];
+  uint32_t custom_size;
+
+  uint32_t cell_offset;
+  uint32_t index_sampling;
+  uint32_t spike_correction;
+  int16_t cell_corr[36][1024];
+  int8_t index_corr[36][1024];
+  float time_corr[4][1024];
+  uint16_t wf_storage[9][1024]; //for peak correction according to CAEN
+
+  uint32_t trn_enable[2];
+  uint32_t trn_threshold[2];
+  uint32_t trn_offset[2];
+  uint32_t trn_polarity;
+  uint32_t trn_readout;
 
   std::string m_event_type, m_producerName;
   uint32_t m_ev;
@@ -46,6 +62,7 @@ private:
   bool m_running, m_terminated;
   uint32_t m_group_mask;
   eudaq::Configuration m_config;
+
 
 };
 

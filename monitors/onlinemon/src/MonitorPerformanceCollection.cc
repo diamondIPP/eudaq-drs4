@@ -7,6 +7,7 @@
 
 #include "MonitorPerformanceCollection.hh"
 #include "OnlineMon.hh"
+#include "OnlineMonWindow.hh"
 
 MonitorPerformanceCollection::MonitorPerformanceCollection(): BaseCollection()
 {
