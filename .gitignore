@@ -64,7 +64,7 @@ Thumbs.db
 *Dict.cxx
 *Dict.h
 
-eud*
+# eud*
 
 #cmake stuff
 #Makefile
