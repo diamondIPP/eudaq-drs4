@@ -886,14 +886,4 @@ string FileWriterTreeCAEN::GetPolarities(vector<signed char> pol) {
     return trim(ss.str(), " ");
 }
 
-uint16_t FileWriterTreeCAEN::ReadNChannels(DetectorEvent dev) {
-    for (uint8_t i = 0; i < dev.NumEvents(); i++) {
-        const eudaq::Event & subev = *dev.GetEvent(i);
-        if (dev.GetSubType() == "VX1742")
-            return dev.GetTag("active_channels", uint16_t(8));
-    }
-    // return 0 if not found VX1742
-    return 0;
-}
-
 #endif // ROOT_FOUND
