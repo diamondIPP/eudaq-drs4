@@ -1,32 +1,15 @@
-/* --------------------------------------------------------------------------------------------
-** CAEN VX1742 implementation into the EUDAQ framework
-** 
-**
-** <FileWriterTreeCAEN>.cc
-** 
-** Date: August 2016
-** Remarks: Based on the FileWriterTreeCAEN from Michael Reichmann
-** Author: Christian Dorfer (dorfer@phys.ethz.ch)
-** -------------------------------------------------------------------------------------------- */
-
-
-
 #ifdef ROOT_FOUND
 
-#include "eudaq/FileWriteTreeCAEN.hh"
+#include "FileWriterTreeCAEN.hh"
 
 // eudaq imports
-#include "FileNamer.hh"
-#include "FileWriter.hh"
-#include "PluginManager.hh"
-#include "Logger.hh"
-#include "FileSerializer.hh"
-#include "WaveformSignalRegion.hh"
-#include "WaveformSignalRegions.hh"
+#include "eudaq/FileNamer.hh"
+#include "eudaq/PluginManager.hh"
+#include "eudaq/Logger.hh"
+#include "eudaq/FileSerializer.hh"
 #include "include/SimpleStandardEvent.hh"
 
 // ROOT imports
-#include "TStopwatch.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1F.h"
@@ -40,11 +23,10 @@
 #include "TPolyMarker.h"
 
 
-
 using namespace std;
 using namespace eudaq;
 
-namespace { static RegisterFileWriter<FileWriterTreeCAEN> reg("drs4tree"); }
+namespace { static RegisterFileWriter<FileWriterTreeCAEN> reg("caentree"); }
 
 /** =====================================================================
     --------------------------CONSTRUCTOR--------------------------------
@@ -274,7 +256,7 @@ void FileWriterTreeCAEN::Configure(){
     =====================================================================*/
 void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     this->runnumber = runnumber;
-    EUDAQ_INFO("Converting the input file into a DRS4 TTree " );
+    EUDAQ_INFO("Converting the input file into a CAEN TTree " );
     string foutput(FileNamer(m_filepattern).Set('X', ".root").Set('R', runnumber));
     EUDAQ_INFO("Preparing the output file: " + foutput);
 
@@ -358,9 +340,18 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     =====================================================================*/
 void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     if (ev.IsBORE()) {
+        cout << "Start reading file!" << endl;
         PluginManager::SetConfig(ev, m_config);
         eudaq::PluginManager::Initialize(ev);
         tcal = PluginManager::GetTimeCalibration(ev);
+        // DIRTY FIX PUT IN THE REAL TCAL HERE!!!
+        if (tcal.at(0).at(0) == -1){
+            map<uint8_t, std::vector<float> > new_tcal;
+            for (uint8_t ich = 0; ich < 4; ich++)
+                for (uint16_t ibin = 0; ibin < 2048; ibin++)
+                    new_tcal[ich].push_back(.5);
+            tcal = new_tcal;
+        }
         FillFullTime();
         stringstream ss;
         ss << "tcal [";
@@ -486,7 +477,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
             f_col->push_back(uint16_t(plane.GetX(ipix)));
             f_row->push_back(uint16_t(plane.GetY(ipix)));
             f_adc->push_back(int16_t(plane.GetPixel(ipix)));
-            f_charge->push_back(42);						// todo: do charge conversion here!
+            f_charge->push_back(42);                        // todo: do charge conversion here!
         }
     }
     m_ttree->Fill();
