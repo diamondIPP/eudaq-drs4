@@ -107,7 +107,7 @@ namespace eudaq {
 
     for (size_t i_ev = 0; i_ev < dev.NumEvents(); ++i_ev) {
       const eudaq::Event &subev = *dev.GetEvent(i_ev);
-      if (subev.GetSubType() == "DRS4")
+      if (subev.GetSubType() == "DRS4" or subev.GetSubType() == "VX1742")
         return GetInstance().GetPlugin(subev).GetTimeCalibration(subev);
     }
     // if there is no sub-event DRS4
