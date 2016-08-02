@@ -107,7 +107,7 @@ void TUProducer::MainLoop(){
 					//input_frequencies[idx] = 1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]);
 
 					input_frequencies[idx] = this->ScalerDeque(idx, (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])));
-					std::cout << "sending idx: " << idx << " rate: " << (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])) << std::endl;
+					//std::cout << "sending idx: " << idx << " rate: " << (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])) << std::endl;
 				}
 				/******************************************** end get all the data ********************************************/
 
@@ -461,7 +461,6 @@ unsigned TUProducer::ScalerDeque(unsigned nr, unsigned rate){
 		}
 	}
 	if(len>0){
-		std::cout << "nr: " << nr << "rate: " << (temp/len) << std::endl;
 		return (temp/len);}
 	return 0;
 }
