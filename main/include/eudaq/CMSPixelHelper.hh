@@ -226,8 +226,8 @@ namespace eudaq {
           // xpixelalive
 
           try{
-            int calCol = in_raw.GetBlock(1)[0];
-            int calRow = in_raw.GetBlock(2)[0];
+            int calCol = in_raw.GetBlock(3)[0];
+            int calRow = in_raw.GetBlock(4)[0];
 
             //std::cout << "cal is at: " << calCol << "," << calRow << std::endl;
             //std::cout << "pixels:" << evt->pixels.size();

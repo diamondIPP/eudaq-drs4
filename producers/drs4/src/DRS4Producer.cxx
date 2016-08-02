@@ -203,7 +203,7 @@ void DRS4Producer::ReadoutLoop() {
 			// Trying to get the next event, daqGetRawEvent throws exception if none is available:
 			try {
 				SendRawEvent();
-
+				std::cout << "DRS4 Event number: " << m_ev << std::endl;
 				if(m_ev%1000 == 0) {
 					std::cout << "DRS4 Board "
 							<< " EVT " << m_ev << std::endl;
