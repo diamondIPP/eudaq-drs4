@@ -145,9 +145,6 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
 
   // Pattern Generator:
   bool testpulses = config.Get("testpulses", false);
-  cout << "WTF IS HAPPENING!" << endl;
-  for (auto i:rocDACs.at(0))
-    cout <<  i.first << " " << i.second << endl;
   if(testpulses) {
 
     uint16_t pgcal = config.Get("wbc", uint16_t(100));
@@ -166,7 +163,6 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
     pg_setup.push_back(std::make_pair("token",0));
     m_pattern_delay = config.Get("patternDelay", 100);
   }
-
   try {
     // Check for multiple ROCs using the I2C parameter:
     std::vector<int32_t> i2c_addresses = split(config.Get("i2c","i2caddresses","-1"),' ');
