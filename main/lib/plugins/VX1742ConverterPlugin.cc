@@ -116,6 +116,7 @@ private:
   uint32_t m_serialno;
   float m_firmware, m_range;
   static VX1742ConverterPlugin m_instance;
+	std::map<uint8_t, std::vector<float> > m_tcal;
 
 }; // class VX1742ConverterPlugin
 
