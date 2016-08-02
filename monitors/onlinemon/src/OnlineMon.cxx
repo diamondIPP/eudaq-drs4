@@ -58,8 +58,8 @@
 using namespace std;
 
 RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & datafile, int /*x*/, int /*y*/, int /*w*/,
-			 int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
-			 const std::string & conffile):eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false), _fft_resets(0){
+       int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
+       const std::string & conffile):eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false), _fft_resets(0) {
 
   if (_offline <= 0){
     onlinemon = new OnlineMonWindow(gClient->GetRoot(),800,600);
@@ -76,30 +76,30 @@ RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & dat
   eudaqCollection = new EUDAQMonitorCollection();
 
 
-	// put collections into the vector
-	_colls.push_back(hmCollection);
-	_colls.push_back(corrCollection);
-	_colls.push_back(wfCollection);
+  // put collections into the vector
+  _colls.push_back(hmCollection);
+  _colls.push_back(corrCollection);
+  _colls.push_back(wfCollection);
   _colls.push_back(tuCollection);
-	_colls.push_back(monCollection);
-	_colls.push_back(eudaqCollection);
-	// set the root Monitor
+  _colls.push_back(monCollection);
+  _colls.push_back(eudaqCollection);
+  // set the root Monitor
 
-	if (_offline <= 0) {
-		hmCollection->setRootMonitor(this);
-		corrCollection->setRootMonitor(this);
-		monCollection->setRootMonitor(this);
-		wfCollection->setRootMonitor(this);
+  if (_offline <= 0) {
+    hmCollection->setRootMonitor(this);
+    corrCollection->setRootMonitor(this);
+    monCollection->setRootMonitor(this);
+    wfCollection->setRootMonitor(this);
     tuCollection->setRootMonitor(this);
-		eudaqCollection->setRootMonitor(this);
-		onlinemon->setCollections(_colls);
-	}
+    eudaqCollection->setRootMonitor(this);
+    onlinemon->setCollections(_colls);
+  }
 
-	//initialize with default configuration
-	mon_configdata.SetDefaults();
-	configfilename.assign(conffile);
+  //initialize with default configuration
+  mon_configdata.SetDefaults();
+  configfilename.assign(conffile);
 
-	cout << "Set OnlineMonitor Configfile: \""<<configfilename<<"\""<<endl;
+  cout << "Set OnlineMonitor Configfile: \""<<configfilename<<"\""<<endl;
 
   if (configfilename.length()>1){
     mon_configdata.setConfigurationFileName(configfilename);
@@ -196,7 +196,8 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
   _checkEOF.EventReceived();
 
   if (ev.IsBORE()){
-    std::cout << "This is a BORE" << std::endl;}
+    std::cout << "This is a BORE" << std::endl;
+  }
 
   if (ev.GetEventNumber()<10 && ev.GetRunNumber()!=0)
    this->onlinemon->setRunNumber(ev.GetRunNumber());
@@ -229,7 +230,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
 
   if (reduce){
     unsigned int num = (unsigned int) ev.NumPlanes();
-	  unsigned int nwf = (unsigned int) ev.NumWaveforms();
+    unsigned int nwf = (unsigned int) ev.NumWaveforms();
     unsigned int ntu = (unsigned int) ev.NumTUEvents();
     //std::cout << "Number of TU events: " << ntu << std::endl;
 
@@ -253,15 +254,15 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
         myevent.setNPlanes(num);}
 
       if (myevent.getNWaveforms()!=nwf){
-				cout << "Waveform Mismatch on " <<ev.GetEventNumber()<<endl;
-				cout << "Current/Previous " <<nwf<<"/"<<myevent.getNWaveforms()<<endl;
-				skip_dodgy_event=true; //we may want to skip this FIXME
-				ostringstream eudaq_warn_message;
-				eudaq_warn_message << "Waveform Mismatch in Event "<<ev.GetEventNumber() <<" "<<nwf<<"/"<<myevent.getNWaveforms()<< ", Updating NWaveforms";
-				EUDAQ_LOG(WARN,(eudaq_warn_message.str()).c_str());
-			
+        cout << "Waveform Mismatch on " <<ev.GetEventNumber()<<endl;
+        cout << "Current/Previous " <<nwf<<"/"<<myevent.getNWaveforms()<<endl;
+        skip_dodgy_event=true; //we may want to skip this FIXME
+        ostringstream eudaq_warn_message;
+        eudaq_warn_message << "Waveform Mismatch in Event "<<ev.GetEventNumber() <<" "<<nwf<<"/"<<myevent.getNWaveforms()<< ", Updating NWaveforms";
+        EUDAQ_LOG(WARN,(eudaq_warn_message.str()).c_str());
+      
       }else{
-				myevent.setNWaveforms(nwf);}
+        myevent.setNWaveforms(nwf);}
     }//end else
 
 
@@ -282,43 +283,43 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
     // this is a hardcoded fix for setup at psi, think about a different option
     bool isPulserEvent = false;
     for (unsigned int i = 0; i < nwf;i++){
-    	const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
-    	if (waveform.GetChannelName() == "PULSER"){
-    		SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
-		simpWaveform.addData(&(*waveform.GetData())[0]);
-		simpWaveform.Calculate();
-		float integral = simpWaveform.getIntegral(700,900);
-		float pulserMin = simpWaveform.getMinimum(700, 900);
+      const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
+      if (waveform.GetChannelName() == "PULSER"){
+        SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
+    simpWaveform.addData(&(*waveform.GetData())[0]);
+    simpWaveform.Calculate();
+    float integral = simpWaveform.getIntegral(700,900);
+    float pulserMin = simpWaveform.getMinimum(700, 900);
     if( pulserMin < -100.)
-	      isPulserEvent = true;
-    	}
+        isPulserEvent = true;
+      }
     }//end for
 
     if (_last_fft_min.size() <nwf)_last_fft_min.resize(nwf,-1);
     if (_last_fft_max.size() <nwf)_last_fft_max.resize(nwf,-1);
     if (_last_fft_mean.size() <nwf)_last_fft_mean.resize(nwf,-1);
-	  for (unsigned int i = 0; i < nwf;i++){
-			const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
+    for (unsigned int i = 0; i < nwf;i++){
+      const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
 
 
       #ifdef DEBUG
-			 cout << "Waveform ID          " << waveform.ID()<<endl;
-			 cout << "Waveform Size        " << sizeof(waveform) <<endl;
-  		 //cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
-			 cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
-			 cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
-			 cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
-			 cout << "Waveform Type        " << waveform.GetType() << endl;
-			 cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
+       cout << "Waveform ID          " << waveform.ID()<<endl;
+       cout << "Waveform Size        " << sizeof(waveform) <<endl;
+       //cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
+       cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
+       cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
+       cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
+       cout << "Waveform Type        " << waveform.GetType() << endl;
+       cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
       #endif
 
 
-			std::string sensorname;
-			sensorname = waveform.GetType();
-			SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);
-			simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
-			simpWaveform.setNSamples(waveform.GetNSamples());
-			simpWaveform.addData(&(*waveform.GetData())[0]);
+      std::string sensorname;
+      sensorname = waveform.GetType();
+      SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);
+      simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
+      simpWaveform.setNSamples(waveform.GetNSamples());
+      simpWaveform.addData(&(*waveform.GetData())[0]);
             // perform the fft and put it into the simpleWF directly
             simpWaveform.performFFT(fft_own);
             int count = 0;
@@ -349,18 +350,18 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
             _last_fft_max[i] = simpWaveform.getMaxFFT();
             _last_fft_mean[i] = simpWaveform.getMeanFFT();
 
-			simpWaveform.Calculate();
-			//simpWaveform.setTimestamp(ev.GetTimestamp());
-			simpWaveform.setTimestamp(waveform.GetTimeStamp());
-			simpWaveform.setEvent(ev.GetEventNumber());
-			simpWaveform.setChannelName(waveform.GetChannelName());
-			simpWaveform.setChannelNumber(waveform.GetChannelNumber());
-			simpWaveform.setPulserEvent(isPulserEvent);
+      simpWaveform.Calculate();
+      //simpWaveform.setTimestamp(ev.GetTimestamp());
+      simpWaveform.setTimestamp(waveform.GetTimeStamp());
+      simpWaveform.setEvent(ev.GetEventNumber());
+      simpWaveform.setChannelName(waveform.GetChannelName());
+      simpWaveform.setChannelNumber(waveform.GetChannelNumber());
+      simpWaveform.setPulserEvent(isPulserEvent);
             //std::cout<<"isPulser Event: "<<isPulserEvent<<"/"<<simpWaveform.isPulserEvent()<<std::endl;
-//			waveform.GetNSamples();
-//			cout<<"simpWaveform no"<<i<<" name \""<<simpWaveform.getName()
-//					<<"\" ID: "<<simpWaveform.getID()
-//					<<" ch name \""<<simpWaveform.getChannelName()<<"\""<<endl;//<<"\" mon:"<<_mon<<endl;
+//      waveform.GetNSamples();
+//      cout<<"simpWaveform no"<<i<<" name \""<<simpWaveform.getName()
+//          <<"\" ID: "<<simpWaveform.getID()
+//          <<" ch name \""<<simpWaveform.getChannelName()<<"\""<<endl;//<<"\" mon:"<<_mon<<endl;
       simpEv.addWaveform(simpWaveform);
 
 
@@ -402,7 +403,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
 /************************************** End TU Event Stuff **************************************/
 
 
-		}
+    }
 
 
     if (skip_dodgy_event){
@@ -433,6 +434,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
 
 
       SimpleStandardPlane simpPlane(sensorname,plane.ID(),plane.XSize(),plane.YSize(), plane.TLUEvent(),plane.PivotPixel(),&mon_configdata);
+      simpPlane.m_ntrig = plane.m_ntrig;
       for (unsigned int lvl1 = 0; lvl1 < plane.NumFrames(); lvl1++){
         // if (lvl1 > 2 && plane.HitPixels(lvl1) > 0) std::cout << "LVLHits: " << lvl1 << ": " << plane.HitPixels(lvl1) << std::endl;
         for (unsigned int index = 0; index < plane.HitPixels(lvl1);index++){
@@ -444,12 +446,12 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
               if ((hit.getTOT()< -20) || (hit.getTOT()>120)){
                 continue;}
             }
-	          if (simpPlane.is_EXPLORER){
-	            if (lvl1!=0) continue;
-	            hit.setTOT((int)plane.GetPixel(index));
-      	      if (hit.getTOT() < 20){
-		            continue;}
-	          }
+            if (simpPlane.is_EXPLORER){
+              if (lvl1!=0) continue;
+              hit.setTOT((int)plane.GetPixel(index));
+              if (hit.getTOT() < 20){
+                continue;}
+            }
             simpPlane.addHit(hit);
           }
           else{ //purely digital pixel
@@ -478,7 +480,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       #ifdef DEBUG
       cout << "Waiting for booking of Histograms..." << endl;
       #endif
-      EUDAQ_SLEEP(1);
+      EUDAQ_SLEEP(3);
       #ifdef DEBUG
       cout << "...long enough"<< endl;
       #endif
@@ -516,9 +518,9 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       if (_colls.at(i)->getCollectionType()==HITMAP_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
         _colls.at(i)->Calculate(ev.GetEventNumber());}
 
-			if (_colls.at(i)->getCollectionType()==WAVEFORM_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
-				_colls.at(i)->Calculate(ev.GetEventNumber());
-			}
+      if (_colls.at(i)->getCollectionType()==WAVEFORM_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
+        _colls.at(i)->Calculate(ev.GetEventNumber());
+      }
     }//end for
 
     if (_offline <= 0){

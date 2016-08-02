@@ -181,7 +181,7 @@ void FileWriterTreeDRS4::Configure(){
         string reg = (split(name, "_").size() > 1) ? split(name, "_").at(1) : "";
         if (name.find("pedestal_") != string::npos) ss_ped << "    region_" << reg << ":" << string(5 - reg.size(), ' ') << to_string(region_def) << "\n";
         if (name.find("signal_") != string::npos) ss_sig << "    region_" << reg << ":" << string(5 - reg.size(), ' ') << to_string(region_def) << "\n";
-        if (name.find("pulser_") != string::npos) ss_pul << "    region_" << reg << ":" << string(5 - reg.size(), ' ') << to_string(region_def) << "\n";
+        if (name.find("pulser") != string::npos) ss_pul << "    region" << reg << ": " << string(5 - reg.size(), ' ') << to_string(region_def) << "\n";
         TString key = name + ":" + string(20 - name.size(), ' ') + TString::Format("%4d - %4d", region_def.first, region_def.second);
         macro->AddLine(key);
         WaveformSignalRegion region = WaveformSignalRegion(region_def.first, region_def.second, name);
@@ -284,7 +284,6 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
 
     // fft stuff and spectrum
     if (fft_waveforms) {
-        print_banner("This is not executed!");
         m_ttree->Branch("fft_mean", &fft_mean);
         m_ttree->Branch("fft_mean_freq", &fft_mean_freq);
         m_ttree->Branch("fft_max", &fft_max);
@@ -342,9 +341,14 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 
     f_event_number = sev.GetEventNumber();
-    if (sev.GetTUEvent(0).GetValid())
-        f_time = sev.GetTimestamp();
-//        f_time = sev.GetTimestamp() / float(384066.);
+
+    // set time stamp
+    if (sev.NumTUEvents()){
+        if (sev.GetTUEvent(0).GetValid())
+            f_time = sev.GetTimestamp();
+    }
+    else
+        f_time = sev.GetTimestamp() / 384066.;
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------

@@ -62,7 +62,15 @@ CMSPixelProducer::CMSPixelProducer(const std::string & name, const std::string &
     m_detector(""),
     m_event_type(""),
     m_alldacs(""),
-    m_last_mask_filename("")
+    m_last_mask_filename(""),
+    m_resetaftereachcolumn(false),
+    m_logcurrents(false),
+    m_caldelscan(false),
+    m_feedbackscan(false),
+    m_feedbackscanmin(10),
+    m_feedbackscanmax(100),
+    m_feedbackscanstep(10),
+    m_caldel(-1)
 {
   if(m_producerName.find("REF") != std::string::npos) {
     m_detector = "REF";
@@ -137,11 +145,50 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
   sig_delays.push_back(std::make_pair("tindelay",config.Get("tindelay",13)));
   sig_delays.push_back(std::make_pair("toutdelay",config.Get("toutdelay",10)));
   sig_delays.push_back(std::make_pair("triggertimeout",config.Get("triggertimeout",65000)));
+  if (config.Get("trimdelay",0) > 0) {
+    sig_delays.push_back(std::make_pair("trimdelay",config.Get("trimdelay",0)));
+    EUDAQ_INFO(string("trimdelay: " + std::to_string(config.Get("trimdelay",0))));
+  }
+  if (config.Get("triggerdelay",0) > 0) {
+    sig_delays.push_back(std::make_pair("triggerdelay",config.Get("triggerdelay",0)));
+    EUDAQ_INFO(string("triggerdelay: " + std::to_string(config.Get("triggerdelay",0))));
+  }
+
   //Power settings:
   power_settings.push_back( std::make_pair("va",config.Get("va",1.8)) );
   power_settings.push_back( std::make_pair("vd",config.Get("vd",2.5)) );
   power_settings.push_back( std::make_pair("ia",config.Get("ia",1.10)) );
   power_settings.push_back( std::make_pair("id",config.Get("id",1.10)) );
+
+  // current logging
+  m_logcurrents = config.Get("logcurrents", false);
+  if (m_logcurrents) {
+    EUDAQ_INFO(string("Current logging enabled (analog/digital currents)."));
+  } else {
+    EUDAQ_INFO(string("Current logging disabled."));
+  }
+
+  // CalDel scan
+  m_caldelscan = config.Get("caldelscan", false);
+  if (m_caldelscan) {
+    EUDAQ_INFO(string("CalDel scan enabled"));
+  } else {
+    EUDAQ_INFO(string("CalDel scan disabled"));
+  }
+
+  // fixed caldel
+  m_caldel = config.Get("caldel", -1);
+
+  // Vwllpr/Vwllsh scan
+  m_feedbackscan = config.Get("feedbackscan", false);
+  if (m_feedbackscan) {
+    EUDAQ_INFO(string("Vwllpr/Vwllsh scan enabled"));
+    m_feedbackscanmin = config.Get("feedbackscanmin", 10);
+    m_feedbackscanmax = config.Get("feedbackscanmax", 250);
+    m_feedbackscanstep = config.Get("feedbackscanstep", 20);
+  } else {
+    EUDAQ_INFO(string("Vwllpr/Vwllsh scan disabled"));
+  }
 
   // Periodic ROC resets:
   m_roc_resetperiod = config.Get("rocresetperiod", 0);
@@ -156,19 +203,34 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
     cout << pgcal << endl;
     pgcal += m_roctype.find("dig") ? 6 : 5;
     cout << pgcal << endl;
-    pg_setup.push_back(std::make_pair("resetroc",config.Get("resetroc",25)) );
+    if (config.Get("resetroc",25) > 0) {
+      pg_setup.push_back(std::make_pair("resetroc", config.Get("resetroc", 25)));
+      EUDAQ_INFO(string("PG with calibrates and reset"));
+    } else {
+      EUDAQ_INFO(string("PG with calibrates, without reset"));
+    }
     pg_setup.push_back(std::make_pair("calibrate",config.Get("calibrate",106)) );
     pg_setup.push_back(std::make_pair("trigger",config.Get("trigger", 16)) );
     pg_setup.push_back(std::make_pair("token",config.Get("token", 0)));
     m_pattern_delay = config.Get("patternDelay", 100) * 10;
     EUDAQ_USER("Using testpulses, pattern delay " + eudaq::to_string(m_pattern_delay) + "\n");
+    if (m_xpixelalive) {
+      EUDAQ_INFO(string("scanning ROC pixel by pixel with test-pulses (xpixelalive)"));
+    }
   }
   else {
+    EUDAQ_INFO(string("PG without calibrates/reset"));
     pg_setup.push_back(std::make_pair("trigger",46));
     pg_setup.push_back(std::make_pair("token",0));
     m_pattern_delay = config.Get("patternDelay", 100);
   }
 
+  if (config.Get("resetAfterEachColumn",0) == 1) {
+    m_resetaftereachcolumn = true;
+    EUDAQ_INFO(string("send ROC reset after each double column"));
+  } else {
+    m_resetaftereachcolumn = false;
+  }
   m_ntrig = config.Get("ntrig", 10);
   cout << "pattern generator has been set";
 
@@ -239,6 +301,16 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
     m_api->initDUT(hubid,m_tbmtype,tbmDACs,m_roctype,rocDACs,rocPixels,rocI2C);
     // Store the number of configured ROCs to be stored in a BORE tag:
     m_nplanes = rocDACs.size();
+
+    if (m_caldel > 0) {
+      m_api->setDAC("caldel", m_caldel);
+      std::stringstream ss;
+      ss << "using CalDel " << m_caldel;
+      EUDAQ_INFO(ss.str());
+    }
+
+    // set pattern generator
+    m_api->setPatternGenerator(pg_setup);
 
     // Read current:
     std::cout << "Analog current: " << m_api->getTBia()*1000 << "mA" << std::endl;
@@ -453,6 +525,246 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
 
 /**STARTRUN*/
 
+double CMSPixelProducer::EstimateEfficiency() {
+
+  std::vector< std::pair<int,int> > pixels;
+  for (int c=1;c<51;c+=6) {
+    for (int r=1;r<79;r+=8) {
+      pixels.push_back(std::make_pair(c,r));
+    }
+  }
+
+  int ntrig=100;
+  int good_hits = 0;
+  m_api->daqStart();
+
+  for (int k=0;k<pixels.size();k++) {
+
+    m_api->_dut->testAllPixels(false);
+    m_api->SetCalibrateBits(false);
+    m_api->_dut->testPixel(pixels[k].first, pixels[k].second, true);
+    m_api->SetCalibrateBits(true);
+
+    m_api->daqSingleSignal("resetroc");
+    m_api->daqTrigger(ntrig, m_pattern_delay);
+
+    m_api->_dut->testPixel(pixels[k].first, pixels[k].second, false);
+
+  }
+
+  // Stop the Data Acquisition:
+  m_api->daqStop();
+
+  std::vector <pxar::Event> caldelEvents = m_api->daqGetEventBuffer();
+  for (int i = 0; i < caldelEvents.size(); i++) {
+    int k = i / ntrig;
+    if (caldelEvents[i].pixels.size() > 0) {
+      for (int j = 0; j < caldelEvents[i].pixels.size(); j++) {
+        if (caldelEvents[i].pixels[j].column() == pixels[k].first &&
+            caldelEvents[i].pixels[j].row() == pixels[k].second) {
+          good_hits++;
+        }
+      }
+    }
+  }
+  return (double)good_hits/(ntrig*pixels.size());
+}
+
+void CMSPixelProducer::CalDelScan() {
+
+  std::cout << "optimize caldel" << std::endl;
+  SetStatus(eudaq::Status::LVL_USER, "CALDEL SCAN (HV ON)");
+
+  std::vector< std::pair<int, double> > efficiencies;
+  double maxEfficiency = 0;
+
+  // step 1
+  for (int calDel=0;calDel<255;calDel += 31) {
+    m_api->setDAC("caldel", calDel);
+
+    std::stringstream ss("");
+    double efficiency = EstimateEfficiency();
+    efficiencies.push_back(std::make_pair(calDel, efficiency));
+
+    if (maxEfficiency < efficiency) {
+      maxEfficiency = efficiency;
+    }
+
+    ss << calDel << ":" << (int)(efficiency*100);
+    EUDAQ_INFO(ss.str());
+
+    if (efficiency < 0.1 && maxEfficiency > 0.9) {
+      break;
+    }
+  }
+
+  int firstPos=0,lastPos=0;
+
+  for (int i=0;i<efficiencies.size();i++) {
+    if (efficiencies[i].second > maxEfficiency * 0.995) {
+      firstPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+  for (int i=efficiencies.size()-1;i>=0;i--) {
+    if (efficiencies[i].second > maxEfficiency * 0.995) {
+      lastPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+  firstPos -=31;
+  if (firstPos < 0) firstPos = 0;
+  lastPos += 31;
+  if (lastPos > 255) lastPos = 255;
+  if (lastPos < firstPos) lastPos = firstPos;
+
+  // step 2
+  maxEfficiency = 0;
+
+  for (int calDel=firstPos;calDel<=lastPos;calDel += 10) {
+    m_api->setDAC("caldel", calDel);
+
+    std::stringstream ss("");
+    double efficiency = EstimateEfficiency();
+    efficiencies.push_back(std::make_pair(calDel, efficiency));
+
+    if (maxEfficiency < efficiency) {
+      maxEfficiency = efficiency;
+    }
+
+    ss << calDel << ":" << (int)(efficiency*100);
+    EUDAQ_INFO(ss.str());
+
+    if (efficiency < 0.1 && maxEfficiency > 0.9) {
+      break;
+    }
+  }
+
+  firstPos=0,lastPos=0;
+
+  for (int i=0;i<efficiencies.size();i++) {
+    if (efficiencies[i].second > maxEfficiency * 0.995) {
+      firstPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+  for (int i=efficiencies.size()-1;i>=0;i--) {
+    if (efficiencies[i].second > maxEfficiency * 0.995) {
+      lastPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+
+  firstPos -=6;
+  if (firstPos < 0) firstPos = 0;
+  lastPos += 6;
+  if (lastPos > 255) lastPos = 255;
+  if (lastPos < firstPos) lastPos = firstPos;
+
+  // step 3 - final step
+  maxEfficiency = 0;
+  int bestCaldel = 0;
+  efficiencies.clear();
+
+  for (int calDel=firstPos;calDel<=lastPos;calDel += 1) {
+    m_api->setDAC("caldel", calDel);
+
+    std::stringstream ss("");
+    double efficiency = EstimateEfficiency();
+    efficiencies.push_back(std::make_pair(calDel, efficiency));
+
+    if (maxEfficiency < efficiency) {
+      maxEfficiency = efficiency;
+      bestCaldel = calDel;
+    }
+
+    ss << calDel << ":" << (double)(efficiency*100);
+    EUDAQ_INFO(ss.str());
+
+    if (efficiency < 0.1 && maxEfficiency > 0.9) {
+      break;
+    }
+  }
+
+  firstPos=0,lastPos=0;
+
+  for (int i=0;i<efficiencies.size();i++) {
+    if (efficiencies[i].second > maxEfficiency * 0.9995) {
+      firstPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+  for (int i=efficiencies.size()-1;i>=0;i--) {
+    if (efficiencies[i].second > maxEfficiency * 0.9995) {
+      lastPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+  bestCaldel = (int)((firstPos+lastPos)/2);
+
+  std::stringstream ss("");
+  ss <<  "optimal CalDel: " << bestCaldel;
+  EUDAQ_INFO(ss.str());
+  m_api->setDAC("caldel", bestCaldel);
+
+}
+
+// scan feedback DACs to optimize efficiency
+void CMSPixelProducer::FeedbackScan() {
+
+  std::cout << "optimize vwllpr/vwllsh" << std::endl;
+  SetStatus(eudaq::Status::LVL_USER, "FEEDBACK SCAN! (HV ON)");
+
+  std::vector< std::pair<int, double> > efficiencies;
+  double maxEfficiency = 0;
+
+  for (int feedback=5;feedback<155;feedback += 5) {
+    m_api->setDAC("vwllpr", feedback);
+    m_api->setDAC("vwllsh", feedback);
+
+    std::stringstream ss("");
+    double efficiency = EstimateEfficiency();
+    efficiencies.push_back(std::make_pair(feedback, efficiency));
+
+    if (maxEfficiency < efficiency) {
+      maxEfficiency = efficiency;
+    }
+
+    ss << "Vwllpr/sh = " << feedback << ":" << (int)(efficiency*100);
+    EUDAQ_INFO(ss.str());
+  }
+
+  int firstPos=0,lastPos=0;
+
+  for (int i=0;i<efficiencies.size();i++) {
+    if (efficiencies[i].second > maxEfficiency * 0.998) {
+      firstPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+  for (int i=efficiencies.size()-1;i>=0;i--) {
+    if (efficiencies[i].second > maxEfficiency * 0.998) {
+      lastPos = efficiencies[i].first;
+      break;
+    }
+  }
+
+  int bestFeedback = (firstPos + lastPos)/2;
+  std::stringstream ss("");
+  ss <<  "optimal vwllpr/sh: " << bestFeedback;
+  EUDAQ_INFO(ss.str());
+  m_api->setDAC("vwllpr", bestFeedback);
+  m_api->setDAC("vwllsh", bestFeedback);
+
+}
+
 void CMSPixelProducer::OnStartRun(unsigned runnumber) {
   m_run = runnumber;
   m_ev = 0;
@@ -463,6 +775,28 @@ void CMSPixelProducer::OnStartRun(unsigned runnumber) {
     EUDAQ_INFO("Switching Sensor Bias HV ON.");
     EUDAQ_INFO(m_last_mask_filename);
     m_api->HVon();
+
+    if (m_caldelscan) {
+      // Send additional ROC Reset signal at run start:
+      if(!m_api->daqSingleSignal("resetroc")) {
+        throw InvalidConfig("Unable to send ROC reset signal!");
+      }
+      else {
+        EUDAQ_INFO(string("ROC Reset signal issued."));
+      }
+      CalDelScan();
+    }
+
+    if (m_feedbackscan) {
+      // Send additional ROC Reset signal at run start:
+      if(!m_api->daqSingleSignal("resetroc")) {
+        throw InvalidConfig("Unable to send ROC reset signal!");
+      }
+      else {
+        EUDAQ_INFO(string("ROC Reset signal issued."));
+      }
+      FeedbackScan();
+    }
 
     std::cout << "Start Run: " << m_run << std::endl;
 
@@ -492,16 +826,36 @@ void CMSPixelProducer::OnStartRun(unsigned runnumber) {
     if (m_xpixelalive) {
       bore.AddBlock(1, reinterpret_cast<const char*>(&m_calCol), sizeof(m_calCol));
       bore.AddBlock(2, reinterpret_cast<const char*>(&m_calRow), sizeof(m_calRow));
+    } else {
+      int empty = 0;
+      bore.AddBlock(1, reinterpret_cast<const char*>(&empty), sizeof(empty));
+      bore.AddBlock(2, reinterpret_cast<const char*>(&empty), sizeof(empty));
     }
+
+    // currents
+    int empty = 0;
+    bore.AddBlock(3, reinterpret_cast<const char*>(&empty), sizeof(empty));
+    bore.AddBlock(4, reinterpret_cast<const char*>(&empty), sizeof(empty));
+
+    // ntrig
+    if (m_xpixelalive) {
+      bore.AddBlock(5, reinterpret_cast<const char*>(&m_ntrig), sizeof(m_ntrig));
+    } else {
+      int empty = 0;
+      bore.AddBlock(5, reinterpret_cast<const char*>(&empty), sizeof(empty));
+    }
+
+
     // Send the event out:
     SendEvent(bore);
 
     std::cout << "BORE with detector " << m_detector << " (event type " << m_event_type << ") and ROC type " << m_roctype << std::endl;
 
+
     // Start the Data Acquisition:
+    eudaq::mSleep(200);
     m_api -> daqStart();
-
-
+    eudaq::mSleep(100);
 
 
     // Send additional ROC Reset signal at run start:
@@ -511,8 +865,6 @@ void CMSPixelProducer::OnStartRun(unsigned runnumber) {
     else {
       EUDAQ_INFO(string("ROC Reset signal issued."));
     }
-
-
 
     // If we run on Pattern Generator, activate the PG loop:
   if(m_trigger_is_pg) {
@@ -579,6 +931,13 @@ void CMSPixelProducer::OnStopRun() {
 
   ev.AddBlock(1, reinterpret_cast<const char*>(&m_calCol), sizeof(m_calCol));
   ev.AddBlock(2, reinterpret_cast<const char*>(&m_calRow), sizeof(m_calRow));
+
+  // currents
+  int empty = 0;
+  ev.AddBlock(3, reinterpret_cast<const char*>(&empty), sizeof(empty));
+  ev.AddBlock(4, reinterpret_cast<const char*>(&empty), sizeof(empty));
+
+  ev.AddBlock(5, reinterpret_cast<const char*>(&m_ntrig), sizeof(m_ntrig));
 	SendEvent(ev);
 	if(daqEvents.at(i).data.size() > 1) { m_ev_filled++; }
 	m_ev++;
@@ -636,11 +995,17 @@ void CMSPixelProducer::GoToNextPixel(){
     if (m_calRow>79) {
       m_calRow = 0;
       m_calCol++;
+      if (m_resetaftereachcolumn) {
+        if (!m_api->daqSingleSignal("resetroc")) { EUDAQ_ERROR(string("Unable to send ROC reset signal!\n")); }
+      }
     }
     if (m_calCol>51) {
       std::cout << "Loop through all pixels finished at event " << m_ev << std::endl;
       m_calRow = 0;
       m_calCol = 0;
+      std::cout << "You can STOP the run now!" << std::endl;
+      EUDAQ_INFO(string("Run finished, click STOP now!"));
+      SetStatus(eudaq::Status::LVL_USER, "DONE! (HV ON)");
       //stop run!!!
     } else {
       std::cout << "test pixel " << (int)m_calCol << "," << (int)m_calRow << std::endl;
@@ -648,6 +1013,7 @@ void CMSPixelProducer::GoToNextPixel(){
       m_api->SetCalibrateBits(true);
       m_api->daqTrigger(m_ntrig, m_pattern_delay);
     }
+  m_nHits = 0;
 }
 
 void CMSPixelProducer::ReadoutLoop() {
@@ -678,20 +1044,42 @@ void CMSPixelProducer::ReadoutLoop() {
 
 	ev.AddBlock(0, reinterpret_cast<const char*>(&daqEvent.data[0]), sizeof(daqEvent.data[0])*daqEvent.data.size());
 
-  // add analogue and digital current
-  float ia = m_api->getTBia();
-  float id = m_api->getTBid();
-  ev.AddBlock(1, reinterpret_cast<const char*>(&ia), sizeof(ia));
-  ev.AddBlock(2, reinterpret_cast<const char*>(&id), sizeof(id));
+    // add address of pixel which received calibrate
+    if(m_xpixelalive) {
+      ev.AddBlock(1, reinterpret_cast<const char*>(&m_calCol), sizeof(m_calCol));
+      ev.AddBlock(2, reinterpret_cast<const char*>(&m_calRow), sizeof(m_calRow));
+    } else {
+      int empty = 0;
+      ev.AddBlock(1, reinterpret_cast<const char*>(&empty), sizeof(empty));
+      ev.AddBlock(2, reinterpret_cast<const char*>(&empty), sizeof(empty));
+    }
 
-  // add address of pixel which received calibrate
-  if(m_xpixelalive) {
-    ev.AddBlock(3, reinterpret_cast<const char*>(&m_calCol), sizeof(m_calCol));
-    ev.AddBlock(4, reinterpret_cast<const char*>(&m_calRow), sizeof(m_calRow));
-  }
+    // add analogue and digital current
+    float ia=0;
+    float id=0;
+    if (m_logcurrents) {
+      ia = m_api->getTBia();
+      id = m_api->getTBid();
+    }
+    ev.AddBlock(3, reinterpret_cast<const char *>(&ia), sizeof(ia));
+    ev.AddBlock(4, reinterpret_cast<const char *>(&id), sizeof(id));
+
+    // add ntrig
+    if(m_xpixelalive) {
+      ev.AddBlock(5, reinterpret_cast<const char*>(&m_ntrig), sizeof(m_ntrig));
+    } else {
+      int empty = 0;
+      ev.AddBlock(5, reinterpret_cast<const char*>(&empty), sizeof(empty));
+    }
 
 	SendEvent(ev);
+        int daqEventSize = daqEvent.data.size();
   std::cout << "Event count CMSPixel producer: " << m_ev << std::endl;
+
+   // count hits
+
+std::cout << "last event size: " << daqEvent.data.size() << std::endl;
+
 	m_ev++;
 
   // go to next pixel in xpixelalive test

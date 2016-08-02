@@ -79,6 +79,7 @@ class SimpleStandardPlane {
     bool getAnalogPixelType() {return AnalogPixelType;}
     void setIsRotated(bool type) {isRotated=type;}
     bool getIsRotated() {return isRotated;}
+    int m_ntrig;
   void setPixelType(std::string name);
     bool is_MIMOSA26;
     bool is_DEPFET;

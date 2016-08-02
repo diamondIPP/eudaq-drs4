@@ -27,6 +27,9 @@ public:
   virtual void OnTerminate();
   void ReadoutLoop();
   void GoToNextPixel();
+  void CalDelScan();
+  double EstimateEfficiency();
+  void FeedbackScan();
 
 private:
   void ReadInSingleEventWriteBinary();
@@ -55,6 +58,14 @@ private:
   bool m_terminated, m_running, triggering;
   bool m_trimmingFromConf, m_trigger_is_pg;
   bool m_maskingFromConf;
+  bool m_resetaftereachcolumn;
+  bool m_logcurrents;
+  bool m_caldelscan;
+  bool m_feedbackscan;
+    int m_feedbackscanmin;
+    int m_feedbackscanmax;
+    int m_feedbackscanstep;
+    int m_caldel;
   std::string m_last_mask_filename;
   eudaq::Configuration m_config;
 
@@ -70,6 +81,7 @@ private:
   char m_calRow;
   char m_calCol;
   int m_ntrig;
+    int m_nHits;
   bool m_xpixelalive;
 };
 

@@ -52,7 +52,7 @@ namespace eudaq {
 
   class CMSPixelHelper {
   public:
-    std::map<std::string, float > roc_calibrations = {{"psi46v2", 65}, {"psi46digv21respin", 47}, {"proc600", 47}};
+    std::map<std::string, float > roc_calibrations = {{"psi46v2", 65}, {"psi46digv21respin", 47}, {"proc600", 47}, {"proc600v2", 47}};
     CMSPixelHelper(std::string event_type) : do_conversion(false), m_event_type(event_type), m_conv_cfg(0) {};
     void set_conversion(bool val){do_conversion = val;}
     bool get_conversion(){return do_conversion;}
@@ -103,7 +103,7 @@ namespace eudaq {
         cnf.SetSection(i);
         std::string roctype = cnf.Get("roctype","roctype","");
         if (roctype == "") continue;
-        bool is_digital = (roctype.find("dig") == -1) ? false : true;
+        bool is_digital = ((roctype.find("dig") == -1)||(roctype.find("proc") == -1)) ? false : true;
 
         std::string fname = m_conv_cfg ? m_conv_cfg->Get("phCalibrationFile", "") : "";
         if (fname == "") fname = cnf.Get("phCalibrationFile","");
@@ -191,8 +191,8 @@ namespace eudaq {
 
       const RawDataEvent & in_raw = dynamic_cast<const RawDataEvent &>(in);
       // Check of we have more than one data block:
-      if(in_raw.NumBlocks() > 3) {
-	EUDAQ_ERROR("Only up to 3 data blocks are expected!");
+      if(in_raw.NumBlocks() > 6) {
+	EUDAQ_ERROR("Only up to 6 data blocks are expected!");
 	return false;
       }
 
@@ -213,6 +213,9 @@ namespace eudaq {
       //decoder.setOffset(20);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
+      bool xpixelalive_run = true;
+      int plane_ntrig = 10;
+
       try{
           // Connect the data source and set up the pipe:
           src = evtSource(0, m_nplanes, 0, m_tbmtype, m_roctype);
@@ -224,28 +227,38 @@ namespace eudaq {
           evt = Eventpump.Get();
 
           // xpixelalive
+          if (xpixelalive_run) {
+            try {
+              int calCol = in_raw.GetBlock(1)[0];
+              int calRow = in_raw.GetBlock(2)[0];
 
-          try{
-            int calCol = in_raw.GetBlock(3)[0];
-            int calRow = in_raw.GetBlock(4)[0];
+              //std::cout << "cal is at: " << calCol << "," << calRow << std::endl;
+              //std::cout << "pixels:" << evt->pixels.size();
 
-            //std::cout << "cal is at: " << calCol << "," << calRow << std::endl;
-            //std::cout << "pixels:" << evt->pixels.size();
-
-            for (size_t i = 0;i< evt->pixels.size();i++) {
-              //std::cout << "hit " << (int)evt->pixels[i].column() << "," << (int)evt->pixels[i].row() << std::endl;
-              if (evt->pixels[i].column() != calCol || evt->pixels[i].row() != calRow) {
-                int val = evt->pixels[i].value();
-                if (val < 0) {
-                  std::cout << "negative PH found in raw event " << (int)evt->pixels[i].column() << "," << (int)evt->pixels[i].row() << ":" << val << " --> corrected";
-                  val = -val;
+              for (size_t i = 0; i < evt->pixels.size(); i++) {
+                //std::cout << "hit " << (int)evt->pixels[i].column() << "," << (int)evt->pixels[i].row() << std::endl;
+                if (evt->pixels[i].column() != calCol || evt->pixels[i].row() != calRow) {
+                  int val = evt->pixels[i].value();
+                  if (val < 0) {
+                    std::cout << "negative PH found in raw event " << (int) evt->pixels[i].column() << "," <<
+                    (int) evt->pixels[i].row() << ":" << val << " --> corrected";
+                    val = -val;
+                  }
+                  evt->pixels[i].setValue(-val);
                 }
-                evt->pixels[i].setValue(-val);
               }
             }
-          }
-          catch (...){
-            //std::cout << "no 7/8" << std::endl;
+            catch (...) {
+              //std::cout << "no 7/8" << std::endl;
+              xpixelalive_run = false; // don't check again for xpixelalive data...
+            }
+            try {
+              plane_ntrig = in_raw.GetBlock(5)[0];
+              //std::cout << "ntrig=" << plane_ntrig << std::endl;
+            }
+            catch (...) {
+              //std::cout << "no ntrig data found -> skip" << std::endl;
+            }
           }
           
 
@@ -264,6 +277,8 @@ namespace eudaq {
 	StandardPlane plane(plane_id + roc, m_event_type, m_detector);
 	plane.SetTrigCount(evt->triggerCount());
 	plane.SetTrigPhase(evt->triggerPhase());
+
+    plane.m_ntrig = plane_ntrig; //this is trigger count per pixel, not total!!   todo: setter function
 
 	// Initialize the plane size (zero suppressed), set the number of pixels
 	// Check which carrier PCB has been used and book planes accordingly:

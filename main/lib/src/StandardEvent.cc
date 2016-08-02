@@ -64,7 +64,7 @@ float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const
 float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> * tcal) const {
 	if (high_bin > this->GetNSamples() - 1) high_bin = uint16_t(this->GetNSamples() - 1);
 	float max_low_length = (peak_pos - low_bin) * float(.5);
-	float max_high_length = (high_bin - peak_pos - 1) * float(.5);
+	float max_high_length = (high_bin - peak_pos) * float(.5);
     uint16_t size = uint16_t(std::min(m_samples.size(), tcal->size()));
 	float integral = tcal->at((tcell + peak_pos) % size) * m_samples.at(peak_pos);  // take the value at the peak pos as start value
 	// sum up the times if the bins to the left side of the peak pos until max length is reached
@@ -87,7 +87,7 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
 		i++;
 	}
 	integral += (max_high_length - high_length) * m_samples.at(i);
-	return integral / (max_high_length + max_low_length);
+	return integral / (max_high_length + max_low_length + float(.5));
 }
 
 std::vector<uint16_t> * StandardWaveform::getAllPeaksAbove(uint16_t min, uint16_t max, float threshold) const {
@@ -112,14 +112,14 @@ float StandardWaveform::getMedian(uint32_t min, uint32_t max) const
 /*************************************** Standard Plane *****************************************/
 /************************************************************************************************/
 
-StandardPlane::StandardPlane() : m_id(0), m_tluevent(0), m_xsize(0), m_ysize(0), m_flags(0), m_pivotpixel(0), m_result_pix(0), m_result_x(0), m_result_y(0) {}
+StandardPlane::StandardPlane() : m_id(0), m_tluevent(0), m_xsize(0), m_ysize(0), m_flags(0), m_pivotpixel(0), m_result_pix(0), m_result_x(0), m_result_y(0), m_ntrig(10) {}
 
 StandardPlane::StandardPlane(unsigned id, const std::string & type, const std::string & sensor)
 : m_type(type), m_sensor(sensor), m_id(id), m_tluevent(0), m_xsize(0), m_ysize(0),
-  m_flags(0), m_pivotpixel(0), m_result_pix(0), m_result_x(0), m_result_y(0)
+  m_flags(0), m_pivotpixel(0), m_result_pix(0), m_result_x(0), m_result_y(0), m_ntrig(10)
 {}
 
-StandardPlane::StandardPlane(Deserializer & ds) : m_result_pix(0), m_result_x(0), m_result_y(0) {
+StandardPlane::StandardPlane(Deserializer & ds) : m_result_pix(0), m_result_x(0), m_result_y(0), m_ntrig(10) {
 	ds.read(m_type);
 	ds.read(m_sensor);
 	ds.read(m_id);

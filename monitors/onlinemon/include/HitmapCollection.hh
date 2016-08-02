@@ -36,11 +36,11 @@ class HitmapCollection : public BaseCollection
     bool isPlaneRegistered(SimpleStandardPlane p);
     void fillHistograms(const SimpleStandardPlane &simpPlane,unsigned event_no,unsigned time_stamp);
   public:
-
+    int ntrig;
     void registerPlane(const SimpleStandardPlane &p);
     void bookHistograms(const SimpleStandardEvent &simpev);
     void setRootMonitor(RootMonitor *mon)  {_mon = mon; }
-    HitmapCollection() : BaseCollection()
+    HitmapCollection() : BaseCollection(), ntrig(10)
   {
     std::cout << " Initialising Hitmap Collection"<<std::endl;
     isOnePlaneRegistered = false;

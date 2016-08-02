@@ -71,7 +71,7 @@ class HitmapHistos {
   public:
     HitmapHistos(SimpleStandardPlane p, RootMonitor * mon);
 
-    void Fill(const SimpleStandardHit & hit);
+    void Fill(const SimpleStandardHit & hit, int ntrig = 10, bool last=false);
     void Fill(const SimpleStandardPlane & plane, unsigned event_no, unsigned time_stamp);
     void Fill(const SimpleStandardCluster & cluster);
     void Reset();
@@ -114,6 +114,8 @@ class HitmapHistos {
 //    TH2D * getTriggerPhaseHisto(){ return _nTriggerPhase;}
     void setRootMonitor(RootMonitor *mon)  {_mon = mon; }
 
+    int ntrig;
+
   private:
     int ** plane_map_array; //store an array representing the map
     int zero_plane_array(); // fill array with zeros;
@@ -132,6 +134,7 @@ class HitmapHistos {
     bool is_USBPIXI4;
     bool is_DEPFET;
     bool is_CMSPIXEL;
+
 };
 
 #ifdef __CINT__

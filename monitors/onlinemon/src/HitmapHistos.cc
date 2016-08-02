@@ -16,7 +16,7 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
 								     _hitmap(NULL),_chargemap(NULL),_hitXmap(NULL),_hitYmap(NULL),_clusterMap(NULL),_calMap(NULL), _bgMap(NULL) ,_lvl1Distr(NULL), _lvl1Width(NULL),_lvl1Cluster(NULL),_totSingle(NULL),_totCluster(NULL),
   _hitOcc(NULL), _nClusters(NULL), _nHits(NULL), _clusterXWidth(NULL), _clusterYWidth(NULL),_nbadHits(NULL),_nHotPixels(NULL),_hitmapSections(NULL),_efficencyPerEvent(NULL),_hBgRate(NULL),_hCalEff(NULL),
   _clusterChargeProfile(NULL),_pixelChargeProfile(NULL),_start_time(0),
-  is_MIMOSA26(false), is_APIX(false), is_USBPIX(false),is_USBPIXI4(false),is_CMSPIXEL(false)
+  is_MIMOSA26(false), is_APIX(false), is_USBPIX(false),is_USBPIXI4(false),is_CMSPIXEL(false),ntrig(10)
 {
   char out[1024], out2[1024];
 
@@ -201,7 +201,7 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
 
     sprintf(out,"%s %i bg rate",_sensor.c_str(), _id);
     sprintf(out2,"h_bgrate_%s_%i",_sensor.c_str(), _id);
-    _hBgRate = new TH1F(out2, out,1001,0,1000);
+    _hBgRate = new TH1F(out2, out,10001,0,1000);
     SetHistoAxisLabelx(_hBgRate,"rate_{bg}");
 
     sprintf(out,"%s %i cal eff",_sensor.c_str(), _id);
@@ -337,7 +337,7 @@ int HitmapHistos::zero_plane_array()
   return 0;
 }
 
-void HitmapHistos::Fill(const SimpleStandardHit & hit)
+void HitmapHistos::Fill(const SimpleStandardHit & hit, int ntrig, bool last)
 {
   int pixel_x=hit.getX();
   int pixel_y=hit.getY();
@@ -345,35 +345,38 @@ void HitmapHistos::Fill(const SimpleStandardHit & hit)
   int n_fill;
 
   bool pixelIsHot = false;
-  if (_HotPixelMap->GetBinContent(pixel_x+1,pixel_y+1)>_mon->mon_configdata.getHotpixelcut()) pixelIsHot=true;
+  //if (_HotPixelMap->GetBinContent(pixel_x+1,pixel_y+1)>_mon->mon_configdata.getHotpixelcut()) pixelIsHot=true;
 
-  if (_bgMap != NULL && !pixelIsHot && hit.getTOT() <= 0) {
+  if (_bgMap != NULL && !pixelIsHot && hit.getTOT() < 0) {
     _bgMap->Fill(pixel_x,pixel_y);
   } 
-  if (_calMap != NULL && !pixelIsHot && hit.getTOT() > 0) {
+  if (_calMap != NULL && !pixelIsHot && hit.getTOT() >= 0) {
     _calMap->Fill(pixel_x,pixel_y);
   }
 
-  if (_eventNumber % 100 == 0) {
+  if (_eventNumber % ntrig*160 == 0 || last) {
 
-    _hCalEff->Scale(0);
+    _hCalEff->Reset("MICES");
     
-    for (size_t col=0;col<52;col++) {
-      for (size_t row=0;row<80;row++) {
-        int nCals=10 * _calMap->GetBinContent(1+col,1+row);
+    for (size_t col=1;col<51;col++) {
+      for (size_t row=1;row<79;row++) {
+        int nCals=100 * _calMap->GetBinContent(1+col,1+row) / ntrig;
         if (nCals>0) {
           _hCalEff->SetBinContent(1+nCals, _hCalEff->GetBinContent(1+nCals)+1);
         }
       }
     }
 
-    _hBgRate->Scale(0);
+    _hBgRate->Reset("MICES");
 
-    for (size_t col=0;col<52;col++) {
-      for (size_t row=0;row<80;row++) {
+    for (size_t col=1;col<51;col++) {
+      for (size_t row=1;row<79;row++) {
         int nBgHits=_bgMap->GetBinContent(1+col,1+row);
-        float rate=(float)nBgHits/(25e-9 * 150 * 100 * 1e-2 * _eventNumber);
-        _hBgRate->Fill(rate);
+        int nCals=_calMap->GetBinContent(1+col,1+row);
+        if (nCals > 0) {
+          float rate = (float) nBgHits / (25e-9 * 150 * 100 * 1e-2 * _eventNumber);
+          _hBgRate->Fill(rate);
+        }
       }
     }
   }
@@ -480,10 +483,16 @@ void HitmapHistos::fillMimosaHistos (const SimpleStandardPlane* plane){
 }
 
 void HitmapHistos::loopOverPixelHits(const SimpleStandardPlane* simpPlane) {
-    for (int hitpix = 0; hitpix < simpPlane->getNHits();hitpix++)
+    int nHitsTotal = simpPlane->getNHits();
+
+    for (int hitpix = 0; hitpix < nHitsTotal;hitpix++)
     {
       const SimpleStandardHit& onehit = simpPlane->getHit(hitpix);
-      this->Fill(onehit);
+      if (hitpix < nHitsTotal-1) {
+        this->Fill(onehit, simpPlane->m_ntrig, false);}
+      else {
+        this->Fill(onehit, simpPlane->m_ntrig, true);
+      }
     }
 }
 
@@ -568,7 +577,7 @@ void HitmapHistos::Reset() {
 void HitmapHistos::Calculate(const int currentEventNum)
 {
   _wait = true;
-  _hitOcc->SetBins(currentEventNum/10,0,1);
+  _hitOcc->SetBins(currentEventNum/10,0,1); //?
   _hitOcc->Reset();
 
   int nHotpixels=0;

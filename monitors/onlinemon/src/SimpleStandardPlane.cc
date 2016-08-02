@@ -9,7 +9,7 @@
 #include <vector>
 #include "include/SimpleStandardPlane.hh"
 
-SimpleStandardPlane::SimpleStandardPlane(const std::string & name, const int id, const int maxX, const int maxY, const int tlu_event, const int pivot_pixel, OnlineMonConfiguration* mymon) : _name(name), _id(id), _maxX(maxX), _maxY(maxY),_binsX(maxX), _binsY(maxY)
+SimpleStandardPlane::SimpleStandardPlane(const std::string & name, const int id, const int maxX, const int maxY, const int tlu_event, const int pivot_pixel, OnlineMonConfiguration* mymon) : _name(name), _id(id), _maxX(maxX), _maxY(maxY),_binsX(maxX), _binsY(maxY), m_ntrig(10)
 {
   const int hits_reserve=500;
   _hits.reserve(hits_reserve);
@@ -40,7 +40,7 @@ SimpleStandardPlane::SimpleStandardPlane(const std::string & name, const int id,
 
 }
 
-SimpleStandardPlane::SimpleStandardPlane(const std::string & name, const int id) : _name(name), _id(id), _maxX(-1), _maxY(-1) //FIXME we actually only need this type of constructor to form a map for histogramm allocation
+SimpleStandardPlane::SimpleStandardPlane(const std::string & name, const int id) : _name(name), _id(id), _maxX(-1), _maxY(-1), m_ntrig(10) //FIXME we actually only need this type of constructor to form a map for histogramm allocation
 {
   _hits.reserve(400);
   _badhits.reserve(400); //

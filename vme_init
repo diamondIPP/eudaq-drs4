@@ -1,0 +1,4 @@
+#!/bin/bash
+
+scl enable devtoolset-3 bash
+export CC=/opt/rh/devtoolset-3/root/usr/bin/gcc

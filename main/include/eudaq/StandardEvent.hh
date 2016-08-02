@@ -191,6 +191,9 @@ public:
 	unsigned GetTrigCount() const {return m_trigger_count;}
 	void SetTrigPhase(unsigned trigger_phase) {m_trigger_phase = trigger_phase;};
 	unsigned GetTrigPhase() const {return m_trigger_phase;}
+
+    int m_ntrig;
+
 private:
 	const std::vector<pixel_t> & GetFrame(const std::vector<std::vector<pixel_t> > & v, unsigned f) const;
 	void SetupResult() const;

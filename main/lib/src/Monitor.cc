@@ -66,7 +66,6 @@ namespace eudaq {
       const DetectorEvent & dev = m_reader->GetDetectorEvent();
       if (dev.IsBORE()) m_lastbore =std::shared_ptr<DetectorEvent>(new DetectorEvent(dev));
       OnEvent(PluginManager::ConvertToStandard(dev));
-      //        ++counter_events_for_online_monitor;
     } catch (const InterruptedException &) {
       return false;
     }
