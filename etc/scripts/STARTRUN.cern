@@ -6,9 +6,9 @@ ws=78
 wg=482
 if [ -z "$DRS" ]; then export DRS=true; wd=$((wd+1)); fi;
 if [ -z "$CMS" ]; then export CMS=true; wd=$((wd+1)); fi;
-if [ -z "$CMS_DIG" ]; then export CMS_DIG=true; wd=$((wd+1)); fi;
+#if [ -z "$CMS_DIG" ]; then export CMS_DIG=true; wd=$((wd+1)); fi;
 if [ -z "$TL" ]; then export TL=true; wd=$((wd+1)); fi;
-if [ -z "$CLK" ]; then export CLK=true; wd=$((wd+1)); fi;
+#if [ -z "$CLK" ]; then export CLK=true; wd=$((wd+1)); fi;
 
 if [ $wd -eq 5 ]; then ws=62; wg=385; fi;
 
