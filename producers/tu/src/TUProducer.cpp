@@ -39,9 +39,17 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     	std::fill_n(trigger_counts_multiplicity, 10, 0);
     	std::fill_n(time_stamps, 2, 0);
     	std::fill_n(beam_current, 2, 0);
-    	avg.assign(20,0);
+    	avg.assign(20,0); //allow the average for the beam current to hold 20 values
+
+    	//average for the scaler inputs - 10 values here
+    	scaler_deques.resize(10);
+    	for (std::vector<std::deque<unsigned>>::iterator i = scaler_deques.begin(); i != scaler_deques.end(); i++){
+      		i->assign(20,0);
+		}
+
     	tc = new trigger_controll();
     	stream = new Triger_Logic_tpc_Stream();
+    	tc->enable(false);
     }catch (...){
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");}
@@ -96,7 +104,10 @@ void TUProducer::MainLoop(){
 
 					prev_trigger_counts[idx] = trigger_counts[idx];
 					trigger_counts[idx] = trigger_counts_multiplicity[idx]*bit_28 + new_tc;
-					input_frequencies[idx] = 1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]);
+					//input_frequencies[idx] = 1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]);
+
+					input_frequencies[idx] = this->ScalerDeque(idx, (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])));
+					std::cout << "sending idx: " << idx << " rate: " << (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])) << std::endl;
 				}
 				/******************************************** end get all the data ********************************************/
 
@@ -325,12 +336,11 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		//open stream to TU
 		std::string ip_adr = conf.Get("ip_adr", "192.168.1.120");
 		const char *ip = ip_adr.c_str();
+		tc->enable(false);
 
 		stream->set_ip_adr(ip);
    		std::cout << "Opening connection to TU @ " << ip << std::endl;
    		stream->open();
-
-
    		std::cout << "Configuring (" << conf.Name() << ").." << std::endl;			
   		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
   		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
@@ -437,7 +447,27 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
 
 
+unsigned TUProducer::ScalerDeque(unsigned nr, unsigned rate){
+	scaler_deques.at(nr).pop_back();
+	scaler_deques.at(nr).push_front(rate);
 
+
+	int len = 0;
+	unsigned temp = 0;
+	for (std::deque<unsigned>::iterator itr=scaler_deques.at(nr).begin(); itr!=scaler_deques.at(nr).end(); ++itr){
+		if (*itr != 0){			
+			temp += *itr;
+			len++;
+		}
+	}
+	if(len>0){
+		std::cout << "nr: " << nr << "rate: " << (temp/len) << std::endl;
+		return (temp/len);}
+	return 0;
+}
+
+
+//for beam current, can be implemented in method above (fixme)
 float TUProducer::SlidingWindow(float val){
 	avg.pop_back();
 	avg.push_front(val);
