@@ -87,6 +87,13 @@ public:
 
 }
 
+	virtual map<uint8_t, vector<float> > GetTimeCalibration(const Event & bore) {
+		map<uint8_t, vector<float> > tcal;
+		for (uint8_t igr = 0; igr < 4; igr++)
+			for (uint16_t itcell = 0; itcell < 1023; itcell++)
+				tcal[igr].push_back(time_corr[igr][itcell + 1] - time_corr[igr][itcell]);
+		return tcal;
+	}
 
   virtual bool GetStandardSubEvent(StandardEvent & sev, const Event & ev) const{
 	const RawDataEvent &in_raw = dynamic_cast<const RawDataEvent &>(ev);
@@ -187,7 +194,6 @@ private:
   int16_t cell_corr[32][1024];
   int8_t index_corr[32][1024];
   static VX1742ConverterPlugin m_instance;
-	std::map<uint8_t, std::vector<float> > m_tcal;
 
 }; // class VX1742ConverterPlugin
 
