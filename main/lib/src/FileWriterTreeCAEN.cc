@@ -344,6 +344,9 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         PluginManager::SetConfig(ev, m_config);
         eudaq::PluginManager::Initialize(ev);
         tcal = PluginManager::GetTimeCalibration(ev);
+        cout << "Start reading channels: " << endl;
+        n_channels = ReadNChannels(ev);
+        cout << n_channels << endl;
         // DIRTY FIX PUT IN THE REAL TCAL HERE!!!
         if (tcal.at(0).at(0) == -1){
             map<uint8_t, std::vector<float> > new_tcal;
@@ -881,6 +884,16 @@ string FileWriterTreeCAEN::GetPolarities(vector<signed char> pol) {
     stringstream ss;
     for (auto i_pol:pol) ss << string(3 - to_string(i_pol).size(), ' ') << to_string(i_pol);
     return trim(ss.str(), " ");
+}
+
+uint16_t FileWriterTreeCAEN::ReadNChannels(DetectorEvent dev) {
+    for (uint8_t i = 0; i < dev.NumEvents(); i++) {
+        const eudaq::Event & subev = *dev.GetEvent(i);
+        if (dev.GetSubType() == "VX1742")
+            return dev.GetTag("active_channels", uint16_t(8));
+    }
+    // return 0 if not found VX1742
+    return 0;
 }
 
 #endif // ROOT_FOUND

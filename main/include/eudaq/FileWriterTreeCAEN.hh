@@ -40,6 +40,7 @@ namespace eudaq {
 
     private:
         unsigned runnumber;
+        uint16_t n_channels;
         TH1F *histo;
         long max_event_number;
         uint16_t save_waveforms;
@@ -58,6 +59,7 @@ namespace eudaq {
         bool UseWaveForm(uint16_t bitmask, uint8_t iwf) { return ((bitmask & 1 << iwf) == 1 << iwf); }
         std::string GetBitMask(uint16_t bitmask);
         std::string GetPolarities(std::vector<signed char> pol);
+        uint16_t ReadNChannels(DetectorEvent dev);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
