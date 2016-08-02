@@ -1,6 +1,6 @@
 #ifdef ROOT_FOUND
 
-#include "FileWriterTreeCAEN.hh"
+#include "eudaq/FileWriterTreeCAEN.hh"
 
 // eudaq imports
 #include "eudaq/FileNamer.hh"

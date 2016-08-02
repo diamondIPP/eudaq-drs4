@@ -1,6 +1,6 @@
 #ifdef ROOT_FOUND
 
-#include "FileWriterTreeDRS4.hh"
+#include "eudaq/FileWriterTreeDRS4.hh"
 
 using namespace std;
 using namespace eudaq;
