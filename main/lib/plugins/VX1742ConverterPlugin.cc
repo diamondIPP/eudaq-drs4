@@ -15,6 +15,7 @@
 #include <string.h>
 #include <cstdint>
 
+using namespace std;
 
 namespace eudaq{
 
@@ -26,12 +27,10 @@ class VX1742ConverterPlugin:public DataConverterPlugin {
 
 public:
   virtual void Initialize(const Event & bore, const Configuration & cnf) {
-	//std::cout<<"VX1742 Initialize"<<std::endl;
-	//m_serialno = bore.GetTag("VX1742_serial_no", (int)-1);
-	//m_firmware = bore.GetTag("VX1742_firmware_v", (int)-1);
-	//m_timestamp = bore.GetTag("VX1742_timestamp", (int)-1);
+	m_serialno = bore.GetTag("VX1742_serial_no", uint32_t(-1));
+	m_firmware = bore.GetTag("VX1742_firmware_v", -1);
+	m_timestamp = bore.GetTag("VX1742_timestamp", uint64_t(-1));
 	m_range = 0.5; //TODO
-
 }
 
   virtual bool GetStandardSubEvent(StandardEvent & sev, const Event & ev) const{
