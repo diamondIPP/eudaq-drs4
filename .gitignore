@@ -1,10 +1,6 @@
 # Ignore binaries:
 bin/*
 
-# Exclude config files
-conf/*
-
-
 # Ignore libraries:
 lib/*
 
