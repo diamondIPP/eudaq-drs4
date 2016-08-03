@@ -127,37 +127,6 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       //std::cout << std::endl;
       //std::cout << "x_axis: " << x_axis << " old scaler1: " << old_scaler1 << " t_diff: " << t_diff  << "-"<< 1000*(scaler1 - old_scaler1)/t_diff<<  std::endl;
 
-      //fix long readout periods - don't judge me for this block of code.. it works
-      if(t_diff>(readout_interval+5)){
-        uint32_t mu = (t_diff+100)/readout_interval;
-        for(uint32_t i=0; i<mu; i++){
-          uint32_t temp_x = x_axis -i;
-
-          if(_CoincidenceCount->GetBinContent(temp_x)==0){
-            _CoincidenceCount->SetBinContent(temp_x, 1000*(coincidence_count - old_coincidence_count)/t_diff);}
-          if(_CoincidenceCountNoScint->GetBinContent(temp_x)==0){
-            _CoincidenceCountNoScint->SetBinContent(temp_x, 1000*(coincidence_count_no_sin - old_coincidence_count_no_sin)/t_diff);}
-          if(_PrescalerCount->GetBinContent(temp_x)==0){
-            _PrescalerCount->SetBinContent(temp_x, 1000*(coincidence_count_no_sin - old_coincidence_count_no_sin)/t_diff);}
-          if(_PrescalerXPulser->GetBinContent(temp_x)==0){
-            _PrescalerXPulser->SetBinContent(temp_x, 1000*(prescaler_count_xor_pulser_count - old_prescaler_count_xor_pulser_count)/t_diff);}         
-          if(_AcceptedPrescaledEvents->GetBinContent(temp_x)==0){
-            _AcceptedPrescaledEvents->SetBinContent(temp_x, 1000*(accepted_prescaled_events - old_accepted_prescaled_events)/t_diff);}
-          if(_AcceptedPulserEvents->GetBinContent(temp_x)==0){
-            _AcceptedPulserEvents->SetBinContent(temp_x, 1000*(accepted_pulser_events - old_accepted_pulser_events)/t_diff);}
-          if(_EventCount->GetBinContent(temp_x)==0){
-            _Scaler1->SetBinContent(temp_x, 1000*(handshake_count - old_handshake_count)/t_diff);}
-          if(_AvgBeamCurrent->GetBinContent(temp_x)==0){
-            _AvgBeamCurrent->SetBinContent(temp_x, cal_beam_current);}
-          if(_Scaler1->GetBinContent(temp_x)==0){
-            _Scaler1->SetBinContent(temp_x, 1000*(scaler1 - old_scaler1)/t_diff);}
-          if(_Scaler2->GetBinContent(temp_x)==0){
-            _Scaler2->SetBinContent(temp_x, 1000*(scaler2 - old_scaler2)/t_diff);}
-
-        }
-      }
-
-
     }
 
       old_timestamp = ev.GetTimeStamp();
