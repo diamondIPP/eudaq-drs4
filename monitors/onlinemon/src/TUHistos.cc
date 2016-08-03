@@ -22,16 +22,45 @@
 TUHistos::TUHistos(){
 
   _CoincidenceCount = new TH1I("Concidence Rate", "Coincidence Rate [Hz]; Run Time [s]",500, 0, 500);
+  _CoincidenceCount->SetMarkerStyle(34);
+  _CoincidenceCount->SetMarkerSize(1);
+  _CoincidenceCount->SetMarkerColor(4);
   _CoincidenceCountNoScint = new TH1I("Coincidence Rate No Scintillator", "Coincidence Rate No Scintillator [Hz]; Run Time [s]",500, 0, 500);
+  _CoincidenceCountNoScint->SetMarkerStyle(34);
+  _CoincidenceCountNoScint->SetMarkerSize(1);
+  _CoincidenceCountNoScint->SetMarkerColor(4);  
   _PrescalerCount = new TH1I("Prescaler Rate", "Prescaler Rate [Hz]; Run Time [s]",500, 0, 500);
+  _PrescalerCount->SetMarkerStyle(34);
+  _PrescalerCount->SetMarkerSize(1);
+  _PrescalerCount->SetMarkerColor(4);
   _PrescalerXPulser = new TH1I("Prescaler Xor Pulser Rate", "Prescaler Xor Pulser Rate [Hz]; Run Time [s]",500, 0, 500);
+  _PrescalerXPulser->SetMarkerStyle(34);
+  _PrescalerXPulser->SetMarkerSize(1);
+  _PrescalerXPulser->SetMarkerColor(4);
   _AcceptedPrescaledEvents = new TH1I("Accepted Prescaled Event Rate", "Accepted Prescaled Rate [Hz]; Run Time [s]",500, 0, 500);
+  _AcceptedPrescaledEvents->SetMarkerStyle(34);
+  _AcceptedPrescaledEvents->SetMarkerSize(1);
+  _AcceptedPrescaledEvents->SetMarkerColor(4);
   _AcceptedPulserEvents = new TH1I("Accepted Pulser Event Rate", "Accepted Pulser Event Rate [Hz]; Run Time [s]",500, 0, 500);
+  _AcceptedPulserEvents->SetMarkerStyle(34);
+  _AcceptedPulserEvents->SetMarkerSize(1);
+  _AcceptedPulserEvents->SetMarkerColor(4);
   _EventCount = new TH1I("Event Rate", "Event Rate [Hz]; Run Time [s]",500, 0, 500);
+  _EventCount->SetMarkerStyle(34);
+  _EventCount->SetMarkerSize(1);
+  _EventCount->SetMarkerColor(4);
   _AvgBeamCurrent = new TH1I("Average Beam Current", "Average Beam Current [mA]; Run Time [s]",500, 0, 500);
+  _AvgBeamCurrent->SetMarkerStyle(34);
+  _AvgBeamCurrent->SetMarkerSize(1);
+  _AvgBeamCurrent->SetMarkerColor(2);
   _Scaler1 = new TH1I("Rate Plane Scaler 1", "Rate Plane Scaler 1 [Hz]; Run Time [s]",500, 0, 500);
+  _Scaler1->SetMarkerStyle(34);
+  _Scaler1->SetMarkerSize(1);
+  _Scaler1->SetMarkerColor(4);
   _Scaler2 = new TH1I("Rate Plane Scaler 2", "Rate Plane Scaler 2 [Hz]; Run Time [s]",500, 0, 500);
-
+  _Scaler2->SetMarkerStyle(34);
+  _Scaler2->SetMarkerSize(1);
+  _Scaler2->SetMarkerColor(4);
 
  	_CoincidenceCount->SetBit(TH1::kCanRebin);
 	_CoincidenceCountNoScint->SetBit(TH1::kCanRebin);

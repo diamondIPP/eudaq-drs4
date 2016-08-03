@@ -68,34 +68,34 @@ void TUCollection::bookHistograms(const SimpleStandardEvent & /*simpev*/){
     string performance_folder_name="TU";
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Coincidence Count"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Coincidence Count"), tuevhistos->getCoincidenceCountHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Coincidence Count"), tuevhistos->getCoincidenceCountHisto(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Coincidence Count No Scintillator"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Coincidence Count No Scintillator"), tuevhistos->getCoincidenceCountNoScintHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Coincidence Count No Scintillator"), tuevhistos->getCoincidenceCountNoScintHisto(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Prescaler Count"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Prescaler Count"), tuevhistos->getPrescalerCountHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Prescaler Count"), tuevhistos->getPrescalerCountHisto(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Prescaler Xor Pulser Count"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Prescaler Xor Pulser Count"), tuevhistos->getPrescalerXPulserHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Prescaler Xor Pulser Count"), tuevhistos->getPrescalerXPulserHisto(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Accepted Prescaled Events"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Accepted Prescaled Events"), tuevhistos->getAcceptedPrescaledEventsHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Accepted Prescaled Events"), tuevhistos->getAcceptedPrescaledEventsHisto(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Accepted Pulser Events"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Accepted Pulser Events"), tuevhistos->getAcceptedPulserEventsHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Accepted Pulser Events"), tuevhistos->getAcceptedPulserEventsHisto(), "P");
     
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Event Count"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Event Count"), tuevhistos->getEventCountHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Event Count"), tuevhistos->getEventCountHisto(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Average Beam Current"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Average Beam Current"), tuevhistos->getAvgBeamCurrentHisto());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Average Beam Current"), tuevhistos->getAvgBeamCurrentHisto(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Plane Scaler 1"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Plane Scaler 1"), tuevhistos->getScaler1Histo());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Plane Scaler 1"), tuevhistos->getScaler1Histo(), "P");
 
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Plane Scaler 2"));
-    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Plane Scaler 2"), tuevhistos->getScaler2Histo());
+    _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Plane Scaler 2"), tuevhistos->getScaler2Histo(), "P");
 
     _mon->getOnlineMon()->makeTreeItemSummary(performance_folder_name.c_str()); //make summary page
 
