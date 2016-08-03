@@ -91,7 +91,6 @@ namespace eudaq{
                     int n_samples = data_size/sizeof(uint64_t);
                     for(int idx=0; idx<n_samples; idx++){
                         uint64_t *sc_val = (uint64_t*)(&data[0]);
-                        //std::cout << "some output" << sc_val[idx] << std::endl;
                         tuev.SetScalerValue(idx, sc_val[idx]);
                      }
 
