@@ -39,6 +39,7 @@ private:
   uint32_t trigger_source;
   uint32_t active_groups;
   uint32_t groups[4];
+  uint32_t dc_offsets[32];
   uint32_t custom_size;
 
   uint32_t cell_offset;
