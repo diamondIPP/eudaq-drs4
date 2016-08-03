@@ -90,7 +90,7 @@ void TUProducer::MainLoop(){
 				beam_current[1] = rd->beam_curent; //save new
 				time_stamps[0] = time_stamps[1]; //save old timestamp for frequency calculations
 				time_stamps[1] = rd->time_stamp; //save new
-				cal_beam_current = SlidingWindow(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0])));
+				cal_beam_current = 1000*SlidingWindow(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0])));
 
 				for(int idx=0; idx<10; idx++){
 					//check if there was a fallover

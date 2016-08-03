@@ -63,7 +63,7 @@ namespace eudaq{
                     id++;
 
 
-                    //#ifdef DEBUG
+                    #ifdef DEBUG
                         std::cout << "************************************************************************************" << std::endl;
                         std::cout << "nblocks: " << nblocks << std::endl;
                         std::cout << "time stamp: " << time_stamp << std::endl;
@@ -76,7 +76,7 @@ namespace eudaq{
                         std::cout << "handshake_count: " << handshake_count << std::endl;
                         std::cout << "cal_beam_current: " << cal_beam_current << std::endl;
                         std::cout << "************************************************************************************" << std::endl;
-                    //#endif
+                    #endif
 
                     //add data to the StandardEvent:
                     sev.SetTimestamp(time_stamp);
