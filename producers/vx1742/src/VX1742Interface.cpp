@@ -307,6 +307,18 @@ void VX1742Interface::disableIndividualTriggers(){
 }
 
 
+void VX1742Interface::setChannelDCOffsets(uint32_t param[]){
+  //continue here
+  for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+    uint32_t grp = ch/(vmec::VX1742_CHANNELS_PER_GROUP);
+    uint32_t ch_val = ((ch%8)*0x10000) + param[ch];
+    if(param[ch] > 0){
+      std::cout << "DC offset for channel " << (ch%8) << " in group " << grp << ": " << param[ch] << std::endl;
+      vx1742->group_n_conf[grp].channel_dc_offset = ch_val;
+    }
+  }
+}
+
 
 
 uint32_t VX1742Interface::readFlashPage(uint32_t group, int8_t* page, uint32_t pagenumber){
