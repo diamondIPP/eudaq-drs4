@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <TH1I.h>
+#include <TH1F.h>
 #include <TFile.h>
 #include <cstdint>
 
@@ -96,7 +97,6 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
 
   if(valid){
 
-
     if(old_timestamp > 0){ //it was already set
       uint64_t new_timestamp = ev.GetTimeStamp();
       uint32_t coincidence_count = ev.GetCoincCount();
@@ -117,17 +117,17 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       //std::cout << "Old timestamp: " << old_timestamp << ", new timestamp: " << new_timestamp << std::endl;
       //std::cout << "X-Achse: " << x_axis << ", zeit differenz: " << t_diff << std::endl;
 
-
-      _CoincidenceCount->Fill(x_axis, (coincidence_count - old_coincidence_count));
-      _CoincidenceCountNoScint->Fill(x_axis, (coincidence_count_no_sin - old_coincidence_count_no_sin));
-      _PrescalerCount->Fill(x_axis, (prescaler_count - old_prescaler_count));
-      _PrescalerXPulser->Fill(x_axis, (prescaler_count_xor_pulser_count - old_prescaler_count_xor_pulser_count));
-      _AcceptedPrescaledEvents->Fill(x_axis, (accepted_prescaled_events - old_accepted_prescaled_events));
-      _AcceptedPulserEvents->Fill(x_axis, (accepted_pulser_events - old_accepted_pulser_events));
-      _EventCount->Fill(x_axis, (handshake_count - old_handshake_count));
+      _CoincidenceCount->Fill(x_axis, 1000*(coincidence_count - old_coincidence_count)/t_diff);
+      _CoincidenceCountNoScint->Fill(x_axis, 1000*(coincidence_count_no_sin - old_coincidence_count_no_sin)/t_diff);
+      _PrescalerCount->Fill(x_axis, 1000*(prescaler_count - old_prescaler_count)/t_diff);
+      _PrescalerXPulser->Fill(x_axis, 1000*(prescaler_count_xor_pulser_count - old_prescaler_count_xor_pulser_count)/t_diff);
+      _AcceptedPrescaledEvents->Fill(x_axis, 1000*(accepted_prescaled_events - old_accepted_prescaled_events)/t_diff);
+      _AcceptedPulserEvents->Fill(x_axis, 1000*(accepted_pulser_events - old_accepted_pulser_events)/t_diff);
+      _EventCount->Fill(x_axis, 1000*(handshake_count - old_handshake_count)/t_diff);
       _AvgBeamCurrent->Fill(x_axis, cal_beam_current);
-      _Scaler1->Fill(x_axis, (scaler1 - old_scaler1));
-      _Scaler2->Fill(x_axis, (scaler2 - old_scaler2));
+      _Scaler1->Fill(x_axis, 1000*(scaler1 - old_scaler1)/t_diff);
+      _Scaler2->Fill(x_axis, 1000*(scaler2 - old_scaler2)/t_diff);
+
 
     }
 
@@ -145,7 +145,6 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
   }
 
 }
-
 
 
 void TUHistos::Reset(){

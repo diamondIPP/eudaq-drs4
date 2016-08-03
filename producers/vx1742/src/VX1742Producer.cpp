@@ -8,14 +8,6 @@
 ** Author: Christian Dorfer (dorfer@phys.ethz.ch)
 ** ---------------------------------------------------------------------------------*/
 
-//wishlist:
-//software trigger
-//trigger on signal
-//calibration
-//send info in bore event!
-//give channels names!
-
-
 
 #include "VX1742Producer.hh"
 #include "VX1742Interface.hh"
@@ -96,6 +88,11 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     trn_polarity = conf.Get("TRn_polarity", 1);
     trn_readout = conf.Get("TRn_readout", 1);
 
+    //DC offsets for channels
+    for(int ch=0; ch < vmec::VX1742_CHANNELS; ch++){
+      std::string ch_name = "DC_CH" + std::to_string(ch);
+      dc_offsets[ch] = conf.Get(ch_name, 0);
+    }
 
     if(caen->isRunning())
       caen->stopAcquisition();
@@ -111,6 +108,8 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     caen->sendBusyToTRGout();
     caen->setTriggerCount(); //count just accepted triggers
     caen->disableIndividualTriggers(); //count one event only once, not per group
+    caen->setChannelDCOffsets(dc_offsets);
+
     usleep(10000);
     caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity, trn_readout);
 
@@ -331,6 +330,8 @@ void VX1742Producer::ReadoutLoop() {
 
 
 void VX1742Producer::OnStopRun(){
+  //collect the last events from the buffers
+  usleep(2500000);
   m_running = false;
   //caen->printAcquisitionControl();
   caen->stopAcquisition();

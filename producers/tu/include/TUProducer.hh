@@ -16,6 +16,7 @@
 #include "eudaq/Producer.hh"
 #include "triger_logic_tpc_stream.h"
 #include <deque>
+#include <vector>
 
 class Configuration;
 class trigger_controll;
@@ -32,6 +33,7 @@ public:
 	virtual void OnReset();
 	virtual void OnStatus();
 	float SlidingWindow(float);
+	unsigned ScalerDeque(unsigned scaler_nr, unsigned rate);
 
 
 private:
@@ -43,6 +45,7 @@ private:
 	int trg_mask;
 	float cal_beam_current;
 	std::deque<float> avg;
+	std::vector<std::deque<unsigned>> scaler_deques;
 
 	//data read back from TU
 	unsigned long trigger_counts[10];

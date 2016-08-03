@@ -2,8 +2,8 @@
 #dorfer@phys.ethz.ch
 
 #Activate/Deactivate Stuff
-export CMS=true
-export CAEN=true
+export CMS=false
+export CAEN=false
 export CLK=false
 export CMS_DIG=false
 export DRS=false
