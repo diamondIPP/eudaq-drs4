@@ -8,14 +8,6 @@
 ** Author: Christian Dorfer (dorfer@phys.ethz.ch)
 ** ---------------------------------------------------------------------------------*/
 
-//wishlist:
-//software trigger
-//trigger on signal
-//calibration
-//send info in bore event!
-//give channels names!
-
-
 
 #include "VX1742Producer.hh"
 #include "VX1742Interface.hh"
@@ -331,6 +323,8 @@ void VX1742Producer::ReadoutLoop() {
 
 
 void VX1742Producer::OnStopRun(){
+  //collect the last events from the buffers
+  usleep(2500000);
   m_running = false;
   //caen->printAcquisitionControl();
   caen->stopAcquisition();
