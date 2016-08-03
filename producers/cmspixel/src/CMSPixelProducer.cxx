@@ -166,7 +166,7 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
   try {
     // Check for multiple ROCs using the I2C parameter:
     std::vector<int32_t> i2c_addresses = split(config.Get("i2c","i2caddresses","-1"),' ');
-    std::cout << "Found BLA " << i2c_addresses.size() << " I2C addresses: " << pxar::listVector(i2c_addresses) << std::endl;
+    std::cout << "Found " << i2c_addresses.size() << " I2C addresses: " << pxar::listVector(i2c_addresses) << std::endl;
 
     // Set the type of the TBM and read registers if any:
     m_tbmtype = config.Get("tbmtype","notbm");
@@ -181,7 +181,7 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
     
     /** Set different wbcs */
       std::vector<int32_t> wbc_values = split(config.Get("wbc","wbcaddresses","-1"),' ');
-      std::cout << "WBC ADRESSES:" << std::endl;
+      std::cout << "WBC ADDRESSES:" << std::endl;
       for (int i =0; i != wbc_values.size(); i++)
         std::cout << wbc_values[i] << std::endl;
 
