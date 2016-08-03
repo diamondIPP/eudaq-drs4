@@ -144,7 +144,7 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       uint32_t t_diff = (uint32_t) (new_timestamp - old_timestamp);
       uint32_t x_axis = (uint32_t) (new_timestamp - start_time)/1000;
 
-      if(x_axis != old_xaxis){
+      if(x_axis > (old_xaxis+2)){
       _CoincidenceCount->Fill(x_axis, 1000*(coincidence_count - old_coincidence_count)/t_diff);
       _CoincidenceCountNoScint->Fill(x_axis, 1000*(coincidence_count_no_sin - old_coincidence_count_no_sin)/t_diff);
       _PrescalerCount->Fill(x_axis, 1000*(prescaler_count - old_prescaler_count)/t_diff);
@@ -155,8 +155,8 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       _AvgBeamCurrent->Fill(x_axis, cal_beam_current);
       _Scaler1->Fill(x_axis, 1000*(scaler1 - old_scaler1)/t_diff);
       _Scaler2->Fill(x_axis, 1000*(scaler2 - old_scaler2)/t_diff);
-      //std::cout << std::endl;
-      //std::cout << "x_axis: " << x_axis << " old scaler1: " << old_scaler1 << " t_diff: " << t_diff  << "-"<< 1000*(scaler1 - old_scaler1)/t_diff<<  std::endl;
+      std::cout << std::endl;
+      std::cout << "x_axis: " << x_axis << " old scaler1: " << old_scaler1 << " t_diff: " << t_diff  << "-"<< 1000*(scaler1 - old_scaler1)/t_diff<<  std::endl;
       }
       old_xaxis = x_axis;
     }
