@@ -6,11 +6,8 @@
 #include "eudaq/Logger.hh"
 #include "eudaq/FileSerializer.hh"
 
-//# include<inttypes.h>
 # include "TFile.h"
 # include "TTree.h"
-# include "TRandom.h"
-# include "TString.h"
 
 using namespace std;
 
@@ -118,7 +115,7 @@ namespace eudaq {
     EUDAQ_INFO("Configuring FileWriteTree");
 
     max_event_number = m_config->Get("max_event_number",0);
-    std::cout<<"Max events; "<<max_event_number<<std::endl;
+    std::cout << "Max events: " << max_event_number << std::endl;
     std::cout<<"End of Configure.";
   }
 
