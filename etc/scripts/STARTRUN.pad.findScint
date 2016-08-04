@@ -1,8 +1,8 @@
 #!/bin/bash
-#dorfer@phys.ethz.ch
+#dorfer@phys.ethz.ch <-- noob
 
 #Activate/Deactivate Stuff
-export CMS=false
+export CMS=true
 export CAEN=false
 export CLK=false
 export CMS_DIG=false
@@ -24,7 +24,8 @@ width=78
 pixelwidth=472
 height=20
 xpos=0
-ypos=800
+ypos=911
+space=5
 
 
 echo $(pwd)
@@ -52,13 +53,13 @@ sleep 2
 
 echo 'DataCollector @ Rapidshare'
 xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY rapidshare scripts/StartDataCollector.sh' &
-xpos=$((xpos+pixelwidth))
+xpos=$((xpos+pixelwidth+space))
 echo -e "${GREEN}Please wait ..${RESTORE}\n"
 sleep 2
 
 echo 'TUProducer @ DAQ'
 xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -T 'TU' -e '~/eudaq-drs4/bin/TUProducer.exe -r tcp://$HOSTNAME:$RCPORT'  &
-xpos=$((xpos+pixelwidth))
+xpos=$((xpos+pixelwidth+space))
 echo -e "${GREEN}Please wait ..${RESTORE}\n"
 sleep 2
 
@@ -67,7 +68,7 @@ sleep 2
 if [ "$CMS" = true ]; then
     echo "${BLUE} CMSPixel @Pim1 ${RESTORE}\n"
     xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 scripts/StartCMSPixel.sh' &
-    xpos=$((xpos+pixelwidth))
+    xpos=$((xpos+pixelwidth+space))
     echo -e "${GREEN}Please wait ..${RESTORE}\n"
     sleep 1
 fi
@@ -76,7 +77,7 @@ fi
 if [ "$CAEN" = true ]; then
     echo "${BLUE} CAEN @ VME ${RESTORE}\n"
     xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY vme scripts/StartVME.sh' &
-    xpos=$((xpos+pixelwidth))
+    xpos=$((xpos+pixelwidth+space))
     echo -e "${GREEN}Please wait ..${RESTORE}\n"
     sleep 1
 fi
@@ -85,7 +86,7 @@ fi
 if [ "$CLK" = true ]; then
     echo "${BLUE} ClockGen @ DAQ ${RESTORE}\n"
     xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e '/home/testbeam/scripts/clockgen.sh'  &
-    xpos=$((xpos+pixelwidth))
+    xpos=$((xpos+pixelwidth+space))
     echo -e "${GREEN}Please wait ..${RESTORE}\n"
     sleep 1
 fi
@@ -95,7 +96,7 @@ if [ "$CMS_DIG" = true ]; then
     sleep 2
     echo "${BLUE} CMSPixelDigital @ Pim1 ${RESTORE}\n"
     xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 scripts/StartCMSPixelDig.sh' &
-    xpos=$((xpos+pixelwidth))
+    xpos=$((xpos+pixelwidth+space))
     echo -e "${GREEN}Please wait ..${RESTORE}\n"
     sleep 1
 fi
@@ -103,7 +104,7 @@ fi
 if [ "$DRS" = true ]; then
     echo "${BLUE} DRS4 @ PiM1 ${RESTORE}\n"
     xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 scripts/StartDRS4.sh' &
-    xpos=$((xpos+pixelwidth))    
+    xpos=$((xpos+pixelwidth+space))    
     echo -e "${GREEN}Please wait ..${RESTORE}\n"
     sleep 1
 fi

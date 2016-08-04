@@ -36,6 +36,7 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     	std::fill_n(trigger_counts, 10, 0);
     	std::fill_n(prev_trigger_counts, 10, 0);
 		std::fill_n(input_frequencies, 10, 0);
+		std::fill_n(avg_input_frequencies, 10, 0);
     	std::fill_n(trigger_counts_multiplicity, 10, 0);
     	std::fill_n(time_stamps, 2, 0);
     	std::fill_n(beam_current, 2, 0);
@@ -91,6 +92,7 @@ void TUProducer::MainLoop(){
 				time_stamps[0] = time_stamps[1]; //save old timestamp for frequency calculations
 				time_stamps[1] = rd->time_stamp; //save new
 				cal_beam_current = 1000*SlidingWindow(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0])));
+				beam_curr = 1000*(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0])));
 
 				for(int idx=0; idx<10; idx++){
 					//check if there was a fallover
@@ -106,7 +108,8 @@ void TUProducer::MainLoop(){
 					trigger_counts[idx] = trigger_counts_multiplicity[idx]*bit_28 + new_tc;
 					//input_frequencies[idx] = 1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]);
 
-					input_frequencies[idx] = this->ScalerDeque(idx, (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])));
+					input_frequencies[idx] = (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]));
+					avg_input_frequencies[idx] = this->ScalerDeque(idx, (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])));
 					//std::cout << "sending idx: " << idx << " rate: " << (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])) << std::endl;
 				}
 				/******************************************** end get all the data ********************************************/
@@ -163,7 +166,7 @@ void TUProducer::MainLoop(){
         			block_no++;
         			ev.AddBlock(block_no, static_cast<const uint32_t*>(&handshake_count), sizeof(uint32_t));
         			block_no++;
-        			ev.AddBlock(block_no, static_cast<const float*>(&cal_beam_current), sizeof(float));
+        			ev.AddBlock(block_no, static_cast<const float*>(&beam_curr), sizeof(float));
         			block_no++;
 
         			//also send individual event scalers
@@ -316,7 +319,7 @@ void TUProducer::OnStatus(){
 			m_status.SetTag("STATUS", "NOT RUNNING");
 
 		for (int i = 0; i < 10; ++i) {
-			m_status.SetTag("SCALER" + std::to_string(i), std::to_string(input_frequencies[i]));
+			m_status.SetTag("SCALER" + std::to_string(i), std::to_string(avg_input_frequencies[i]));
 		}
 
 		if(cal_beam_current > 0)
