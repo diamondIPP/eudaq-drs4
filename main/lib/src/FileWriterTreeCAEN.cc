@@ -781,7 +781,7 @@ void FileWriterTreeCAEN::FillRegionVectors(){
 
 void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf){
     signed char pol = polarities.at(iwf);
-    v_is_saturated->at(iwf) = wf->getAbsMaxInRange(0, 1023) > 498; // indicator if saturation is reached in sampling region (1-1024)
+    v_is_saturated->at(iwf) = wf->getAbsMaxInRange(0, 1023) > 488; // indicator if saturation is reached in sampling region (1-1024)
     v_median->at(iwf) = pol * wf->getMedian(0, 1023); // Median over whole sampling region
     v_average->at(iwf) = pol * wf->getIntegral(0, 1023);
     if (UseWaveForm(active_regions, iwf)){
@@ -828,7 +828,7 @@ inline int FileWriterTreeCAEN::IsPulserEvent(const StandardWaveform *wf){
 
 inline void FileWriterTreeCAEN::ExtractForcTiming(vector<float> * data) {
     bool found_timing = false;
-    for (uint16_t j=1; j<data->size(); j++){
+    for (uint16_t j=1; j < data->size(); j++){
         if( abs(data->at(j)) > 200 && abs(data->at(uint16_t(j - 1))) < 200) {
             v_forc_pos->push_back(j);
             v_forc_time->push_back(getTriggerTime(trigger_channel, j));
@@ -856,7 +856,8 @@ void FileWriterTreeCAEN::FillFullTime(){
 }
 
 inline float FileWriterTreeCAEN::getTriggerTime(const uint8_t & ch, const uint16_t & bin) {
-    return full_time.at(ch).at(bin + f_trigger_cell) - full_time.at(ch).at(f_trigger_cell);
+    //todo add group number
+    return full_time.at(0).at(bin + f_trigger_cell) - full_time.at(0).at(f_trigger_cell);
 }
 
 float FileWriterTreeCAEN::getTimeDifference(uint8_t ch, uint16_t bin_low, uint16_t bin_up) {
