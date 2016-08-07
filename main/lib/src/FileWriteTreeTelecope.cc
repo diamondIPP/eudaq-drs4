@@ -6,8 +6,9 @@
 #include "eudaq/Logger.hh"
 #include "eudaq/FileSerializer.hh"
 
-# include "TFile.h"
-# include "TTree.h"
+#include "TFile.h"
+#include "TTree.h"
+#include "TROOT.h"
 
 using namespace std;
 
@@ -71,13 +72,12 @@ namespace eudaq {
     float f_time;
 
     // Vector Branches
-    std::vector<int> * f_plane;
-    std::vector<int> * f_col;
-    std::vector<int> * f_row;
-    std::vector<int> * f_adc;
-    std::vector<int> * f_charge;
+    std::vector<uint16_t> *f_plane;
+    std::vector<uint16_t> *f_col;
+    std::vector<uint16_t> *f_row;
+    std::vector<int16_t> *f_adc;
+    std::vector<uint32_t> *f_charge;
 //    std::vector< std::vector<float>> * f_waveforms;
-    int f_nwfs;
 
   };
 
@@ -88,15 +88,16 @@ namespace eudaq {
   FileWriterTreeTelescope::FileWriterTreeTelescope(const std::string & /*param*/)
     : m_tfile(0), m_ttree(0),m_noe(0),chan(4),n_pixels(90*90+60*60)
   {
+    gROOT->ProcessLine("#include <vector>");
     //Initialize for configuration file:
     //how many events will be analyzed, 0 = all events
     max_event_number = 0;
 
-    f_plane  = new std::vector<int>;
-    f_col    = new std::vector<int>;
-    f_row    = new std::vector<int>;
-    f_adc    = new std::vector<int>;
-    f_charge = new std::vector<int>;
+    f_plane  = new std::vector<uint16_t>;
+    f_col    = new std::vector<uint16_t>;
+    f_row    = new std::vector<uint16_t>;
+    f_adc    = new std::vector<int16_t>;
+    f_charge = new std::vector<uint32_t>;
 //    f_waveforms = new std::vector< std::vector<float> >;
 
 
@@ -130,13 +131,12 @@ namespace eudaq {
     m_ttree->Branch("event_number",&f_event_number, "event_number/I");
     m_ttree->Branch("time",&f_time, "time/F");
 
+    // telescope
     m_ttree->Branch("plane", &f_plane);
     m_ttree->Branch("col", &f_col);
     m_ttree->Branch("row", &f_row);
     m_ttree->Branch("adc", &f_adc);
     m_ttree->Branch("charge", &f_charge);
-//    m_ttree->Branch("waveforms", &f_charge);
-//    m_ttree->Branch("nwfs", &f_nwfs,"n_waveforms/I");
   }
 
   void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {
@@ -172,35 +172,34 @@ namespace eudaq {
     f_charge->clear();
 
     uint8_t ind = 0;
-    for (size_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
+    for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
 
       const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
       if(plane.Sensor() == "DUT") {
         std::vector<double> cds = plane.GetPixels<double>();
 
-        for (size_t ipix = 0; ipix < cds.size(); ++ipix) {
-          f_plane->push_back(ind);
-          f_col->push_back(plane.GetX(ipix));
-          f_row->push_back(plane.GetY(ipix));
-          f_adc->push_back((int) plane.GetPixel(ipix));
-          f_charge->push_back(42);
+        for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
+          f_plane->push_back(iplane);
+          f_col->push_back(uint16_t(plane.GetX(ipix)));
+          f_row->push_back(uint16_t(plane.GetY(ipix)));
+          f_adc->push_back(int16_t(plane.GetPixel(ipix)));
+          f_charge->push_back(42);                        // todo: do charge conversion here!
         }
         ind++;
       }
     }
-    for (size_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
+    for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
 
       const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
       if(plane.Sensor() != "DUT") {
         std::vector<double> cds = plane.GetPixels<double>();
 
-        for (size_t ipix = 0; ipix < cds.size(); ++ipix) {
-
-          f_plane->push_back(ind);
-          f_col->push_back(plane.GetX(ipix));
-          f_row->push_back(plane.GetY(ipix));
-          f_adc->push_back((int) plane.GetPixel(ipix));
-          f_charge->push_back(42);
+        for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
+          f_plane->push_back(iplane);
+          f_col->push_back(uint16_t(plane.GetX(ipix)));
+          f_row->push_back(uint16_t(plane.GetY(ipix)));
+          f_adc->push_back(int16_t(plane.GetPixel(ipix)));
+          f_charge->push_back(42);                        // todo: do charge conversion here!
         }
         ind++;
       }
