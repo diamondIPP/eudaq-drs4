@@ -401,9 +401,11 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
 
 
     //start with the pulser wf
-    vector<uint8_t> wf_order = {2};
-    for (uint8_t iwf = 0; iwf < sev.GetNWaveforms(); iwf++)
-        if (iwf != 2)
+
+    vector<uint8_t> wf_order = {pulser_channel};
+    uint8_t n_wfs = sev.GetNWaveforms() < 10 ? uint8_t(sev.GetNWaveforms()) : uint8_t(9);
+    for (uint8_t iwf = 0; iwf < n_wfs; iwf++)
+        if (iwf != pulser_channel)
             wf_order.push_back(iwf);
     ResizeVectors(sev.GetNWaveforms());
     for (auto iwf:wf_order){
