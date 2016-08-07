@@ -156,7 +156,14 @@ namespace eudaq {
 
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
     f_event_number = sev.GetEventNumber();
-    f_time = sev.GetTimestamp()/384066.;
+
+    // set time stamp
+    if (sev.hasTUEvent()){
+      if (sev.GetTUEvent(0).GetValid())
+        f_time = sev.GetTimestamp();
+    }
+    else
+      f_time = sev.GetTimestamp() / float(384066.);
 
     f_plane->clear();
     f_col->clear();
