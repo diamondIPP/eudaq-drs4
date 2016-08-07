@@ -43,6 +43,7 @@ private:
 	trigger_controll *tc; //class for TU control from trigger_controll.h
 	Triger_Logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
 	int trg_mask;
+	float beam_curr;
 	float cal_beam_current;
 	std::deque<float> avg;
 	std::vector<std::deque<unsigned>> scaler_deques;
@@ -51,6 +52,7 @@ private:
 	unsigned long trigger_counts[10];
 	unsigned int prev_trigger_counts[10];
 	unsigned int input_frequencies[10];
+	unsigned int avg_input_frequencies[10];
 	unsigned int trigger_counts_multiplicity[10];
 	unsigned int coincidence_count_no_sin;
 	unsigned int coincidence_count;

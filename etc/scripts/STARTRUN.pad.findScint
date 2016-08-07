@@ -1,9 +1,9 @@
 #!/bin/bash
-#dorfer@phys.ethz.ch
+#dorfer@phys.ethz.ch <-- noob
 
 #Activate/Deactivate Stuff
 export CMS=true
-export CAEN=true
+export CAEN=false
 export CLK=false
 export CMS_DIG=false
 export DRS=false
