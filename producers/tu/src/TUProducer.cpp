@@ -27,7 +27,7 @@
 
 #define BOLDRED "\33[1m\033[31m"
 #define BOLDGREEN "\33[1m\033[32m"
-#define CLEAR "\033[2J"
+#define CLEAR "\033[0m\n"
 
 static const std::string EVENT_TYPE = "TU";
 
@@ -59,7 +59,7 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     	if (tc->enable(false) != 0){throw(-1);}
 
     }catch (...){
-    std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU!" << CLEAR << std::endl;
+    std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU!" << CLEAR;
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");}
 }
@@ -230,7 +230,7 @@ void TUProducer::OnStartRun(unsigned run_nr) {
         EUDAQ_INFO("Triggers are now accepted");
 		SetStatus(eudaq::Status::LVL_OK, "Started");
 	}catch(...){
-		std::cout << BOLDRED << "TUProducer::OnStartRun: Could not start TU Producer." << CLEAR << std::endl;
+		std::cout << BOLDRED << "TUProducer::OnStartRun: Could not start TU Producer." << CLEAR;
 		SetStatus(eudaq::Status::LVL_ERROR, "Start Error");
 	}
 }
@@ -248,7 +248,7 @@ void TUProducer::OnStopRun(){
 		SetStatus(eudaq::Status::LVL_OK, "Stopped");
 
 	} catch (...) {
-	    std::cout << BOLDRED << "TUProducer::OnStopRun: Could not stop TU Producer." << CLEAR << std::endl;
+	    std::cout << BOLDRED << "TUProducer::OnStopRun: Could not stop TU Producer." << CLEAR;
 		SetStatus(eudaq::Status::LVL_ERROR, "Stop Error");
 		}
 }
@@ -265,7 +265,7 @@ void TUProducer::OnTerminate(){
 		delete stream;
 		eudaq::mSleep(1000);
 		}catch(...){
-		    std::cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer." << CLEAR << std::endl;
+		    std::cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer." << CLEAR;
 			SetStatus(eudaq::Status::LVL_ERROR, "Terminate Error");
 		}
 }
@@ -294,7 +294,7 @@ void TUProducer::OnReset(){
 			m_ev_prev = 0;
 			SetStatus(eudaq::Status::LVL_OK);
 		}catch(...){
-		    std::cout << BOLDRED << "TUProducer::OnReset: Could not reset TU Producer." << CLEAR << std::endl;
+		    std::cout << BOLDRED << "TUProducer::OnReset: Could not reset TU Producer." << CLEAR;
 			SetStatus(eudaq::Status::LVL_ERROR, "Reset Error");
 		}
 }
@@ -443,7 +443,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 
 	}catch (...){
-		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU, try again." << CLEAR << std::endl;
+		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU, try again." << CLEAR;
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
 	}
 }

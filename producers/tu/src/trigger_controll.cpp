@@ -198,8 +198,8 @@ using namespace libconfig;
         socket_desc = socket(AF_INET , SOCK_STREAM , 0);
         if (socket_desc == -1)
         {
-            printf("Could not create socket");
-            sprintf(error_str,"Error: Could not create socket");
+            //printf("Could not create socket");
+            //sprintf(error_str,"Error: Could not create socket");
             return 1;
         }
 
@@ -231,8 +231,8 @@ using namespace libconfig;
           getsockopt(socket_desc, SOL_SOCKET, SO_ERROR, &so_error, &len);
            //see if the socket actualy connected
           if (so_error != 0) {
-              printf("Error connecting\n");
-              sprintf(error_str,"Error: Error connecting");
+              //printf("Error connecting\n");
+              //sprintf(error_str,"Error: Error connecting");
               close(socket_desc);
               return 1;
           }
@@ -241,8 +241,8 @@ using namespace libconfig;
         sprintf( message , "GET %s HTTP/1.0\r\n\r\n",command);
         if( send(socket_desc , message , strlen(message) , 0) < 0)
         {
-            puts("Send failed");
-            sprintf(error_str,"Error: Send failed");
+            //puts("Send failed");
+            //sprintf(error_str,"Error: Send failed");
             close(socket_desc);
             return 1;
         }
@@ -255,8 +255,8 @@ using namespace libconfig;
         //Receive a reply from the server
         if( (recv_len = recv(socket_desc, server_reply , 2000 , 0) )< 0)
         {
-            puts("recv failed");
-            sprintf(error_str,"Error: recv failed");
+            //puts("recv failed");
+            //sprintf(error_str,"Error: recv failed");
             close(socket_desc);
             return 1; //error
         }else{
@@ -268,8 +268,8 @@ using namespace libconfig;
                     toget = 2000;
                 if( (recv_len = recv(socket_desc, server_reply , toget , 0) )< 0)
                 {
-                    puts("recv failed");
-                    sprintf(error_str,"Error: recv failed");
+                    //puts("recv failed");
+                    //sprintf(error_str,"Error: recv failed");
                     close(socket_desc);
                     return 1; //error
                 }
