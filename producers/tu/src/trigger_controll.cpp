@@ -18,98 +18,41 @@
 using namespace std;
 #include <libconfig.h++>
 using namespace libconfig;
-    trigger_controll::trigger_controll()
-    {
+
+    trigger_controll::trigger_controll(){
         parser = new(http_responce_pars);
         this->ip_adr = "192.168.1.120";
     }
-    void trigger_controll::set_scintillator_delay(int d)
-    {
-        this->scintillator_delay =d;
-    }
 
-    void trigger_controll::set_plane_1_delay(int d)
-    {
-        this->plane_1_delay=d;
-    }
-    void trigger_controll::set_plane_2_delay(int d)
-    {
-        this->plane_2_delay=d;
-    }
-    void trigger_controll::set_plane_3_delay(int d)
-    {
-        this->plane_3_delay=d;
-    }
-    void trigger_controll::set_plane_4_delay(int d)
-    {
-        this->plane_4_delay=d;
-    }
-    void trigger_controll::set_plane_5_delay(int d)
-    {
-        this->plane_5_delay=d;
-    }
-    void trigger_controll::set_plane_6_delay(int d)
-    {
-        this->plane_6_delay=d;
-    }
-    void trigger_controll::set_plane_7_delay(int d)
-    {
-        this->plane_7_delay=d;
-    }
-    void trigger_controll::set_plane_8_delay(int d)
-    {
-        this->plane_8_delay=d;
-    }
-    void trigger_controll::set_pad_delay(int d)
-    {
-        this->pad_delay=d;
-    }
+    void trigger_controll::set_scintillator_delay(int d){this->scintillator_delay =d;}
+    void trigger_controll::set_plane_1_delay(int d){this->plane_1_delay=d;}
+    void trigger_controll::set_plane_2_delay(int d){this->plane_2_delay=d;}
+    void trigger_controll::set_plane_3_delay(int d){this->plane_3_delay=d;}
+    void trigger_controll::set_plane_4_delay(int d){this->plane_4_delay=d;}
+    void trigger_controll::set_plane_5_delay(int d){this->plane_5_delay=d;}
+    void trigger_controll::set_plane_6_delay(int d){this->plane_6_delay=d;}
+    void trigger_controll::set_plane_7_delay(int d){this->plane_7_delay=d;}
+    void trigger_controll::set_plane_8_delay(int d){this->plane_8_delay=d;}
+    void trigger_controll::set_pad_delay(int d){this->pad_delay=d;}
 
-    int trigger_controll::get_scintillator_delay()
-    {
-        return this->scintillator_delay;
-    }
 
-    int trigger_controll::get_plane_1_delay()
-    {
-        return this->plane_1_delay;
-    }
-    int trigger_controll::get_plane_2_delay()
-    {
-        return this->plane_2_delay;
-    }
-    int trigger_controll::get_plane_3_delay()
-    {
-        return this->plane_3_delay;
-    }
-    int trigger_controll::get_plane_4_delay()
-    {
-        return this->plane_4_delay;
-    }
-    int trigger_controll::get_plane_5_delay()
-    {
-        return this->plane_5_delay;
-    }
-    int trigger_controll::get_plane_6_delay()
-    {
-        return this->plane_6_delay;
-    }
-    int trigger_controll::get_plane_7_delay()
-    {
-        return this->plane_7_delay;
-    }
-    int trigger_controll::get_plane_8_delay()
-    {
-        return this->plane_8_delay;
-    }
 
-    int trigger_controll::get_pad_delay()
-    {
-        return this->pad_delay;
-    }
+    int trigger_controll::get_scintillator_delay(){return this->scintillator_delay;}
+    int trigger_controll::get_plane_1_delay(){return this->plane_1_delay;}
+    int trigger_controll::get_plane_2_delay(){return this->plane_2_delay;}
+    int trigger_controll::get_plane_3_delay(){return this->plane_3_delay;}
+    int trigger_controll::get_plane_4_delay(){return this->plane_4_delay;}
+    int trigger_controll::get_plane_5_delay(){return this->plane_5_delay;}
+    int trigger_controll::get_plane_6_delay(){return this->plane_6_delay;}
+    int trigger_controll::get_plane_7_delay(){return this->plane_7_delay;}
+    int trigger_controll::get_plane_8_delay(){return this->plane_8_delay;}
+    int trigger_controll::get_pad_delay(){return this->pad_delay;}
+    int trigger_controll::get_coincidence_pulse_width(){return coincidence_pulse_width;}
+    int trigger_controll::get_coincidence_edge_width(){return coincidence_edge_width;}
 
-    int trigger_controll::set_delays()
-    {
+
+
+    int trigger_controll::set_delays(){
         char cmd_str[128];
         sprintf(cmd_str,"/a?a0=%d&a1=%d&a2=%d&a3=%d&a4=%d&a5=%d&a6=%d&a7=%d&a8=%d&a9=%d",scintillator_delay,
                 plane_1_delay,plane_2_delay,plane_3_delay,plane_4_delay,
@@ -117,8 +60,7 @@ using namespace libconfig;
         return this->http_backend(cmd_str);
     }
 
-    int trigger_controll::enable(bool state)
-    {
+    int trigger_controll::enable(bool state){
         char cmd_str[128];
         if(state)
             sprintf(cmd_str,"/a?k=7");
@@ -127,91 +69,83 @@ using namespace libconfig;
 
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::get_coincidence_pulse_width()
-    {
-        return coincidence_pulse_width;
-    }
-    int trigger_controll::get_coincidence_edge_width()
-    {
-        return coincidence_edge_width;
-    }
-    int trigger_controll::set_coincidence_pulse_width(int width)
-    {
+    
+
+
+
+    int trigger_controll::set_coincidence_pulse_width(int width){
         char cmd_str[128];
         coincidence_pulse_width = width;
         sprintf(cmd_str,"/a?r=%d",width);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::set_coincidence_edge_width(int width)
-    {
+
+    int trigger_controll::set_coincidence_edge_width(int width){
         char cmd_str[128];
         coincidence_edge_width = width;
         sprintf(cmd_str,"/a?q=%d",width);
         return this->http_backend(cmd_str);
     }
-    //send coincidence_pulse_width and send_coincidence_edge_width
-    //send the stored value of coincidence_pulse_width and
-    //coincidence_edge_width
-    int trigger_controll::send_coincidence_pulse_width()
-    {
+
+    int trigger_controll::send_coincidence_pulse_width(){
         char cmd_str[128];
         sprintf(cmd_str,"/a?r=%d",coincidence_pulse_width);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::send_coincidence_edge_width()
-    {
+
+    int trigger_controll::send_coincidence_edge_width(){
         char cmd_str[128];
         sprintf(cmd_str,"/a?q=%d",coincidence_edge_width);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::set_Pulser_freq(double freq)
-    {
+
+    int trigger_controll::set_Pulser_freq(double freq){
         char cmd_str[128];
         sprintf(cmd_str,"/a?o=%f",freq);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::set_Pulser_width(double freq,int width)
-    {
+    
+    int trigger_controll::set_Pulser_width(double freq,int width){
         char cmd_str[128];
         sprintf(cmd_str,"/a?o=%f&p=%d",freq, width);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::set_handshake_delay(int delay)
-    {
+
+    int trigger_controll::set_handshake_delay(int delay){
         char cmd_str[128];
         this->handshake_delay = delay;
         sprintf(cmd_str,"/a?m=%d",delay);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::set_handshake_mask(int mask)
-    {
+
+    int trigger_controll::set_handshake_mask(int mask){
         char cmd_str[128];
         this->handshake_mask = mask;
         sprintf(cmd_str,"/a?l=%d",mask);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::get_handshake_delay()
-    {
+
+    int trigger_controll::get_handshake_delay(){
         return this->handshake_delay ;
     }
-    int trigger_controll::get_handshake_mask()
-    {
+
+    int trigger_controll::get_handshake_mask(){
         return this->handshake_mask;
     }
-    int trigger_controll::send_handshake_delay()
-    {
+
+    int trigger_controll::send_handshake_delay(){
         char cmd_str[128];
         sprintf(cmd_str,"/a?m=%d",this->handshake_delay );
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::send_handshake_mask()
-    {
+
+    int trigger_controll::send_handshake_mask(){
         char cmd_str[128];
         sprintf(cmd_str,"/a?l=%d",this->handshake_mask);
         return this->http_backend(cmd_str);
     }
-    int trigger_controll::set_time()
-    {
+
+    int trigger_controll::set_time(){
         char cmd_str[128];
         time_t t;
         unsigned int l,h;
@@ -222,18 +156,21 @@ using namespace libconfig;
         sprintf(cmd_str,"/a?s=%u&t=%u",h,l);
         return this->http_backend(cmd_str);
     }
+
+
+
+
     /*************************************************************************
      * read_back
      * return a Readout_Data structure populated with the return data or NULL
      *************************************************************************/
-    tuc::Readout_Data * trigger_controll::read_back()
-    {
+    tuc::Readout_Data * trigger_controll::read_back(){
        tuc::Readout_Data * ret_data=NULL;
        if(http_backend((char*)"/a?R=1") !=0)
            return NULL;
-       //May be beter to check if == in size
-       if(parser->get_content_length() >= tuc::TRIGGER_LOGIC_READBACK_FILE_SIZE)
-       {
+
+
+       if(parser->get_content_length() >= tuc::TRIGGER_LOGIC_READBACK_FILE_SIZE){
            ret_data = (tuc::Readout_Data*) malloc(sizeof(tuc::Readout_Data));
            char *raw_ret = parser->get_content();
            if(ret_data == NULL)
@@ -242,6 +179,9 @@ using namespace libconfig;
        }
        return ret_data;
     }
+
+
+
 
     int trigger_controll::http_backend(char * command)
     {
@@ -253,8 +193,8 @@ using namespace libconfig;
         struct timeval tv;
         fd_set fdset;
         parser->clean_up();
-            //Create socket
-    //    puts("creating socket\n");
+
+
         socket_desc = socket(AF_INET , SOCK_STREAM , 0);
         if (socket_desc == -1)
         {
@@ -262,7 +202,6 @@ using namespace libconfig;
             sprintf(error_str,"Error: Could not create socket");
             return 1;
         }
-    //    puts("socket created\n");
 
         server.sin_addr.s_addr = inet_addr(this->ip_adr.c_str());
         server.sin_family = AF_INET;
@@ -279,6 +218,7 @@ using namespace libconfig;
             return 1;
         }
         */
+
         FD_ZERO(&fdset);
         FD_SET(socket_desc, &fdset);
         tv.tv_sec = 2;             /* 10 second timeout */
@@ -339,10 +279,14 @@ using namespace libconfig;
         }
         close(socket_desc);
         puts(parser->get_content());
-        sprintf(error_str,"OK");
+        //sprintf(error_str,"OK");
 
         return 0;
     }
+
+
+
+
     char * trigger_controll::get_error_str()
     {
         return this->error_str;

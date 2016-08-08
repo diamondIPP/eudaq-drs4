@@ -46,6 +46,7 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     	std::fill_n(time_stamps, 2, 0);
     	std::fill_n(beam_current, 2, 0);
     	avg.assign(20,0); //allow the average for the beam current to hold 20 values
+    	error_code = 0;
 
     	//average for the scaler inputs - 10 values here
     	scaler_deques.resize(10);
@@ -53,10 +54,12 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
       		i->assign(20,0);
 		}
 
-    	tc = new trigger_controll();
-    	stream = new Triger_Logic_tpc_Stream();
-    	tc->enable(false);
+    	tc = new trigger_controll(); //does not talk to the box
+    	stream = new Trigger_logic_tpc_Stream(); //neither this
+    	if (tc->enable(false) != 0){throw(-1);}
+
     }catch (...){
+    std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU!" << CLEAR << std::endl;
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");}
 }
@@ -122,6 +125,7 @@ void TUProducer::MainLoop(){
 				//check if eventnumber has changed since last readout:
 				if(handshake_count != prev_handshake_count){
 				
+					#ifdef DEBUG
                         std::cout << "************************************************************************************" << std::endl;
                         std::cout << "time stamp: " << time_stamps[1] << std::endl;
                         std::cout << "coincidence_count: " << coincidence_count << std::endl;
@@ -133,7 +137,7 @@ void TUProducer::MainLoop(){
                         std::cout << "handshake_count: " << handshake_count << std::endl;
                         std::cout << "cal_beam_current: " << cal_beam_current << std::endl;
                         std::cout << "************************************************************************************" << std::endl;
-					
+					#endif
 					
 					//send fake events for events we are missing out between readout cycles
 					if(handshake_count > m_ev_prev){
@@ -221,15 +225,12 @@ void TUProducer::OnStartRun(unsigned run_nr) {
 
 		OnReset();
 		TUStarted = true;
-		tc->enable(true);
+		if(tc->enable(true) != 0){throw(-1);}
 
         EUDAQ_INFO("Triggers are now accepted");
 		SetStatus(eudaq::Status::LVL_OK, "Started");
-	}catch(const std::exception & e){
-		printf("Caught exception: %s\n", e.what());
-		SetStatus(eudaq::Status::LVL_ERROR, "Start Error");
 	}catch(...){
-		printf("Unknown exception\n");
+		std::cout << BOLDRED << "TUProducer::OnStartRun: Could not start TU Producer." << CLEAR << std::endl;
 		SetStatus(eudaq::Status::LVL_ERROR, "Start Error");
 	}
 }
@@ -239,18 +240,15 @@ void TUProducer::OnStartRun(unsigned run_nr) {
 void TUProducer::OnStopRun(){
 	std::cout << "--> Stopping TU Run." << std::endl;	
 	try{
-		tc->enable(false);
+		if(tc->enable(false) != 0){throw(-1);}
 		TUStarted = false;
 		TUJustStopped = true;
 		eudaq::mSleep(2000);
 		OnReset();
 		SetStatus(eudaq::Status::LVL_OK, "Stopped");
 
-	}catch(const std::exception & e){
-		printf("Caught exception: %s\n", e.what());
-		SetStatus(eudaq::Status::LVL_ERROR, "Stop Error");
 	} catch (...) {
-		printf("Unknown exception\n");
+	    std::cout << BOLDRED << "TUProducer::OnStopRun: Could not stop TU Producer." << CLEAR << std::endl;
 		SetStatus(eudaq::Status::LVL_ERROR, "Stop Error");
 		}
 }
@@ -260,16 +258,14 @@ void TUProducer::OnStopRun(){
 void TUProducer::OnTerminate(){
 		try{
 		std::cout << "--> Terminate (press enter)" << std::endl;
-		tc->enable(false);
-		tc->reset_counts();
+		if(tc->enable(false) != 0){throw(-1);}
+		if(tc->reset_counts() != 0){throw(-1);}
 		done = true;
-		delete tc, stream; //clean up
+		delete tc; //clean up
+		delete stream;
 		eudaq::mSleep(1000);
-		}catch(const std::exception & e){
-			printf("Caught exception: %s\n", e.what());
-			SetStatus(eudaq::Status::LVL_ERROR, "Terminate Error");
 		}catch(...){
-			printf("Unknown exception\n");
+		    std::cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer." << CLEAR << std::endl;
 			SetStatus(eudaq::Status::LVL_ERROR, "Terminate Error");
 		}
 }
@@ -279,7 +275,7 @@ void TUProducer::OnTerminate(){
 void TUProducer::OnReset(){
 		try{
 			std::cout << "--> Resetting TU." << std::endl;
-			tc->reset_counts();
+			if(tc->reset_counts() != 0){throw(-1);}
 			std::fill_n(trigger_counts, 10, 0);
 			std::fill_n(prev_trigger_counts, 10, 0);
 			std::fill_n(input_frequencies, 10, 0);
@@ -297,11 +293,8 @@ void TUProducer::OnReset(){
 			prev_handshake_count = 99999;
 			m_ev_prev = 0;
 			SetStatus(eudaq::Status::LVL_OK);
-		}catch(const std::exception & e){
-			printf("Caught exception: %s\n", e.what());
-			SetStatus(eudaq::Status::LVL_ERROR, "Reset Error");
 		}catch(...){
-			printf("Unknown exception\n");
+		    std::cout << BOLDRED << "TUProducer::OnReset: Could not reset TU Producer." << CLEAR << std::endl;
 			SetStatus(eudaq::Status::LVL_ERROR, "Reset Error");
 		}
 }
@@ -336,39 +329,36 @@ void TUProducer::OnStatus(){
 
 
 void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
-
 	try {
-		int error_code = 0;
 
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
-		//open stream to TU
+
 		std::string ip_adr = conf.Get("ip_adr", "192.168.1.120");
 		const char *ip = ip_adr.c_str();
-		tc->enable(false);
+		if(tc->enable(false) != 0){throw(-1);}
+
 
 		stream->set_ip_adr(ip);
    		std::cout << "Opening connection to TU @ " << ip;
-   		error_code = stream->open();
-   		if (error_code != 0){
-   			std::cout << BOLDRED << "Could not connect to TU" << CLEAR << std::endl;
-   		}
+   		if(stream->open() != 0){throw(-1);}
+
    		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
-   		std::cout << "Configuring (" << conf.Name() << ").." << std::endl;			
+
+   		std::cout << "Configuring (" << conf.Name() << "), please wait." << std::endl;			
   		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
   		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
 		tc->set_scintillator_delay(conf.Get("scintillator_delay", 100));
-  		tc->set_plane_1_delay(conf.Get("plane1del", 100));
-  		std::cout << "Debug: Plane 1 delay: " << conf.Get("plane_1", 100) << std::endl;
-  		tc->set_plane_2_delay(conf.Get("plane2del", 100));
-  		tc->set_plane_3_delay(conf.Get("plane3del", 100));
-  		tc->set_plane_4_delay(conf.Get("plane4del", 100));
-  		tc->set_plane_5_delay(conf.Get("plane5del", 100));
-  		tc->set_plane_6_delay(conf.Get("plane6del", 100));
-  		tc->set_plane_7_delay(conf.Get("plane7del", 100));
-  		tc->set_plane_8_delay(conf.Get("plane8del", 100));
-  		tc->set_pad_delay(conf.Get("pad_delay", 100));
-  		tc->set_delays();
+		tc->set_plane_1_delay(conf.Get("plane1del", 100));
+		tc->set_plane_2_delay(conf.Get("plane2del", 100));
+		tc->set_plane_3_delay(conf.Get("plane3del", 100));
+		tc->set_plane_4_delay(conf.Get("plane4del", 100));
+		tc->set_plane_5_delay(conf.Get("plane5del", 100));
+		tc->set_plane_6_delay(conf.Get("plane6del", 100));
+		tc->set_plane_7_delay(conf.Get("plane7del", 100));
+		tc->set_plane_8_delay(conf.Get("plane8del", 100));
+		tc->set_pad_delay(conf.Get("pad_delay", 100));
+		if(tc->set_delays() != 0){throw(-1);}
 
   		//generate and set a trigger mask
   		trg_mask = conf.Get("pad", 0);
@@ -380,14 +370,14 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
   		trg_mask = (trg_mask<<1)+conf.Get("scintillator", 0);
   		//std::cout << "Debug: Trigger mask: " << trg_mask << std::endl;
-  		tc->set_coincidence_enable(trg_mask);
+  		if(tc->set_coincidence_enable(trg_mask) != 0){throw(-1);}
 
 
   		std::cout << "--> Setting prescaler and delay." << std::endl;
 		int scal = conf.Get("prescaler", 1);
 		int predel = conf.Get("prescaler_delay", 5); //must be >4
-		tc->set_prescaler(scal);
-		tc->set_prescaler_delay(predel);
+		if(tc->set_prescaler(scal) != 0){throw(-1);}
+		if(tc->set_prescaler_delay(predel) != 0){throw(-1);}
 
 
 		std::cout << "--> Setting pulser frequency, width and delay." << std::endl;
@@ -395,40 +385,39 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		int width = conf.Get("pulser_width", 0);
 		int puldel = conf.Get("pulser_delay", 5); //must be > 4
 
-		tc->set_Pulser_width(freq, width);
-		tc->set_pulser_delay(puldel);
+		if(tc->set_Pulser_width(freq, width) != 0){throw(-1);}
+		if(tc->set_pulser_delay(puldel) != 0){throw(-1);}
 
 
 		std::cout << "--> Setting coincidence pulse and edge width." << std::endl;
 		int copwidth = conf.Get("coincidence_pulse_width", 10);
 		int coewidth = conf.Get("coincidence_edge_width", 10);
-		tc->set_coincidence_pulse_width(copwidth);
-		tc->set_coincidence_edge_width(coewidth);
-		tc->send_coincidence_edge_width();
-		tc->send_coincidence_pulse_width();
+		if(tc->set_coincidence_pulse_width(copwidth) != 0){throw(-1);}
+		if(tc->set_coincidence_edge_width(coewidth) != 0){throw(-1);}
+		if(tc->send_coincidence_edge_width() != 0){throw(-1);}
+		if(tc->send_coincidence_pulse_width() != 0){throw(-1);}
 
 		int hs_del = conf.Get("handshake_delay", 0);
-		tc->set_handshake_delay(hs_del);
-		tc->send_handshake_delay();
+		if(tc->set_handshake_delay(hs_del) != 0){throw(-1);}
+		if(tc->send_handshake_delay() != 0){throw(-1);}
 
 		int hs_mask = conf.Get("handshake_mask", 0);
-		tc->set_handshake_mask(hs_mask);
-		tc->send_handshake_mask();
+		if(tc->set_handshake_mask(hs_mask) != 0){throw(-1);}
+		if(tc->send_handshake_mask() != 0){throw(-1);}
 
 		int trigdel1 = conf.Get("trig_1_delay", 100);
 		int trigdel2 = conf.Get("trig_2_delay", 100);
 		int trigdel12 = (trigdel1<<12) | trigdel2;
-		tc->set_trigger_12_delay(trigdel12);
+		if(tc->set_trigger_12_delay(trigdel12) != 0){throw(-1);}
 				
 
 		int trigdel3 = conf.Get("trig_3_delay", 100);
-		tc->set_trigger_3_delay(trigdel3);
-		tc->set_delays();
+		if(tc->set_trigger_3_delay(trigdel3) != 0){throw(-1);}
+		if(tc->set_delays() != 0){throw(-1);}
 
 		//set current UNIX timestamp
-   		tc->set_time();
+   		if(tc->set_time() != 0){throw(-1);}
 		eudaq::mSleep(1000);
-		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 		
 		std::cout << "--> Readback of values" << std::endl;
 		std::cout << "############################################################" << std::endl;
@@ -449,11 +438,12 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
 		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl << std::endl;
 
-		std::cout << "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << std::endl;
+		std::cout << BOLDGREEN <<  "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << CLEAR << std::endl;
 
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
+
 	}catch (...){
-		printf("Configuration Error\n");
+		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU, try again." << CLEAR << std::endl;
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
 	}
 }

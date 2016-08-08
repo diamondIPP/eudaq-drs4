@@ -25,7 +25,7 @@
 
 
 
-   Triger_Logic_tpc_Stream::Triger_Logic_tpc_Stream(){
+   Trigger_logic_tpc_Stream::Trigger_logic_tpc_Stream(){
       socket_desc = -1;
       error = 0;
       is_socket_open =false;
@@ -34,12 +34,12 @@
 
 
 
-   bool Triger_Logic_tpc_Stream::is_open(){
+   bool Trigger_logic_tpc_Stream::is_open(){
        return is_socket_open;
    }
 
 
-   int Triger_Logic_tpc_Stream::open(){
+   int Trigger_logic_tpc_Stream::open(){
 
        struct sockaddr_in server;
        struct timeval tv;
@@ -101,17 +101,17 @@
        return 0;
     }
 
-    int Triger_Logic_tpc_Stream::close()
+    int Trigger_logic_tpc_Stream::close()
     {
         is_socket_open =false;
         return shutdown(socket_desc,SHUT_RDWR);
     }
-    void Triger_Logic_tpc_Stream::set_ip_adr(std::string ip_address)
+    void Trigger_logic_tpc_Stream::set_ip_adr(std::string ip_address)
     {
         this->ip_adr = ip_address;
     }
 
-    std::string Triger_Logic_tpc_Stream::get_ip_adr()
+    std::string Trigger_logic_tpc_Stream::get_ip_adr()
     {
         return this->ip_adr;
     }
@@ -121,7 +121,7 @@
  * can not pass the timer handler to the set timer directly
  * so set the external callback to call timer_handler to readout the data
  *****************************************************************************/
-tuc::Readout_Data * Triger_Logic_tpc_Stream::timer_handler ()
+tuc::Readout_Data * Trigger_logic_tpc_Stream::timer_handler ()
 {
     char  server_reply[2000];
    // static int count = 0;
@@ -156,7 +156,7 @@ tuc::Readout_Data * Triger_Logic_tpc_Stream::timer_handler ()
         return readout;
     
 }
-tuc::Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
+tuc::Readout_Data *Trigger_logic_tpc_Stream::pars_stream_ret(char *stream)
 {
     char *start;
     int i;
@@ -240,7 +240,7 @@ tuc::Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     return readout;
 }
 /*
-Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
+Readout_Data *Trigger_logic_tpc_Stream::pars_stream_ret(char *stream)
 {
     char *start;
     int i;
@@ -272,7 +272,7 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     return readout;
 }
 */
-void Triger_Logic_tpc_Stream::dump_readout(tuc::Readout_Data *readout)
+void Trigger_logic_tpc_Stream::dump_readout(tuc::Readout_Data *readout)
 {
     int i;
     printf("id: %d\ntrigger c:\t",readout->id);

@@ -17,7 +17,7 @@
 
 typedef void (*Triger_CallbackType)(int);
 
-class Triger_Logic_tpc_Stream{
+class Trigger_logic_tpc_Stream{
    private:
    int socket_desc;
    int error;
@@ -26,7 +26,7 @@ class Triger_Logic_tpc_Stream{
    std::string ip_adr;
 
    public:
-    Triger_Logic_tpc_Stream();
+    Trigger_logic_tpc_Stream();
 
     /*******************************************************************//*!
      * Dumps redout data to the screen

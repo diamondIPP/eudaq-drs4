@@ -22,6 +22,7 @@ class trigger_controll
 {
 public:
     trigger_controll();
+    
     /*********************************************************************//*!
      * sets the scintillator delay localy set_delays must be caled to send
      * all deays to the trigger box
