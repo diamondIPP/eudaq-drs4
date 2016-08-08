@@ -1,14 +1,19 @@
+
+
+
+
 #include "trigger_controll.h"
-#include<stdio.h>
-#include<string.h>    //strlen
-#include<sys/socket.h>
-#include<arpa/inet.h> //inet_addr
+#include "TUDEFS.h"
+#include <stdio.h>
+#include <string.h>    //strlen
+#include <sys/socket.h>
+#include <arpa/inet.h> //inet_addr
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
-#define SERVER_PORT 80
+
 //#define HOST "128.146.33.69"
 using namespace std;
 #include <libconfig.h++>
@@ -221,19 +226,19 @@ using namespace libconfig;
      * read_back
      * return a Readout_Data structure populated with the return data or NULL
      *************************************************************************/
-    Readout_Data * trigger_controll::read_back()
+    tuc::Readout_Data * trigger_controll::read_back()
     {
-       Readout_Data * ret_data=NULL;
+       tuc::Readout_Data * ret_data=NULL;
        if(http_backend((char*)"/a?R=1") !=0)
            return NULL;
        //May be beter to check if == in size
-       if(parser->get_content_length() >= TRIGGER_LOGIC_READBACK_FILE_SIZE)
+       if(parser->get_content_length() >= tuc::TRIGGER_LOGIC_READBACK_FILE_SIZE)
        {
-           ret_data = (Readout_Data*) malloc(sizeof(Readout_Data));
+           ret_data = (tuc::Readout_Data*) malloc(sizeof(tuc::Readout_Data));
            char *raw_ret = parser->get_content();
            if(ret_data == NULL)
                return NULL;
-           memcpy(ret_data,raw_ret,sizeof(Readout_Data));
+           memcpy(ret_data,raw_ret,sizeof(tuc::Readout_Data));
        }
        return ret_data;
     }
@@ -261,7 +266,7 @@ using namespace libconfig;
 
         server.sin_addr.s_addr = inet_addr(this->ip_adr.c_str());
         server.sin_family = AF_INET;
-        server.sin_port = htons( SERVER_PORT );
+        server.sin_port = htons(tuc::HOST_PORT);
 
         // make non blocking so it does not lockup
         fcntl(socket_desc, F_SETFL, O_NONBLOCK);

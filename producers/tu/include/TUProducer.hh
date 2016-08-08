@@ -14,7 +14,7 @@
 
 //Readout_Data struct defined here:
 #include "eudaq/Producer.hh"
-#include "triger_logic_tpc_stream.h"
+#include "trigger_logic_tpc_stream.h"
 #include <deque>
 #include <vector>
 

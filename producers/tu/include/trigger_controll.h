@@ -5,7 +5,7 @@
 #include<sys/socket.h>
 #include<arpa/inet.h> //inet_addr
 #include "http_responce_pars.h"
-#include "triger_logic_tpc_stream.h"
+#include "trigger_logic_tpc_stream.h"
 #include <libconfig.h++>
 /************************************************************************//**
  *  trigger_controll cllass 
@@ -217,7 +217,7 @@ public:
      *
      * Use Triger_Logic_tpc_Stream class for readback. 
      ************************************************************************/
-    Readout_Data* read_back(); //DO NOT USE use stream readout
+    tuc::Readout_Data* read_back(); //DO NOT USE use stream readout
     /*******************************************************************//*!
      * Get the error string form the last send command .
      * @return pointer to a string describing the last error

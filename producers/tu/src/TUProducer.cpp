@@ -11,6 +11,7 @@
 //TU includes
 #include "TUProducer.hh"
 #include "trigger_controll.h"
+#include "TUDEFS.h"
 
 //EUDAQ includes
 #include "eudaq/Utils.hh"
@@ -23,6 +24,10 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
+
+#define BOLDRED "\33[1m\033[31m"
+#define BOLDGREEN "\33[1m\033[32m"
+#define CLEAR "\033[2J"
 
 static const std::string EVENT_TYPE = "TU";
 
@@ -75,7 +80,7 @@ void TUProducer::MainLoop(){
 		if(TUStarted || TUJustStopped){
 			eudaq::mSleep(500); //only read out every 1/2 second
 
-			Readout_Data *rd;
+			tuc::Readout_Data *rd;
 			rd = stream->timer_handler();
 			if (rd){
 
@@ -333,17 +338,22 @@ void TUProducer::OnStatus(){
 void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
 	try {
+		int error_code = 0;
 
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
-
 		//open stream to TU
 		std::string ip_adr = conf.Get("ip_adr", "192.168.1.120");
 		const char *ip = ip_adr.c_str();
 		tc->enable(false);
 
 		stream->set_ip_adr(ip);
-   		std::cout << "Opening connection to TU @ " << ip << std::endl;
-   		stream->open();
+   		std::cout << "Opening connection to TU @ " << ip;
+   		error_code = stream->open();
+   		if (error_code != 0){
+   			std::cout << BOLDRED << "Could not connect to TU" << CLEAR << std::endl;
+   		}
+   		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+
    		std::cout << "Configuring (" << conf.Name() << ").." << std::endl;			
   		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
   		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
@@ -369,7 +379,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
   		}
 
   		trg_mask = (trg_mask<<1)+conf.Get("scintillator", 0);
-  		std::cout << "Debug: Trigger mask: " << trg_mask << std::endl;
+  		//std::cout << "Debug: Trigger mask: " << trg_mask << std::endl;
   		tc->set_coincidence_enable(trg_mask);
 
 
