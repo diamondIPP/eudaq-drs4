@@ -84,7 +84,6 @@ void TUProducer::MainLoop(){
 			eudaq::mSleep(500); //only read out every 1/2 second
 
 			tuc::Readout_Data *rd;
-			rd = stream->timer_handler();
 			if (rd){
 
 				/******************************************** start get all the data ********************************************/
@@ -191,6 +190,7 @@ void TUProducer::MainLoop(){
 				}//end if (prev event count)
 
 			}//end if(rd)
+		std::cout << BOLDRED << "TUProducer::MainLoop: One event readout returned nothing!" << CLEAR;
 
 		}//end if(TUStarted)
 
