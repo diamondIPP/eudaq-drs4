@@ -155,7 +155,8 @@ void TUProducer::MainLoop(){
 					m_ev = handshake_count;
 					
 					//real data event
-					eudaq::RawDataEvent ev(event_type, m_run, m_ev); //generate a raw event
+					//std::cout << "m_run: " << m_run << std::endl;
+					eudaq::RawDataEvent ev(event_type, ((unsigned int) m_run), m_ev); //generate a raw event
 					ev.SetTag("valid", std::to_string(1));
 
         			unsigned int block_no = 0;
@@ -210,11 +211,12 @@ void TUProducer::MainLoop(){
 void TUProducer::OnStartRun(unsigned run_nr) {
 	try{
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
+		std::cout << "--> Starting TU Run " << run_nr << std::endl;
 		eudaq::mSleep(5000);
 		m_run = run_nr;
 		m_ev = 0;
 
-		std::cout << "--> Starting TU Run." << std::endl;
+		
 
 		eudaq::RawDataEvent ev(eudaq::RawDataEvent::BORE(event_type, m_run));
 		ev.SetTag("FirmwareID", "not given"); //FIXME!

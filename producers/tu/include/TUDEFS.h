@@ -12,40 +12,38 @@
 #ifndef _TUDEFS_H
 #define _TUDEFS_H
 
-#include <cstdint>
-
 namespace tuc{
-  const uint32_t HOST_PORT = 80;
-  const uint32_t STREAM_HOST_PORT = 8080;
+  const unsigned int HOST_PORT = 80;
+  const unsigned int STREAM_HOST_PORT = 8080;
 
   //readout addresses
-  const uint32_t TRIGGER_LOGIC_HEADER = 0;
-  const uint32_t TRIGGER_LOGIC_READBACK_ID = 4;
-  const uint32_t TRIGGER_COUNT_0 = 8;
-  const uint32_t TRIGGER_COUNT_1 = 12;
-  const uint32_t TRIGGER_COUNT_2 = 16;
-  const uint32_t TRIGGER_COUNT_3 = 20;
-  const uint32_t TRIGGER_COUNT_4 = 24;
-  const uint32_t TRIGGER_COUNT_5 = 28;
-  const uint32_t TRIGGER_COUNT_6 = 32;
-  const uint32_t TRIGGER_COUNT_7 = 36;
-  const uint32_t TRIGGER_COUNT_8 = 40;
-  const uint32_t TRIGGER_COUNT_9 = 44;
-  const uint32_t TRIGGER_LOGIC_COINCIDENCE_CNT = 48;
-  const uint32_t TRIGGER_LOGIC_BEAM_CURRENT = 52;
-  const uint32_t TRIGGER_LOGIC_PRESCALER_CNT = 56;
-  const uint32_t TRIGGER_LOGIC_PRESCALER_XOR_PULSER_CNT = 60;
-  const uint32_t TRIGGER_LOGIC_PRESCALER_XOR_PULSER_AND_PRESCALER_DELAYED_CNT = 64;
-  const uint32_t TRIGGER_LOGIC_PULSER_DELAY_AND_XOR_PULSER_CNT = 68;
-  const uint32_t TRIGGER_LOGIC_HANDSHAKE_CNT = 72;
-  const uint32_t TRIGGER_LOGIC_COINCIDENCE_CNT_NO_SIN = 76;
-  const uint32_t TRIGGER_LOGIC__S = 80;  
-  const uint32_t TRIGGER_LOGIC_TIME_STAMP_HIGH = 84;
-  const uint32_t TRIGGER_LOGIC_TIME_STAMP_LOW = 88;
-  const uint32_t TRIGGER_LOGIC_CHECK_SUM = 96;
-  const uint32_t SLAVE_REG_24 = 92;
-  const uint32_t TRIGGER_LOGIC_END_FAG = 92;
-  const uint32_t TRIGGER_LOGIC_READBACK_FILE_SIZE = 104;
+  const unsigned int TRIGGER_LOGIC_HEADER = 0;
+  const unsigned int TRIGGER_LOGIC_READBACK_ID = 4;
+  const unsigned int TRIGGER_COUNT_0 = 8;
+  const unsigned int TRIGGER_COUNT_1 = 12;
+  const unsigned int TRIGGER_COUNT_2 = 16;
+  const unsigned int TRIGGER_COUNT_3 = 20;
+  const unsigned int TRIGGER_COUNT_4 = 24;
+  const unsigned int TRIGGER_COUNT_5 = 28;
+  const unsigned int TRIGGER_COUNT_6 = 32;
+  const unsigned int TRIGGER_COUNT_7 = 36;
+  const unsigned int TRIGGER_COUNT_8 = 40;
+  const unsigned int TRIGGER_COUNT_9 = 44;
+  const unsigned int TRIGGER_LOGIC_COINCIDENCE_CNT = 48;
+  const unsigned int TRIGGER_LOGIC_BEAM_CURRENT = 52;
+  const unsigned int TRIGGER_LOGIC_PRESCALER_CNT = 56;
+  const unsigned int TRIGGER_LOGIC_PRESCALER_XOR_PULSER_CNT = 60;
+  const unsigned int TRIGGER_LOGIC_PRESCALER_XOR_PULSER_AND_PRESCALER_DELAYED_CNT = 64;
+  const unsigned int TRIGGER_LOGIC_PULSER_DELAY_AND_XOR_PULSER_CNT = 68;
+  const unsigned int TRIGGER_LOGIC_HANDSHAKE_CNT = 72;
+  const unsigned int TRIGGER_LOGIC_COINCIDENCE_CNT_NO_SIN = 76;
+  const unsigned int TRIGGER_LOGIC__S = 80;  
+  const unsigned int TRIGGER_LOGIC_TIME_STAMP_HIGH = 84;
+  const unsigned int TRIGGER_LOGIC_TIME_STAMP_LOW = 88;
+  const unsigned int TRIGGER_LOGIC_CHECK_SUM = 96;
+  const unsigned int SLAVE_REG_24 = 92;
+  const unsigned int TRIGGER_LOGIC_END_FAG = 92;
+  const unsigned int TRIGGER_LOGIC_READBACK_FILE_SIZE = 104;
 
 
   struct RET_DATA{
