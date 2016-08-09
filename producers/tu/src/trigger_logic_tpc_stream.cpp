@@ -1,40 +1,53 @@
-#include<stdio.h>
-#include<string.h>    //strlen
-#include <stdlib.h>
+/* ---------------------------------------------------------------------------------
+** Interface to Artix-7 (AC701 Development Board) via HTTP server running on board.
+** Based on work done at OSU
+**
+** <trigger_logic_tpc_stream>.cpp
+** 
+** Date: August 2016
+** Author: Christian Dorfer (dorfer@phys.ethz.ch)
+** ---------------------------------------------------------------------------------*/
 
-#include<sys/socket.h>
-#include<arpa/inet.h> //inet_addr
+#include "trigger_logic_tpc_stream.h"
+//#include "TUDEFS.h"
+
+#include <stdio.h>
+ 
+#include <string.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/time.h>
 #include <fcntl.h>
-#include "triger_logic_tpc_stream.h"
-//#define HOST_NAME "128.146.33.69"
-#define STREAM_HOST_PORT 8080
 
 
-   Triger_Logic_tpc_Stream::Triger_Logic_tpc_Stream()
-   {
+
+
+   Trigger_logic_tpc_Stream::Trigger_logic_tpc_Stream(){
       socket_desc = -1;
       error = 0;
       is_socket_open =false;
       this->ip_adr = "192.168.1.120";
    }
-   bool Triger_Logic_tpc_Stream::is_open()
-   {
+
+
+
+   bool Trigger_logic_tpc_Stream::is_open(){
        return is_socket_open;
    }
 
-   int Triger_Logic_tpc_Stream::open()
-   {    
+
+   int Trigger_logic_tpc_Stream::open(){
+
        struct sockaddr_in server;
        struct timeval tv;
        fd_set fdset;
        is_socket_open =false;
      
-    //Create socket
-//    puts("creating socket\n");
        socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+
        if (socket_desc == -1)
        {
            //printf("Could not create socket");
@@ -43,11 +56,19 @@
        }
           //puts("socket created\n");
          
+
+
+       if (socket_desc == -1){
+           error =1;
+           return 1;
+       }
+        
+
        server.sin_addr.s_addr = inet_addr(this->ip_adr.c_str());
        server.sin_family = AF_INET;
-       server.sin_port = htons( STREAM_HOST_PORT);
+       server.sin_port = htons(tuc::STREAM_HOST_PORT);
  
-   //Connect to remote server
+       //Connect to remote server
        // make non blocking so it does not lockup
        fcntl(socket_desc, F_SETFL, O_NONBLOCK);
 
@@ -59,8 +80,8 @@
        tv.tv_sec = 10;             /* 10 second timeout */
        tv.tv_usec = 0;
        int ret= select(socket_desc + 1, NULL, &fdset, NULL, &tv);
-       if (ret <= 0)
-       {
+
+       if (ret <= 0){
            //printf("Error connecting\n");
            ::close(socket_desc);
            return 1;
@@ -80,6 +101,7 @@
          return 1;
          */
        }
+
        //make blocking again
        int flags =0;
        if (-1 == (flags = fcntl(socket_desc, F_GETFL, 0)))
@@ -91,17 +113,17 @@
        return 0;
     }
 
-    int Triger_Logic_tpc_Stream::close()
+    int Trigger_logic_tpc_Stream::close()
     {
         is_socket_open =false;
         return shutdown(socket_desc,SHUT_RDWR);
     }
-    void Triger_Logic_tpc_Stream::set_ip_adr(std::string ip_address)
+    void Trigger_logic_tpc_Stream::set_ip_adr(std::string ip_address)
     {
         this->ip_adr = ip_address;
     }
 
-    std::string Triger_Logic_tpc_Stream::get_ip_adr()
+    std::string Trigger_logic_tpc_Stream::get_ip_adr()
     {
         return this->ip_adr;
     }
@@ -111,7 +133,7 @@
  * can not pass the timer handler to the set timer directly
  * so set the external callback to call timer_handler to readout the data
  *****************************************************************************/
-Readout_Data * Triger_Logic_tpc_Stream::timer_handler ()
+tuc::Readout_Data * Trigger_logic_tpc_Stream::timer_handler ()
 {
     char  server_reply[2000];
    // static int count = 0;
@@ -136,7 +158,7 @@ Readout_Data * Triger_Logic_tpc_Stream::timer_handler ()
         return NULL;
     }
    //puts(server_reply);
-   Readout_Data * readout;
+   tuc::Readout_Data * readout;
    readout = pars_stream_ret(server_reply);
 	   if(readout !=NULL)
            //dump_readout(readout);
@@ -146,15 +168,15 @@ Readout_Data * Triger_Logic_tpc_Stream::timer_handler ()
         return readout;
     
 }
-Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
+tuc::Readout_Data *Trigger_logic_tpc_Stream::pars_stream_ret(char *stream)
 {
     char *start;
     int i;
     unsigned int *iptr;
-    Readout_Data *readout;
+    tuc::Readout_Data *readout;
     if((start=strstr(stream,"RS #"))==NULL)
         return NULL;
-    readout = (Readout_Data*)malloc(sizeof(Readout_Data));
+    readout = (tuc::Readout_Data*)malloc(sizeof(tuc::Readout_Data));
     iptr = (unsigned int *) start+4;
     readout->id = *iptr;
     for(i=0;i<4;i++)
@@ -162,7 +184,7 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
             ;
 
             //printf("\n");
-    for(i=4;i<TRIGGER_LOGIC_READBACK_FILE_SIZE;i=i+4)
+    for(i=4;i<tuc::TRIGGER_LOGIC_READBACK_FILE_SIZE;i=i+4)
     {
         iptr = (unsigned int *) (start +i);
         //printf("%d %d, \t",i,*iptr);
@@ -173,50 +195,50 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     }
     for(i=0;i<10;i++)
     {
-        iptr = (unsigned int *) (start +TRIGGER_COUNT_0+4*i);
+        iptr = (unsigned int *) (start +tuc::TRIGGER_COUNT_0+4*i);
         readout->trigger_counts[i] =  *iptr;
     }
-    iptr = (unsigned int *) (start +TRIGGER_LOGIC_COINCIDENCE_CNT_NO_SIN);
+    iptr = (unsigned int *) (start +tuc::TRIGGER_LOGIC_COINCIDENCE_CNT_NO_SIN);
     readout->coincidence_count_no_sin =  *iptr;
     
-    iptr = (unsigned int *) (start +TRIGGER_LOGIC_COINCIDENCE_CNT);
+    iptr = (unsigned int *) (start +tuc::TRIGGER_LOGIC_COINCIDENCE_CNT);
     readout->coincidence_count =  *iptr;
 //    printf("coincidence_count %d, \n",*iptr);
-    iptr = (unsigned int *) (start +TRIGGER_LOGIC_BEAM_CURRENT);
+    iptr = (unsigned int *) (start +tuc::TRIGGER_LOGIC_BEAM_CURRENT);
     readout->beam_curent= *iptr;
 //    printf("beam_current %d, \n",*iptr);
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_CNT);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_PRESCALER_CNT);
     readout->prescaler_count = *iptr;
 //    printf("prescaler_count %d, \n",*iptr);
 
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_XOR_PULSER_CNT);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_PRESCALER_XOR_PULSER_CNT);
     readout->prescaler_count_xor_pulser_count = *iptr;
 
 
     //start altered by cdorfer
     //iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_XOR_PULSER_AND_PRESCALER_DELAYED_CNT);
     //readout->pulser_delay_and_xor_pulser_count = *iptr;
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_XOR_PULSER_AND_PRESCALER_DELAYED_CNT);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_PRESCALER_XOR_PULSER_AND_PRESCALER_DELAYED_CNT);
     readout->prescaler_xor_pulser_and_prescaler_delayed_count = *iptr;
 
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_PULSER_DELAY_AND_XOR_PULSER_CNT);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_PULSER_DELAY_AND_XOR_PULSER_CNT);
     readout->pulser_delay_and_xor_pulser_count = *iptr;
     //end altered
 
-    iptr = (unsigned int *) (start +TRIGGER_LOGIC_HANDSHAKE_CNT);
+    iptr = (unsigned int *) (start +tuc::TRIGGER_LOGIC_HANDSHAKE_CNT);
     readout->handshake_count = *iptr;
 
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_COINCIDENCE_CNT);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_COINCIDENCE_CNT);
     readout->coincidence_count = *iptr;
 
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_PRESCALER_CNT);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_PRESCALER_CNT);
     readout->prescaler_count = *iptr;
 
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_TIME_STAMP_HIGH);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_TIME_STAMP_HIGH);
     i = *iptr;
     readout->time_stamp = ((unsigned long)i)<<32;
 
-    iptr = (unsigned int *) (start + TRIGGER_LOGIC_TIME_STAMP_LOW);
+    iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_TIME_STAMP_LOW);
     i = *iptr;
     readout->time_stamp =  readout->time_stamp | (((unsigned long)i) & 0xFFFFFFFF);
     /* rates are not implimented
@@ -230,7 +252,7 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     return readout;
 }
 /*
-Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
+Readout_Data *Trigger_logic_tpc_Stream::pars_stream_ret(char *stream)
 {
     char *start;
     int i;
@@ -262,7 +284,7 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     return readout;
 }
 */
-void Triger_Logic_tpc_Stream::dump_readout(Readout_Data *readout)
+void Trigger_logic_tpc_Stream::dump_readout(tuc::Readout_Data *readout)
 {
     int i;
     printf("id: %d\ntrigger c:\t",readout->id);
