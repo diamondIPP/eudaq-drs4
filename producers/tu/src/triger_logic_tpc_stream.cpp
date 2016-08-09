@@ -37,11 +37,11 @@
        socket_desc = socket(AF_INET , SOCK_STREAM , 0);
        if (socket_desc == -1)
        {
-           printf("Could not create socket");
+           //printf("Could not create socket");
            error =1;
            return 1;
        }
-    puts("socket created\n");
+          //puts("socket created\n");
          
        server.sin_addr.s_addr = inet_addr(this->ip_adr.c_str());
        server.sin_family = AF_INET;
@@ -61,7 +61,7 @@
        int ret= select(socket_desc + 1, NULL, &fdset, NULL, &tv);
        if (ret <= 0)
        {
-           printf("Error connecting\n");
+           //printf("Error connecting\n");
            ::close(socket_desc);
            return 1;
            /*
@@ -86,7 +86,7 @@
            flags = 0;
        fcntl(socket_desc, F_SETFL, flags & (!O_NONBLOCK));
 
-       puts("connect sucess");
+       //puts("connect sucess");
        is_socket_open =true;
        return 0;
     }
