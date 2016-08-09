@@ -196,8 +196,7 @@ using namespace libconfig;
 
 
         socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-        if (socket_desc == -1)
-        {
+        if (socket_desc == -1){
             //printf("Could not create socket");
             //sprintf(error_str,"Error: Could not create socket");
             return 1;
@@ -253,8 +252,7 @@ using namespace libconfig;
         fcntl(socket_desc, F_SETFL, flags & (!O_NONBLOCK));
 
         //Receive a reply from the server
-        if( (recv_len = recv(socket_desc, server_reply , 2000 , 0) )< 0)
-        {
+        if( (recv_len = recv(socket_desc, server_reply , 2000 , 0) )< 0){
             //puts("recv failed");
             //sprintf(error_str,"Error: recv failed");
             close(socket_desc);
@@ -278,7 +276,7 @@ using namespace libconfig;
             }
         }
         close(socket_desc);
-        puts(parser->get_content());
+        //puts(parser->get_content());
         //sprintf(error_str,"OK");
 
         return 0;

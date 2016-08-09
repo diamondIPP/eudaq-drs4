@@ -96,7 +96,7 @@
            flags = 0;
        fcntl(socket_desc, F_SETFL, flags & (!O_NONBLOCK));
 
-       puts("connect sucess");
+       //puts("connect sucess");
        is_socket_open =true;
        return 0;
     }

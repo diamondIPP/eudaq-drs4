@@ -347,7 +347,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
    		std::cout << "Configuring (" << conf.Name() << "), please wait." << std::endl;			
   		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
-  		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
+  		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad..";
 		tc->set_scintillator_delay(conf.Get("scintillator_delay", 100));
 		tc->set_plane_1_delay(conf.Get("plane1del", 100));
 		tc->set_plane_2_delay(conf.Get("plane2del", 100));
@@ -359,8 +359,10 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		tc->set_plane_8_delay(conf.Get("plane8del", 100));
 		tc->set_pad_delay(conf.Get("pad_delay", 100));
 		if(tc->set_delays() != 0){throw(-1);}
+		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
   		//generate and set a trigger mask
+  		std::cout << "Generate and set trigger mask..";
   		trg_mask = conf.Get("pad", 0);
   		for (unsigned int idx=8; idx>0; idx--){
   			std::string sname = "plane" + std::to_string(idx);
@@ -371,32 +373,37 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
   		trg_mask = (trg_mask<<1)+conf.Get("scintillator", 0);
   		//std::cout << "Debug: Trigger mask: " << trg_mask << std::endl;
   		if(tc->set_coincidence_enable(trg_mask) != 0){throw(-1);}
+  		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
 
-  		std::cout << "--> Setting prescaler and delay." << std::endl;
+  		std::cout << "--> Setting prescaler and delay..";
 		int scal = conf.Get("prescaler", 1);
 		int predel = conf.Get("prescaler_delay", 5); //must be >4
 		if(tc->set_prescaler(scal) != 0){throw(-1);}
 		if(tc->set_prescaler_delay(predel) != 0){throw(-1);}
+		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
 
-		std::cout << "--> Setting pulser frequency, width and delay." << std::endl;
+		std::cout << "--> Setting pulser frequency, width and delay..";
 		double freq = conf.Get("pulser_freq", 0);
 		int width = conf.Get("pulser_width", 0);
 		int puldel = conf.Get("pulser_delay", 5); //must be > 4
 
 		if(tc->set_Pulser_width(freq, width) != 0){throw(-1);}
 		if(tc->set_pulser_delay(puldel) != 0){throw(-1);}
+		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
 
-		std::cout << "--> Setting coincidence pulse and edge width." << std::endl;
+		std::cout << "--> Setting coincidence pulse and edge width..";
 		int copwidth = conf.Get("coincidence_pulse_width", 10);
 		int coewidth = conf.Get("coincidence_edge_width", 10);
 		if(tc->set_coincidence_pulse_width(copwidth) != 0){throw(-1);}
 		if(tc->set_coincidence_edge_width(coewidth) != 0){throw(-1);}
 		if(tc->send_coincidence_edge_width() != 0){throw(-1);}
 		if(tc->send_coincidence_pulse_width() != 0){throw(-1);}
+		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
+		std::cout << "--> Setting handshake settings..";
 		int hs_del = conf.Get("handshake_delay", 0);
 		if(tc->set_handshake_delay(hs_del) != 0){throw(-1);}
 		if(tc->send_handshake_delay() != 0){throw(-1);}
@@ -404,20 +411,24 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		int hs_mask = conf.Get("handshake_mask", 0);
 		if(tc->set_handshake_mask(hs_mask) != 0){throw(-1);}
 		if(tc->send_handshake_mask() != 0){throw(-1);}
+		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
+		std::cout << "--> Set trigger delays..";
 		int trigdel1 = conf.Get("trig_1_delay", 100);
 		int trigdel2 = conf.Get("trig_2_delay", 100);
 		int trigdel12 = (trigdel1<<12) | trigdel2;
 		if(tc->set_trigger_12_delay(trigdel12) != 0){throw(-1);}
-				
-
 		int trigdel3 = conf.Get("trig_3_delay", 100);
 		if(tc->set_trigger_3_delay(trigdel3) != 0){throw(-1);}
 		if(tc->set_delays() != 0){throw(-1);}
+		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
 		//set current UNIX timestamp
+		std::cout << "--> Set current UNIX time to TU..";
    		if(tc->set_time() != 0){throw(-1);}
 		eudaq::mSleep(1000);
+		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+
 		
 		std::cout << "--> Readback of values" << std::endl;
 		std::cout << "############################################################" << std::endl;
