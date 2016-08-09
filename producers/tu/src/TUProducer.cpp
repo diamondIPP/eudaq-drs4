@@ -84,6 +84,7 @@ void TUProducer::MainLoop(){
 			eudaq::mSleep(500); //only read out every 1/2 second
 
 			tuc::Readout_Data *rd;
+			rd = stream->timer_handler();
 			if (rd){
 
 				/******************************************** start get all the data ********************************************/
@@ -190,7 +191,7 @@ void TUProducer::MainLoop(){
 				}//end if (prev event count)
 
 			}//end if(rd)
-		std::cout << BOLDRED << "TUProducer::MainLoop: One event readout returned nothing!" << CLEAR;
+		//std::cout << BOLDRED << "TUProducer::MainLoop: One event readout returned nothing!" << CLEAR;
 
 		}//end if(TUStarted)
 
@@ -339,10 +340,10 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
 
 		stream->set_ip_adr(ip);
-   		std::cout << "Opening connection to TU @ " << ip;
+   		std::cout << "Opening connection to TU @ " << ip << " ..";
    		if(stream->open() != 0){throw(-1);}
 
-   		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+   		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 
    		std::cout << "Configuring (" << conf.Name() << "), please wait." << std::endl;			
@@ -359,10 +360,10 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		tc->set_plane_8_delay(conf.Get("plane8del", 100));
 		tc->set_pad_delay(conf.Get("pad_delay", 100));
 		if(tc->set_delays() != 0){throw(-1);}
-		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
   		//generate and set a trigger mask
-  		std::cout << "Generate and set trigger mask..";
+  		std::cout << "--> Generate and set trigger mask..";
   		trg_mask = conf.Get("pad", 0);
   		for (unsigned int idx=8; idx>0; idx--){
   			std::string sname = "plane" + std::to_string(idx);
@@ -373,7 +374,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
   		trg_mask = (trg_mask<<1)+conf.Get("scintillator", 0);
   		//std::cout << "Debug: Trigger mask: " << trg_mask << std::endl;
   		if(tc->set_coincidence_enable(trg_mask) != 0){throw(-1);}
-  		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+  		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 
   		std::cout << "--> Setting prescaler and delay..";
@@ -381,7 +382,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		int predel = conf.Get("prescaler_delay", 5); //must be >4
 		if(tc->set_prescaler(scal) != 0){throw(-1);}
 		if(tc->set_prescaler_delay(predel) != 0){throw(-1);}
-		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 
 		std::cout << "--> Setting pulser frequency, width and delay..";
@@ -391,7 +392,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
 		if(tc->set_Pulser_width(freq, width) != 0){throw(-1);}
 		if(tc->set_pulser_delay(puldel) != 0){throw(-1);}
-		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 
 		std::cout << "--> Setting coincidence pulse and edge width..";
@@ -401,7 +402,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		if(tc->set_coincidence_edge_width(coewidth) != 0){throw(-1);}
 		if(tc->send_coincidence_edge_width() != 0){throw(-1);}
 		if(tc->send_coincidence_pulse_width() != 0){throw(-1);}
-		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 		std::cout << "--> Setting handshake settings..";
 		int hs_del = conf.Get("handshake_delay", 0);
@@ -411,7 +412,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		int hs_mask = conf.Get("handshake_mask", 0);
 		if(tc->set_handshake_mask(hs_mask) != 0){throw(-1);}
 		if(tc->send_handshake_mask() != 0){throw(-1);}
-		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 		std::cout << "--> Set trigger delays..";
 		int trigdel1 = conf.Get("trig_1_delay", 100);
@@ -421,7 +422,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		int trigdel3 = conf.Get("trig_3_delay", 100);
 		if(tc->set_trigger_3_delay(trigdel3) != 0){throw(-1);}
 		if(tc->set_delays() != 0){throw(-1);}
-		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
+		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 		//set current UNIX timestamp
 		std::cout << "--> Set current UNIX time to TU..";
@@ -429,9 +430,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		eudaq::mSleep(1000);
 		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
-		
-		std::cout << "--> Readback of values" << std::endl;
-		std::cout << "############################################################" << std::endl;
+		std::cout << "################### Readback ###################" << std::endl;
 		std::cout << "Scintillator delay [ns]: " << tc->get_scintillator_delay()*2.5 << std::endl;
 		std::cout << "Plane 1 delay [ns]: " << tc->get_plane_1_delay()*2.5 << std::endl;
 		std::cout << "Plane 2 delay [ns]: " << tc->get_plane_2_delay()*2.5 << std::endl;
@@ -449,7 +448,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
 		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl << std::endl;
 
-		std::cout << BOLDGREEN <<  "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << CLEAR << std::endl;
+		std::cout << BOLDGREEN <<  "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << CLEAR;
 
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 
