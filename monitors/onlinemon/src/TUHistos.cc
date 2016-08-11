@@ -21,57 +21,47 @@
 
 TUHistos::TUHistos(){
 
-  _CoincidenceCount = new TH1I("Concidence Rate", "Coincidence Rate [Hz]; Run Time [s]",500, 0, 500);
+  _CoincidenceCount = new TH1I("Concidence Rate", "Coincidence Rate [Hz]; Run Time [s]",60000, 0, 60000);
   _CoincidenceCount->SetMarkerStyle(34);
   _CoincidenceCount->SetMarkerSize(1);
   _CoincidenceCount->SetMarkerColor(4);
-  _CoincidenceCountNoScint = new TH1I("Coincidence Rate No Scintillator", "Coincidence Rate No Scintillator [Hz]; Run Time [s]",500, 0, 500);
+  _CoincidenceCountNoScint = new TH1I("Coincidence Rate No Scintillator", "Coincidence Rate No Scintillator [Hz]; Run Time [s]",60000, 0, 60000);
   _CoincidenceCountNoScint->SetMarkerStyle(34);
   _CoincidenceCountNoScint->SetMarkerSize(1);
   _CoincidenceCountNoScint->SetMarkerColor(4);  
-  _PrescalerCount = new TH1I("Prescaler Rate", "Prescaler Rate [Hz]; Run Time [s]",500, 0, 500);
+  _PrescalerCount = new TH1I("Prescaler Rate", "Prescaler Rate [Hz]; Run Time [s]",60000, 0, 60000);
   _PrescalerCount->SetMarkerStyle(34);
   _PrescalerCount->SetMarkerSize(1);
   _PrescalerCount->SetMarkerColor(4);
-  _PrescalerXPulser = new TH1I("Prescaler Xor Pulser Rate", "Prescaler Xor Pulser Rate [Hz]; Run Time [s]",500, 0, 500);
+  _PrescalerXPulser = new TH1I("Prescaler Xor Pulser Rate", "Prescaler Xor Pulser Rate [Hz]; Run Time [s]",60000, 0, 60000);
   _PrescalerXPulser->SetMarkerStyle(34);
   _PrescalerXPulser->SetMarkerSize(1);
   _PrescalerXPulser->SetMarkerColor(4);
-  _AcceptedPrescaledEvents = new TH1I("Accepted Prescaled Event Rate", "Accepted Prescaled Rate [Hz]; Run Time [s]",500, 0, 500);
+  _AcceptedPrescaledEvents = new TH1I("Accepted Prescaled Event Rate", "Accepted Prescaled Rate [Hz]; Run Time [s]",60000, 0, 60000);
   _AcceptedPrescaledEvents->SetMarkerStyle(34);
   _AcceptedPrescaledEvents->SetMarkerSize(1);
   _AcceptedPrescaledEvents->SetMarkerColor(4);
-  _AcceptedPulserEvents = new TH1I("Accepted Pulser Event Rate", "Accepted Pulser Event Rate [Hz]; Run Time [s]",500, 0, 500);
+  _AcceptedPulserEvents = new TH1I("Accepted Pulser Event Rate", "Accepted Pulser Event Rate [Hz]; Run Time [s]",60000, 0, 60000);
   _AcceptedPulserEvents->SetMarkerStyle(34);
   _AcceptedPulserEvents->SetMarkerSize(1);
   _AcceptedPulserEvents->SetMarkerColor(4);
-  _EventCount = new TH1I("Event Rate", "Event Rate [Hz]; Run Time [s]",500, 0, 500);
+  _EventCount = new TH1I("Event Rate", "Event Rate [Hz]; Run Time [s]",60000, 0, 60000);
   _EventCount->SetMarkerStyle(34);
   _EventCount->SetMarkerSize(1);
   _EventCount->SetMarkerColor(4);
-  _AvgBeamCurrent = new TH1I("Average Beam Current", "Average Beam Current [mA]; Run Time [s]",500, 0, 500);
+  _AvgBeamCurrent = new TH1I("Average Beam Current", "Average Beam Current [mA]; Run Time [s]",60000, 0, 60000);
   _AvgBeamCurrent->SetMarkerStyle(34);
   _AvgBeamCurrent->SetMarkerSize(1);
   _AvgBeamCurrent->SetMarkerColor(2);
-  _Scaler1 = new TH1I("Rate Plane Scaler 1", "Rate Plane Scaler 1 [Hz]; Run Time [s]",500, 0, 500);
+  _Scaler1 = new TH1I("Rate Plane Scaler 1", "Rate Plane Scaler 1 [Hz]; Run Time [s]",60000, 0, 60000);
   _Scaler1->SetMarkerStyle(34);
   _Scaler1->SetMarkerSize(1);
   _Scaler1->SetMarkerColor(4);
-  _Scaler2 = new TH1I("Rate Plane Scaler 2", "Rate Plane Scaler 2 [Hz]; Run Time [s]",500, 0, 500);
+  _Scaler2 = new TH1I("Rate Plane Scaler 2", "Rate Plane Scaler 2 [Hz]; Run Time [s]",60000, 0, 60000);
   _Scaler2->SetMarkerStyle(34);
   _Scaler2->SetMarkerSize(1);
   _Scaler2->SetMarkerColor(4);
 
- 	_CoincidenceCount->SetBit(TH1::kCanRebin);
-	_CoincidenceCountNoScint->SetBit(TH1::kCanRebin);
-	_PrescalerCount->SetBit(TH1::kCanRebin);
-	_PrescalerXPulser->SetBit(TH1::kCanRebin);
-	_AcceptedPrescaledEvents->SetBit(TH1::kCanRebin);
-	_AcceptedPulserEvents->SetBit(TH1::kCanRebin);
-	_EventCount->SetBit(TH1::kCanRebin);
-	_AvgBeamCurrent->SetBit(TH1::kCanRebin);
-	_Scaler1->SetBit(TH1::kCanRebin);
-	_Scaler2->SetBit(TH1::kCanRebin);
 
   called = false;
   old_timestamp = 0;
@@ -144,7 +134,24 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       uint32_t t_diff = (uint32_t) (new_timestamp - old_timestamp);
       uint32_t x_axis = (uint32_t) (new_timestamp - start_time)/1000;
 
-      if(x_axis > (old_xaxis+2)){
+      
+
+
+      if(x_axis > old_xaxis){
+      
+      //this is not the ideal solution but it works
+      _CoincidenceCount->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _CoincidenceCountNoScint->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _PrescalerCount->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _PrescalerXPulser->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _AcceptedPrescaledEvents->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _AcceptedPulserEvents->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _EventCount->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _AvgBeamCurrent->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _Scaler1->GetXaxis()->SetRangeUser(0, x_axis+10);
+      _Scaler2->GetXaxis()->SetRangeUser(0, x_axis+10);
+
+
       _CoincidenceCount->Fill(x_axis, 1000*(coincidence_count - old_coincidence_count)/t_diff);
       _CoincidenceCountNoScint->Fill(x_axis, 1000*(coincidence_count_no_sin - old_coincidence_count_no_sin)/t_diff);
       _PrescalerCount->Fill(x_axis, 1000*(prescaler_count - old_prescaler_count)/t_diff);
@@ -155,8 +162,6 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       _AvgBeamCurrent->Fill(x_axis, cal_beam_current);
       _Scaler1->Fill(x_axis, 1000*(scaler1 - old_scaler1)/t_diff);
       _Scaler2->Fill(x_axis, 1000*(scaler2 - old_scaler2)/t_diff);
-      std::cout << std::endl;
-      std::cout << "x_axis: " << x_axis << " old scaler1: " << old_scaler1 << " t_diff: " << t_diff  << "-"<< 1000*(scaler1 - old_scaler1)/t_diff<<  std::endl;
       }
       old_xaxis = x_axis;
     }
