@@ -6,7 +6,7 @@ export CMS=true
 export CAEN=false
 export CLK=false
 export CMS_DIG=false
-export DRS=false
+export DRS=true
 
 export HOSTNAME=192.168.1.102
 export ROOTSYS=/home/testbeam/sdvlp/root/build-new
@@ -103,7 +103,7 @@ fi
 
 if [ "$DRS" = true ]; then
     echo "${BLUE} DRS4 @ PiM1 ${RESTORE}\n"
-    xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 scripts/StartDRS4.sh' &
+    xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 software/DRS4/drsosc' &
     xpos=$((xpos+pixelwidth+space))    
     echo -e "${GREEN}Please wait ..${RESTORE}\n"
     sleep 1
