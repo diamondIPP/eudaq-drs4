@@ -30,7 +30,7 @@ SET (OnlineMon_SOURCES
   src/TUHistos.cc
   src/SimpleStandardTUEvent.cc
 #  src/TreeHistoRelation.cc
-  )
+        src/EventAlignmentHistos.cc)
 
 # fill list of header files 
 set(OnlineMon_HEADERS 
