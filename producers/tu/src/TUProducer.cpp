@@ -503,7 +503,7 @@ float TUProducer::SlidingWindow(float val){
 
 //values from laboratory measurement with pulser
 float TUProducer::CorrectBeamCurrent(float uncorr){
-	return (0.133395 + 0.960367*uncorr + 0.00324716*pow(uncorr, 2) - 0.000033953*pow(uncorr, 3) + 0.00000009439*pow(uncorr,4));
+	return (3.01077 + 1.06746*uncorr);
 }
 
 
