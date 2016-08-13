@@ -67,6 +67,7 @@ namespace eudaq {
         bool UseWaveForm(uint16_t bitmask, uint8_t iwf) { return ((bitmask & 1 << iwf) == 1 << iwf); }
         std::string GetBitMask(uint16_t bitmask);
         std::string GetPolarities(std::vector<signed char> pol);
+        void SetTimeStamp(StandardEvent);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;

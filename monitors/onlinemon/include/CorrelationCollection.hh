@@ -20,6 +20,7 @@
 
 #include "SimpleStandardPlaneDouble.hh"
 #include "CorrelationHistos.hh"
+#include "EventAlignmentHistos.hh"
 #include "BaseCollection.hh"
 
 
@@ -72,6 +73,9 @@ class CorrelationCollection : public BaseCollection {
     void fillHistograms(vector< vector< pair< int, SimpleStandardCluster > > > tracks, const SimpleStandardEvent & simpEv);
     void fillHistograms(const SimpleStandardPlaneDouble &simpPlaneDouble);
     void fillHistograms(const SimpleStandardPlane& p1, const SimpleStandardPlane& p2);
+    void fillAlignHistos(const SimpleStandardEvent&);
+    bool alignIsRegistered;
+    EventAlignmentHistos * _evAlign;
   public:
     CorrelationCollection();
     void Fill(const SimpleStandardEvent &simpev);
@@ -82,6 +86,7 @@ class CorrelationCollection : public BaseCollection {
     CorrelationHistos * getCorrelationHistos(const SimpleStandardPlane &p1, const SimpleStandardPlane &p2);
 
     void registerPlaneCorrelations(const SimpleStandardPlane &p1, const SimpleStandardPlane &p2);
+    void registerEventAlignment();
 
     virtual void Write(TFile *file);
     bool getCorrelateAllPlanes() const;
