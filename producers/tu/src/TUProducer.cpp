@@ -24,6 +24,7 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
+#include <math.h>
 
 #define BOLDRED "\33[1m\033[31m"
 #define BOLDGREEN "\33[1m\033[32m"
@@ -99,8 +100,10 @@ void TUProducer::MainLoop(){
 				beam_current[1] = rd->beam_curent; //save new
 				time_stamps[0] = time_stamps[1]; //save old timestamp for frequency calculations
 				time_stamps[1] = rd->time_stamp; //save new
-				cal_beam_current = 1000*SlidingWindow(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0])));
-				beam_curr = 1000*(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0])));
+
+				beam_curr = CorrectBeamCurrent(1000*(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0]))));
+				cal_beam_current = SlidingWindow(beam_curr);
+				
 
 				for(int idx=0; idx<10; idx++){
 					//check if there was a fallover
@@ -498,7 +501,10 @@ float TUProducer::SlidingWindow(float val){
 	return (1.0*temp/len);
 }
 
-
+//values from laboratory measurement with pulser
+float TUProducer::CorrectBeamCurrent(float uncorr){
+	return (0.133395 + 0.960367*uncorr + 0.00324716*pow(uncorr, 2) - 0.000033953*pow(uncorr, 3) + 0.00000009439*pow(uncorr,4));
+}
 
 
 int main(int /*argc*/, const char ** argv) {

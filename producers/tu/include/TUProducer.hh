@@ -34,6 +34,7 @@ public:
 	virtual void OnStatus();
 	float SlidingWindow(float);
 	unsigned ScalerDeque(unsigned scaler_nr, unsigned rate);
+	float CorrectBeamCurrent(float);
 
 
 private:
