@@ -81,7 +81,7 @@ void TUProducer::MainLoop(){
 		}
 			    	
 		if(TUStarted || TUJustStopped){
-			eudaq::mSleep(500); //only read out every 1/2 second
+			
 
 			tuc::Readout_Data *rd;
 			rd = stream->timer_handler();
@@ -190,8 +190,9 @@ void TUProducer::MainLoop(){
 					std::cout << "Event number TUProducer: " << handshake_count << std::endl;
 				
 				}//end if (prev event count)
-
 			}//end if(rd)
+			eudaq::mSleep(500); //only read out every 1/2 second
+
 		//std::cout << BOLDRED << "TUProducer::MainLoop: One event readout returned nothing!" << CLEAR;
 
 		}//end if(TUStarted)
