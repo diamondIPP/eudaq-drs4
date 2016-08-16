@@ -99,6 +99,7 @@ namespace eudaq{
                      tuev.SetPrescalerCountXorPulserCount(prescaler_count_xor_pulser_count);
                      tuev.SetAcceptedPrescaledEvents(accepted_prescaled_events);
                      tuev.SetCoincCountNoSin(coincidence_count_no_sin);
+                     tuev.SetAcceptedPulserCount(accepted_pulser_events);
                      tuev.SetPrescalerCount(prescaler_count);
                      tuev.SetHandshakeCount(handshake_count);
                      tuev.SetBeamCurrent(cal_beam_current);

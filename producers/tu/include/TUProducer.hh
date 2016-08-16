@@ -14,7 +14,7 @@
 
 //Readout_Data struct defined here:
 #include "eudaq/Producer.hh"
-#include "triger_logic_tpc_stream.h"
+#include "trigger_logic_tpc_stream.h"
 #include <deque>
 #include <vector>
 
@@ -34,6 +34,7 @@ public:
 	virtual void OnStatus();
 	float SlidingWindow(float);
 	unsigned ScalerDeque(unsigned scaler_nr, unsigned rate);
+	float CorrectBeamCurrent(float);
 
 
 private:
@@ -41,7 +42,8 @@ private:
 	unsigned int m_run, m_ev, m_ev_prev, prev_handshake_count; //run & event number
 	bool done, TUStarted, TUJustStopped;
 	trigger_controll *tc; //class for TU control from trigger_controll.h
-	Triger_Logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
+	Trigger_logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
+	unsigned int error_code;
 	int trg_mask;
 	float beam_curr;
 	float cal_beam_current;

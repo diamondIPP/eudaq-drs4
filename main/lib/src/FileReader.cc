@@ -19,6 +19,12 @@ namespace eudaq {
     m_ev(EventFactory::Create(m_des)),
     m_ver(1)
     {
+      if (m_ev->GetRunNumber() > 2e9){
+        EUDAQ_WARN("Error reading run number! Taking the one from the filename string!");
+        std::cout << m_ev->GetRunNumber() << " -> ";
+        m_ev->SetRunNumber(unsigned(atoi(trim(split(m_filename, "/").back(), "run.raw").c_str())));
+        std::cout << m_ev->GetRunNumber() << std::endl;
+      }
 
 // 		m_ev->SetTag("longTimeDelay",longTimeDelay);
 // 		m_ev->SetTag("NumberOfEvents",syncEvents);

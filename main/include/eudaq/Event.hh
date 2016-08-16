@@ -47,6 +47,7 @@ namespace eudaq {
 
       unsigned GetRunNumber() const { return m_runnumber; }
       unsigned GetEventNumber() const { return m_eventnumber; }
+      void SetRunNumber(unsigned nr) { m_runnumber = nr; }
       uint64_t GetTimestamp() const { return m_timestamp; }
 
       /** Returns the type string of the event implementation.

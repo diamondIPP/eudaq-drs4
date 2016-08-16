@@ -18,9 +18,11 @@ CorrelationCollection::CorrelationCollection()
   correlateAllPlanes(false),
   selected_planes_to_skip(),
   planesNumberForCorrelation(0),
-  windowWidthForCorrelation(0)
+  windowWidthForCorrelation(0),
+  alignIsRegistered(false)
 {
   //cout << " Initializing Correlation Collection"<<endl;
+  _evAlign = new EventAlignmentHistos();
   CollectionType = CORRELATION_COLLECTION_TYPE;
 }
 
@@ -112,6 +114,7 @@ void CorrelationCollection::Reset()
   {
     (*it).second->Reset();
   }
+  _evAlign->Reset();
 }
 
 void CorrelationCollection::Fill(const SimpleStandardEvent &simpev)
@@ -200,6 +203,7 @@ void CorrelationCollection::Fill(const SimpleStandardEvent &simpev)
       }
     }
   }
+  fillAlignHistos(simpev);
 }
 
 unsigned int CorrelationCollection::FillWithTracks(const SimpleStandardEvent &simpev)
@@ -375,6 +379,15 @@ void CorrelationCollection::fillHistograms(std::vector < vector<
   }
 }
 
+void CorrelationCollection::fillAlignHistos(const SimpleStandardEvent & sev) {
+
+  if (!alignIsRegistered){
+    registerEventAlignment();
+    alignIsRegistered = true;
+  }
+  _evAlign->Fill(sev);
+}
+
 void CorrelationCollection::fillHistograms(const SimpleStandardPlane& p1, const SimpleStandardPlane& p2)
 {
 
@@ -451,6 +464,30 @@ void CorrelationCollection::registerPlaneCorrelations(const SimpleStandardPlane&
     sprintf(tree,"%s/%s %i", dirName.c_str(), p1.getName().c_str(),p1.getID());
     _mon->getOnlineMon()->makeTreeItemSummary(tree);
   }
+}
+
+void CorrelationCollection::registerEventAlignment() {
+
+  if (_mon == NULL)
+    return;
+  string tree = "Correlations/HitFraction at Pulser Events";
+  _mon->getOnlineMon()->registerTreeItem(tree);
+  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentHisto(), "", 0);
+  tree = "Correlations/HitFraction at Pulser Events +1";
+  _mon->getOnlineMon()->registerTreeItem(tree);
+  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentPlus1Histo(), "", 0);
+  tree = "Correlations/Is Aligned";
+  _mon->getOnlineMon()->registerTreeItem(tree);
+  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedHisto(), "COL", 0);
+  tree = "Correlations/Plus 1 Is Aligned";
+  _mon->getOnlineMon()->registerTreeItem(tree);
+  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedPlus1Histo(), "COL", 0);
+
+  _mon->getOnlineMon()->makeTreeItemSummary("Correlations"); //make summary page
+
+  tree = "Correlations/Pulser Rate";
+  _mon->getOnlineMon()->registerTreeItem(tree);
+  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPulserRate(), "hist", 0);
 }
 
 bool CorrelationCollection::getCorrelateAllPlanes() const

@@ -329,6 +329,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         ss << "\b\b]";
         macro->AddLine(ss.str().c_str());
         cout << "loading the first event...." << endl;
+        //todo: add time stamp for the very first tu event
         return;
     }
     else if (ev.IsEORE()) {
@@ -342,12 +343,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 
     f_event_number = sev.GetEventNumber();
     // set time stamp
-    if (sev.hasTUEvent()){
-        if (sev.GetTUEvent(0).GetValid())
-            f_time = sev.GetTimestamp();
-    }
-    else
-        f_time = sev.GetTimestamp() / float(384066.);
+    SetTimeStamp(sev);
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
@@ -851,6 +847,15 @@ string FileWriterTreeDRS4::GetPolarities(vector<signed char> pol) {
     stringstream ss;
     for (auto i_pol:pol) ss << string(3 - to_string(i_pol).size(), ' ') << to_string(i_pol);
     return trim(ss.str(), " ");
+}
+
+void FileWriterTreeDRS4::SetTimeStamp(StandardEvent sev) {
+    if (sev.hasTUEvent()){
+        if (sev.GetTUEvent(0).GetValid())
+            f_time = sev.GetTimestamp();
+    }
+    else
+        f_time = sev.GetTimestamp() / float(384066.);
 }
 
 #endif // ROOT_FOUND
