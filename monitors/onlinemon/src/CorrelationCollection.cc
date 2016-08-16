@@ -484,6 +484,10 @@ void CorrelationCollection::registerEventAlignment() {
   _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedPlus1Histo(), "COL", 0);
 
   _mon->getOnlineMon()->makeTreeItemSummary("Correlations"); //make summary page
+
+  tree = "Correlations/Pulser Rate";
+  _mon->getOnlineMon()->registerTreeItem(tree);
+  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPulserRate(), "hist", 0);
 }
 
 bool CorrelationCollection::getCorrelateAllPlanes() const
