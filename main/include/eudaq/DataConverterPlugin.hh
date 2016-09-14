@@ -3,6 +3,7 @@
 
 #include "eudaq/StandardEvent.hh"
 #include "eudaq/RawDataEvent.hh"
+#include <map>
 
 #if USE_LCIO
 #  include "IMPL/LCEventImpl.h"
@@ -148,9 +149,11 @@ namespace eudaq{
       typedef std::pair<unsigned, std::string> t_eventid;
 
       virtual void Initialize(eudaq::Event const &, eudaq::Configuration const &) {}
+      virtual std::map<uint8_t, std::vector<float> > GetTimeCalibration(const Event & bore);
+      virtual void SetConfig(Configuration * conv_cfg) {}
 
       virtual unsigned GetTriggerID(eudaq::Event const &) const;
-	  virtual int IsSyncWithTLU(eudaq::Event const & ev,eudaq::TLUEvent const & tlu) const {
+      virtual int IsSyncWithTLU(eudaq::Event const & ev,eudaq::TLUEvent const & tlu) const {
 		  // dummy comparator. it is just checking if the event numbers are the same.
 		  
 		  //auto triggerID=ev.GetEventNumber();

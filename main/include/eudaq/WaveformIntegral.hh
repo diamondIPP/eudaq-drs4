@@ -8,7 +8,6 @@
 #ifndef WAVEFORMINTEGRAL_HH_
 #define WAVEFORMINTEGRAL_HH_
 
-//#include "StandardEvent.hh"
 #include <limits>
 #include <vector>
 #include <iosfwd>
@@ -19,12 +18,13 @@
 class WaveformIntegral:public TObject{
     public:
         WaveformIntegral(int low=-1, int high=-1, std::string name="");
-//        void calculateIntegral(int peak_position,const StandardWaveform* wf);
         void SetPeakPosition(int peak_position,int n_samples);
-        int GetIntegralStart() const {return integral_start;}
-        int GetIntegralStop() const {return integral_stop;}
+        uint16_t GetIntegralStart() const {return integral_start;}
+        uint16_t GetIntegralStop() const {return integral_stop;}
         void SetIntegral(float integral);
-        float GetIntegral(){return !calculated?std::numeric_limits<double>::quiet_NaN():integral;}
+        void SetTimeIntegral(float integral) { time_integral = integral; }
+        float GetIntegral(){ return !calculated ? std::numeric_limits<float>::quiet_NaN() : integral; }
+        float GetTimeIntegral(){ return time_integral; }
         virtual ~WaveformIntegral();
         void Reset();
         void Print() const {Print(std::cout,true);}
@@ -35,9 +35,10 @@ class WaveformIntegral:public TObject{
         bool calculated;
         int down_range;
         int up_range;
-        int integral_start;
-        int integral_stop;
+        uint16_t integral_start;
+        uint16_t integral_stop;
         float integral;
+        float time_integral;
         std::string name;
 };
 

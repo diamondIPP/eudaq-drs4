@@ -15,6 +15,7 @@
 #include <string.h>
 #include <cstdint>
 
+using namespace std;
 
 namespace eudaq{
 
@@ -86,6 +87,13 @@ public:
 
 }
 
+	virtual map<uint8_t, vector<float> > GetTimeCalibration(const Event & bore) {
+		map<uint8_t, vector<float> > tcal;
+		for (uint8_t igr = 0; igr < 4; igr++)
+			for (uint16_t itcell = 0; itcell < 1023; itcell++)
+				tcal[igr].push_back(time_corr[igr][itcell + 1] - time_corr[igr][itcell]);
+		return tcal;
+	}
 
   virtual bool GetStandardSubEvent(StandardEvent & sev, const Event & ev) const{
 	const RawDataEvent &in_raw = dynamic_cast<const RawDataEvent &>(ev);
@@ -143,7 +151,7 @@ public:
           float wave_array[samples_per_channel];
 	  		  uint16_t *raw_wave_array = (uint16_t*)(&data[0]);
 			    for (int i = 0; i < samples_per_channel; i++){
-            wave_array[i] = (1000.0*(raw_wave_array[i]/4096.0)); //convert to mV
+            wave_array[i] = (1000.0*(raw_wave_array[i]/4096.0 - 0.5)); //convert to mV
 	   	    }
 
           uint32_t ch_nr = channels*grp+ch;

@@ -132,7 +132,8 @@ std::string VX1742Interface::getDRS4FirmwareVersion(){
   		uint32_t day = (value2&0xf) + 10*((value2>>4)&0xf);
   		uint32_t month = ((value2>>8)&0xf);
   		uint32_t year = ((value2>>12)&0xf);
-  		firmware << "DRS4 firmware version group " << idx << ": " << value1 << "." << value << " from " << day << "." << month << "." << year << std::endl;
+      uint32_t pcb_rev = vx1742->group_n_conf[idx].group_status.mezzanine_rev;
+  		firmware << "DRS4 firmware group " << idx << ": " << value1 << "." << value << " from " << day << "." << month << "." << year << ", Mezannine PCB Rev.: " << std::to_string(pcb_rev) << std::endl;
 	}
 	return firmware.str();
 }
@@ -305,6 +306,18 @@ void VX1742Interface::disableIndividualTriggers(){
 	vx1742->group_conf.individual_trg = 1;
 }
 
+
+void VX1742Interface::setChannelDCOffsets(uint32_t param[]){
+  //continue here
+  for(uint32_t ch=0; ch<vmec::VX1742_CHANNELS; ch++){
+    uint32_t grp = ch/(vmec::VX1742_CHANNELS_PER_GROUP);
+    uint32_t ch_val = ((ch%8)*0x10000) + param[ch];
+    if(param[ch] > 0){
+      std::cout << "DC offset for channel " << (ch%8) << " in group " << grp << ": " << param[ch] << std::endl;
+      vx1742->group_n_conf[grp].channel_dc_offset = ch_val;
+    }
+  }
+}
 
 
 
@@ -609,6 +622,9 @@ uint32_t VX1742Interface::BlockTransferEventD64(VX1742Event *vxEvent){
 			printf("Trigger time:       %u\n", head.trigger_time);
 			printf("******************************************************\n\n");
 		#endif
+      printf("Event count:        %u\n", head.evnt_cnt.event_counter);
+
+
 
 		vxEvent->setData(&head, data+4, (head.size.eventSize-4));
 	}

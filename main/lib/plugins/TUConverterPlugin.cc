@@ -22,6 +22,9 @@ namespace eudaq{
                 int valid = std::stoi(in_raw.GetTag("valid"));
                 int nblocks = in_raw.NumBlocks();
 
+                StandardTUEvent tuev(EVENT_TYPE);
+                tuev.SetValid(bool(valid));
+
                 if(valid){
                     unsigned int id = 0;
                     RawDataEvent::data_t data = in_raw.GetBlock(id);
@@ -63,7 +66,7 @@ namespace eudaq{
                     id++;
 
 
-                    //#ifdef DEBUG
+                    #ifdef DEBUG
                         std::cout << "************************************************************************************" << std::endl;
                         std::cout << "nblocks: " << nblocks << std::endl;
                         std::cout << "time stamp: " << time_stamp << std::endl;
@@ -76,12 +79,10 @@ namespace eudaq{
                         std::cout << "handshake_count: " << handshake_count << std::endl;
                         std::cout << "cal_beam_current: " << cal_beam_current << std::endl;
                         std::cout << "************************************************************************************" << std::endl;
-                    //#endif
+                    #endif
 
                     //add data to the StandardEvent:
                     sev.SetTimestamp(time_stamp);
-                    StandardTUEvent tuev(EVENT_TYPE);
-                    tuev.SetValid(1);
 
 
                     //get individual scaler values
@@ -90,7 +91,6 @@ namespace eudaq{
                     int n_samples = data_size/sizeof(uint64_t);
                     for(int idx=0; idx<n_samples; idx++){
                         uint64_t *sc_val = (uint64_t*)(&data[0]);
-                        //std::cout << "some output" << sc_val[idx] << std::endl;
                         tuev.SetScalerValue(idx, sc_val[idx]);
                      }
 
@@ -99,15 +99,12 @@ namespace eudaq{
                      tuev.SetPrescalerCountXorPulserCount(prescaler_count_xor_pulser_count);
                      tuev.SetAcceptedPrescaledEvents(accepted_prescaled_events);
                      tuev.SetCoincCountNoSin(coincidence_count_no_sin);
+                     tuev.SetAcceptedPulserCount(accepted_pulser_events);
                      tuev.SetPrescalerCount(prescaler_count);
                      tuev.SetHandshakeCount(handshake_count);
                      tuev.SetBeamCurrent(cal_beam_current);
-                     sev.AddTUEvent(tuev);
-                }else{
-                     StandardTUEvent tuev(EVENT_TYPE);
-                     tuev.SetValid(0);
-                     sev.AddTUEvent(tuev);
                 }
+                sev.AddTUEvent(tuev);
                 return true;
             }
 

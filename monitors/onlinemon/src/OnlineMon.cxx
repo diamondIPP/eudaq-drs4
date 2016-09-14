@@ -285,13 +285,13 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
     bool isPulserEvent = false;
     for (unsigned int i = 0; i < nwf;i++){
       const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
-      if (waveform.GetChannelName() == "PULSER"){
+      if (waveform.GetChannelName() == "PULSER" || waveform.GetChannelName() == "Pulser"){
         SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
         simpWaveform.addData(&(*waveform.GetData())[0]);
         simpWaveform.Calculate();
         float integral = simpWaveform.getIntegral(700,900);
         float pulserMin = simpWaveform.getMinimum(700, 900);
-        if( pulserMin < -100.)
+        if( abs(integral) > 100.)
           isPulserEvent = true;
         }
     }//end for

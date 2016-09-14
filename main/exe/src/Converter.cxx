@@ -1,10 +1,7 @@
 #include "eudaq/FileReader.hh"
 #include "eudaq/FileWriter.hh"
 #include "eudaq/OptionParser.hh"
-#include "eudaq/Utils.hh"
 #include "eudaq/Logger.hh"
-#include "eudaq/Configuration.hh"
-#include <iostream>
 #include "eudaq/MultiFileReader.hh"
 
 using namespace eudaq;
@@ -31,11 +28,14 @@ int main(int, char ** argv) {
     op.Parse(argv);
     EUDAQ_LOG_LEVEL(level.Value());
     std::vector<unsigned> numbers = parsenumbers(events.Value());
-	std::sort(numbers.begin(),numbers.end());
-	eudaq::multiFileReader reader(!async.Value());
+    std::sort(numbers.begin(),numbers.end());
+    eudaq::multiFileReader reader(!async.Value());
     for (size_t i = 0; i < op.NumArgs(); ++i) {
       reader.addFileReader(op.GetArg(i), ipat.Value());
 	}
+    std::stringstream message;
+    message << "STARTING EUDAQ " << to_string(type.Value()) << " CONVERTER";
+    print_banner(message.str());
     Configuration config("");
     if (configFileName.Value() != ""){
         std::cout << "Read config file: "<<configFileName.Value()<<std::endl;
@@ -59,12 +59,11 @@ int main(int, char ** argv) {
 			break;
 		  }else if (reader.GetDetectorEvent().IsBORE() || reader.GetDetectorEvent().IsEORE() || numbers.empty() ||
 				std::find(numbers.begin(), numbers.end(), reader.GetDetectorEvent().GetEventNumber()) != numbers.end()) {
-			  writer->WriteEvent(reader.GetDetectorEvent());
-			  if(dbg>0)std::cout<< "writing one more event" << std::endl;
-			  ++event_nr;
-			  if (event_nr % 1000 == 0)
-				  std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
-			}
+        writer->WriteEvent(reader.GetDetectorEvent());
+        if(dbg>0)std::cout<< "writing one more event" << std::endl;
+        ++event_nr;
+        if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
+      }
       } while (reader.NextEvent() && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
       if(dbg>0)std::cout<< "no more events to read" << std::endl;
     

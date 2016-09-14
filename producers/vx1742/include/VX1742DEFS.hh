@@ -17,6 +17,7 @@ namespace vmec{
 
     // Constants
     const uint32_t VX1742_CHANNELS = 32;
+    const uint32_t VX1742_MAX_CHANNELS = 36;
     const uint32_t VX1742_GROUPS = 4;
     const uint32_t VX1742_DRS4_COUNT = 4;
     const uint32_t VX1742_CHANNELS_PER_GROUP = 8;

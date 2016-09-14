@@ -64,6 +64,7 @@ namespace eudaq{
 	
 
 		int m_TLUs_found;
+		int m_TUs_found;
 
 		bool isAsync_;
 		size_t NumberOfEventsToSync_;

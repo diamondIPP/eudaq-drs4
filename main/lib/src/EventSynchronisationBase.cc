@@ -59,7 +59,16 @@ void SyncBase::addBOREEvent(int fileIndex, const eudaq::DetectorEvent& BOREvent 
 			 m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)]=id++; //only the first TLU gets threated differently all others are just producers
 			}
 			 ++m_TLUs_found;
-		}else{
+		}
+		else if (BOREvent.GetEvent(i)->GetSubType() == "TU"){
+			if (!m_TUs_found)
+				m_ProducerId2Eventqueue[getUniqueID(fileIndex, i)] = 0;
+			else
+				m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)] = id++;
+			m_TUs_found++;
+			cout << "Found TU with id " << id << endl;
+		}
+		else{
 
 			m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)]=id++;
 		}
@@ -174,7 +183,10 @@ bool SyncBase::SyncFirstEvent()
 
 bool SyncBase::SyncNEvents( size_t N )
 {
-
+	if (m_TUs_found) {
+		makeDetectorEvent();
+		return true;
+	}
 	while (m_DetectorEventQueue.size()<=N)
 	{
 		if (!SyncFirstEvent())
@@ -191,9 +203,8 @@ void SyncBase::makeDetectorEvent()
 	auto &TLU=m_ProducerEventQueue[0].front();
 	shared_ptr<DetectorEvent> det=make_shared<DetectorEvent>(TLU->GetRunNumber(),TLU->GetEventNumber(),TLU->GetTimestamp());
 	det->AddEvent(TLU);
-	for (size_t i=1;i<m_ProducerEventQueue.size();++i)
+	for (size_t i=1; i<m_ProducerEventQueue.size(); ++i)
 	{
-
 		det->AddEvent(m_ProducerEventQueue[i].front());
 
 	}
@@ -299,7 +310,7 @@ void SyncBase::PrepareForEvents()
 	}
 	else
 	{
-		if (m_TLUs_found == 0)
+		if (m_TLUs_found == 0 && !m_TUs_found)
 		{
 			EUDAQ_THROW("no TLU events found in the data\n for the resynchronisation it is nessasary to have a TLU in the data stream \n for now the synchrounsation only works with the old TLU (date 12.2013)");
 		}
@@ -323,6 +334,7 @@ unsigned SyncBase::getTLU_UniqueID( unsigned fileIndex )
 
 void SyncBase::storeCurrentOrder()
 {
+	if (m_TUs_found) return;
 	shared_ptr<TLUEvent> tlu=std::dynamic_pointer_cast<TLUEvent>(getFirstTLUQueue().back());
 	for (size_t i=1; i<m_ProducerEventQueue.size();++i)
 	{

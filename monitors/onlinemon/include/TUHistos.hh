@@ -44,6 +44,7 @@ class TUHistos{
     uint32_t old_handshake_count;
     uint64_t old_scaler1;
     uint64_t old_scaler2;
+    uint32_t old_xaxis;
 
 
   public:

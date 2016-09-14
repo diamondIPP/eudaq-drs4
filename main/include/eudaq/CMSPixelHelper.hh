@@ -34,23 +34,23 @@ using namespace pxar;
 
 namespace eudaq {
 
-    struct VCALDict {
-        int row;
-        int col;
-        float par0;
-        float par1;
-        float par2;
-        float par3;
-        float calibration_factor;
-    };
+  struct VCALDict {
+    int row;
+    int col;
+    float par0;
+    float par1;
+    float par2;
+    float par3;
+    float calibration_factor;
+  };
 
 
 
 
   class CMSPixelHelper {
   public:
-    std::map<std::string, float >roc_calibrations = {{"psi46v2",65},{"psi46digv21respin",47}};
-    CMSPixelHelper(std::string event_type) : do_conversion(false),m_event_type(event_type) {};
+    std::map<std::string, float > roc_calibrations = {{"psi46v2", 65}, {"psi46digv21respin", 47}, {"proc600", 47}};
+    CMSPixelHelper(std::string event_type) : do_conversion(false), m_event_type(event_type), m_conv_cfg(0) {};
     void set_conversion(bool val){do_conversion = val;}
     bool get_conversion(){return do_conversion;}
     std::map< std::string, VCALDict> vcal_vals;
@@ -66,6 +66,8 @@ namespace eudaq {
         //std::cout<<"get Charge: "<<val<<" "<<d.par0<<" "<<d.par1<<" "<<d.par2<<" "<<d.par3<<" "<<charge<<std::endl;
         return charge;
     }
+    virtual void SetConfig(Configuration * conv_cfg) { m_conv_cfg = conv_cfg; }
+
     void Initialize(const Event & bore, const Configuration & cnf) {
       DeviceDictionary* devDict;
       std::string roctype = bore.GetTag("ROCTYPE", "");
@@ -92,44 +94,39 @@ namespace eudaq {
     }
 
     void read_PHCalibrationData(const Configuration & cnf){
-        std::cout<<"REAAD PH CALIBRATION"<<std::endl;
-        for (auto i: cnf.GetSections()){
-            if (i.find("Producer.")==-1)
-                continue;
-            cnf.SetSection(i);
-            std::string roctype = cnf.Get("roctype","roctype","");
-            if (roctype == "")
-                continue;
-            bool is_digital = true;
-            if (roctype.find("dig")==-1)
-                is_digital = false;
+      std::cout << "READ PH CALIBRATION..." << std::endl;
+      for (auto i: cnf.GetSections()){
+        if (i.find("Producer.")==-1) continue;
+        cnf.SetSection(i);
+        std::string roctype = cnf.Get("roctype","roctype","");
+        if (roctype == "") continue;
+        bool is_digital = (roctype.find("dig") == -1) ? false : true;
 
-            std::string fname = cnf.Get("phCalibrationFile","");
-            if (fname == ""){
-                fname = cnf.Get("dacFile","");
-                std::size_t found = fname.find_last_of("/");
-                if (is_digital)
-                    fname = fname.substr(0,found) + (std::string)"/phCalibrationFitErr";
-                else
-                    fname = fname.substr(0,found) + (std::string)"/phCalibrationGErfFit";
-            }
-            std::string i2c = cnf.Get("i2c","i2caddresses","0");
-            if (i.find("REF") != -1)
-                read_PH_CalibrationFile("REF",fname,i2c,roc_calibrations[roctype]);
-            else if (i.find("ANA") != -1)
-                read_PH_CalibrationFile("ANA",fname,i2c,roc_calibrations[roctype]);
-            else if (i.find("DIG") != -1)
-                read_PH_CalibrationFile("DIG",fname,i2c,roc_calibrations[roctype]);
-            else if (i.find("TRP") != -1)
-                read_PH_CalibrationFile("TRP",fname,i2c,roc_calibrations[roctype]);
-            else
-                read_PH_CalibrationFile("DUT",fname,i2c,roc_calibrations[roctype]);
+        std::string fname = m_conv_cfg ? m_conv_cfg->Get("phCalibrationFile", "") : "";
+        if (fname == "") fname = cnf.Get("phCalibrationFile","");
+        if (fname == "") {
+          fname = cnf.Get("dacFile", "");
+          size_t found = fname.find_last_of("/");
+          fname = fname.substr(0, found);
         }
+        fname += (is_digital) ? "/phCalibrationFitErr" : "/phCalibrationGErfFit";
+        std::string i2c = cnf.Get("i2c","i2caddresses","0");
+        if (i.find("REF") != -1)
+          read_PH_CalibrationFile("REF", fname, i2c, roc_calibrations.at(roctype));
+        else if (i.find("ANA") != -1)
+          read_PH_CalibrationFile("ANA", fname, i2c, roc_calibrations.at(roctype));
+        else if (i.find("DIG") != -1)
+          read_PH_CalibrationFile("DIG", fname, i2c, roc_calibrations.at(roctype));
+        else if (i.find("TRP") != -1)
+          read_PH_CalibrationFile("TRP", fname, i2c, roc_calibrations.at(roctype));
+        else
+          read_PH_CalibrationFile("DUT", fname, i2c, roc_calibrations.at(roctype));
+      }
     }
 
     void read_PH_CalibrationFile(std::string roc_type,std::string fname, std::string i2cs,float factor){
       std::vector<std::string> vec_i2c = split(i2cs," ");
-      int nRocs  = vec_i2c.size();
+      size_t nRocs  = vec_i2c.size();
 
       // getting vcal-charge translation from file
       //
@@ -137,7 +134,7 @@ namespace eudaq {
       int row, col;
       std::string dump;
       char trash[30];
-      for (int iroc = 0; iroc<nRocs; iroc++){
+      for (uint16_t iroc = 0; iroc < nRocs; iroc++){
         std::string i2c = vec_i2c.at(iroc);
         FILE * fp;
         char *line = NULL;
@@ -145,36 +142,28 @@ namespace eudaq {
         ssize_t read;
         
         TString filename = fname;
-        filename+=(std::string)"_C"+(std::string)i2c+(std::string)".dat";
-        std::cout<<filename<< " with " << factor <<" e/ADC" << std::endl;
-        fp = fopen (filename,"r");//String::Format("/home/testbeam/sdvlp/TrackingTelescope/Calibrations/telescope9/phCalibrationGErfFit_C%d.dat", iroc), "r");
-        //std::cout << "this is the file: " << fp << std::endl;
+        filename += "_C"+ i2c + ".dat";
+        fp = fopen (filename, "r");
 
         VCALDict tmp_vcaldict;
-        if (!fp) {
-          std::cout <<  " DID NOT FIND A FILE TO GO FROM ADC TO CHARGE!!!!" << std::endl;}
+        if (!fp) std::cout <<  "  DID NOT FIND A FILE TO GO FROM ADC TO CHARGE!!" << std::endl;
         else{
-          std::cout <<  " FILLING THE VCAL - ADC TRANSLATION FACTORS!!!!" << std::endl;
-          read = getline(&line,&len,fp);
-          read = getline(&line,&len,fp);
-          read = getline(&line,&len,fp);
+          // jump to fourth line
+          for (uint8_t i = 0; i < 3; i++) if (!getline(&line, &len, fp)) return;
 
           int q = 0;
           while (fscanf(fp, "%f %f %f %f %s %d %d", &par0, &par1, &par2, &par3, trash,&col, &row) == 7){
-              // std::cout << "par0: " << par0 << "  par1: " << par1 << " row and col " << row << " " << col << std::endl;
-              tmp_vcaldict.par0 = par0;
-              tmp_vcaldict.par1 = par1;
-              tmp_vcaldict.par2 = par2;
-              tmp_vcaldict.par3 = par3;
-              tmp_vcaldict.calibration_factor = factor;
-              std::string identifier = roc_type + std::string( TString::Format("%01d%02d%02d",iroc,row,col));
-              //if (q==0) std::cout<<"IDENTIFIER: "<<identifier<<std::endl;
-              q++;
-              vcal_vals[identifier] = tmp_vcaldict;
+            tmp_vcaldict.par0 = par0;
+            tmp_vcaldict.par1 = par1;
+            tmp_vcaldict.par2 = par2;
+            tmp_vcaldict.par3 = par3;
+            tmp_vcaldict.calibration_factor = factor;
+            std::string identifier = roc_type + std::string( TString::Format("%01d%02d%02d",iroc,row,col));
+            q++;
+            vcal_vals[identifier] = tmp_vcaldict;
           }
-          std::cout<<"Read "<<q <<" Pixels for "<<roc_type<<i2c<<std::endl;
+          fclose(fp);
         }
-        delete fp;
       }
     }
 
@@ -200,8 +189,8 @@ namespace eudaq {
       const RawDataEvent & in_raw = dynamic_cast<const RawDataEvent &>(in);
       // Check of we have more than one data block:
       if(in_raw.NumBlocks() > 1) {
-	EUDAQ_ERROR("Only one data block is expected!");
-	return false;
+        EUDAQ_ERROR("Only one data block is expected!");
+        return false;
       }
 
       unsigned plane_id;
@@ -218,7 +207,7 @@ namespace eudaq {
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
       // todo: read this by a config file or even better, write it to the data!
-      decoder.setOffset(20);
+      decoder.setOffset(25);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
       try{
@@ -399,6 +388,7 @@ namespace eudaq {
     std::string m_event_type;
     mutable pxar::statistics decoding_stats;
     bool do_conversion;
+    Configuration * m_conv_cfg;
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
 
       // Transform data of form char* to vector<int16_t>

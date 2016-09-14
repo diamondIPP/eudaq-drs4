@@ -64,7 +64,7 @@ Thumbs.db
 *Dict.cxx
 *Dict.h
 
-eud*
+# eud*
 
 #cmake stuff
 #Makefile
@@ -79,3 +79,4 @@ crashlog.txt
 
 AutoDict*
 data
+conf/converter_waveform_integrals.conf

@@ -55,6 +55,7 @@ class VX1742Interface{
 	void printAcquisitionStatus();
 	void printAcquisitionControl();
 	void disableIndividualTriggers();
+	void setChannelDCOffsets(uint32_t param[]);
 
 	void setSamplingFrequency(uint32_t param);
 	uint32_t getSamplingFrequency();

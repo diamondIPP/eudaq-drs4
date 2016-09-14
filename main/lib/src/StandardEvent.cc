@@ -48,13 +48,11 @@ unsigned StandardWaveform::ID() const {
 }
 
 
-float StandardWaveform::getIntegral(int min, int max, bool _abs) const {
-    if ( max  > this->GetNSamples() - 1)
-        max = this->GetNSamples() -1;
-    if (min < 0)
-        min = 0;
+float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const {
+    if (max > this->GetNSamples() - 1) max = uint16_t(this->GetNSamples() - 1);
+    if (min < 0) min = 0;
     float integral = 0;
-    for (unsigned i = min; i <= max; i++){
+    for (uint16_t i = min; i <= max; i++){
         if(!_abs)
             integral += m_samples.at(i);
         else
@@ -63,21 +61,50 @@ float StandardWaveform::getIntegral(int min, int max, bool _abs) const {
     return integral/(float)(max-(int)min);
 }
 
+float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> * tcal) const {
+	if (high_bin > this->GetNSamples() - 1) high_bin = uint16_t(this->GetNSamples() - 1);
+	float max_low_length = (peak_pos - low_bin) * float(.5);
+	float max_high_length = (high_bin - peak_pos) * float(.5);
+    uint16_t size = uint16_t(std::min(m_samples.size(), tcal->size()));
+	float integral = tcal->at((tcell + peak_pos) % size) * m_samples.at(peak_pos);  // take the value at the peak pos as start value
+	// sum up the times if the bins to the left side of the peak pos until max length is reached
+	uint16_t i = uint16_t(peak_pos - 1);
+	float low_length = tcal->at((peak_pos + tcell) % size) / float(2.);
+	while (low_length + tcal->at((i + tcell) % size) < max_low_length) {
+		low_length += tcal->at((i + tcell) % size);
+		integral += m_samples.at(i) * tcal->at((i + tcell) % size);
+		if (i < 1) break;
+		i--;
+	}
+	integral += (max_low_length - low_length) * m_samples.at(i);
+	// same thing for the right side
+	i = uint16_t(peak_pos + 1);
+	float high_length = tcal->at((peak_pos + tcell) % size) / float(2.);
+	while (high_length+tcal->at((i + tcell) % size) < max_high_length) {
+		high_length += tcal->at((i + tcell) % size);
+		integral += m_samples.at(i) * tcal->at((i + tcell) % size);
+		if (i > size - 2) break;
+		i++;
+	}
+	integral += (max_high_length - high_length) * m_samples.at(i);
+	return integral / (max_high_length + max_low_length + float(.5));
+}
 
-float StandardWaveform::getMedian(int min, int max) const
+std::vector<uint16_t> * StandardWaveform::getAllPeaksAbove(uint16_t min, uint16_t max, float threshold) const {
+	std::vector<uint16_t> * peak_positions = new std::vector<uint16_t>;
+	// make sure min does not start at zero
+	if (!min) min++;
+	for (uint16_t j = uint16_t(min + 1); j <= max; j++)
+		if (abs(m_samples.at(j)) > threshold && abs(m_samples.at(uint16_t(j - 1))) < threshold)
+			peak_positions->push_back(j);
+	return peak_positions;
+}
+
+float StandardWaveform::getMedian(uint32_t min, uint32_t max) const
 {
     float median;
-    int n = max - min + 1;
-//    float* cropDataArray = new float[n];
-//    int i = 0;
-//    for (vector<float,allocator<float>>::iterator iterator = this->m_samples->begin()+min; iterator != m_samples->begin()+max+1; iterator++) {
-//        cropDataArray[i] = *iterator;
-//        i++;
-//    }
-//    median = (float)TMath::Median(n, cropDataArray);
+    int n = abs(max - min + 1);
     median = (float)TMath::Median(n, &m_samples.at(min));
-
-//    delete[] cropDataArray;
     return median;
 }
 
@@ -499,7 +526,7 @@ size_t StandardEvent::NumTUEvents() const{
 	return m_tuevent.size();
 }
 
-StandardTUEvent & StandardEvent::GetTUEvent(size_t i){ 
+StandardTUEvent & StandardEvent::GetTUEvent(size_t i){
 	return m_tuevent[i];
 }
 
@@ -511,9 +538,12 @@ StandardTUEvent & StandardEvent::AddTUEvent(const StandardTUEvent & tuev){
 	m_tuevent.push_back(tuev);
 	return m_tuevent.back();
 }
+
 //end added CD
 
-
+bool StandardEvent::hasTUEvent() {
+	return m_tuevent.size() !=0;
+}
 
 size_t StandardEvent::NumWaveforms() const {//ok
 	return m_waveforms.size();
@@ -532,5 +562,5 @@ StandardWaveform & StandardEvent::AddWaveform(const StandardWaveform & waveform)
 	return m_waveforms.back();
 }
 
-}
+} // end namespace eudaq
 

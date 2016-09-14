@@ -192,4 +192,20 @@ namespace eudaq {
 
   }
 
+  void DLLEXPORT print_banner(std::string message, const char seperator, uint16_t max_lenght) {
+    uint16_t mes_length = 0;
+    std::vector<std::string> split_msg = split(message, "\n");;
+    std::stringstream ss;
+    for (std::vector<std::string>::iterator it = split_msg.begin(); it != split_msg.end(); it++)
+      if (it->size() > mes_length) mes_length = uint16_t(it->size());
+    if (mes_length > max_lenght) mes_length = max_lenght;
+    for (std::vector<std::string>::iterator it = split_msg.begin(); it != split_msg.end(); it++){
+      it->resize(mes_length);
+      ss << it->c_str() << "\n";
+    }
+    std::string send_msg = trim(ss.str(), "\n");
+    std::string banner = std::string(mes_length, seperator);
+    std::cout << "\n" << banner << "\n" << send_msg << "\n" << banner << "\n" << std::endl;
+  }
+
 }

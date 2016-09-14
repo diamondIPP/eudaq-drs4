@@ -1,8 +1,4 @@
 #include "eudaq/DataConverterPlugin.hh"
-#include "eudaq/StandardEvent.hh"
-#include "eudaq/Utils.hh"
-#include <string.h>
-#include <stdio.h>
 
 // All LCIO-specific parts are put in conditional compilation blocks
 // so that the other parts may still be used if LCIO is not available.
@@ -12,6 +8,8 @@
 #  include "IMPL/LCCollectionVec.h"
 #  include "lcio.h"
 #endif
+
+using namespace std;
 
 namespace eudaq {
 
@@ -29,12 +27,12 @@ private:
 	unsigned char m_activated_channels;
 	std::map<int, std::string> m_channel_names;
 	std::string m_dut_name;
+	std::map<uint8_t, std::vector<float> > m_tcal;
 public:
 	// This is called once at the beginning of each run.
 	// You may extract information from the BORE and/or configuration
 	// and store it in member variables to use during the decoding later.
-	virtual void Initialize(const Event & bore,
-			const Configuration & cnf) {
+	virtual void Initialize(const Event & bore, const Configuration & cnf) {
 		std::cout<<"Read DRS4 Bore Event"<<std::endl;
 #ifndef WIN32  //some linux Stuff //$$change
 		(void)cnf; // just to suppress a warning about unused parameter cnf
@@ -54,8 +52,25 @@ public:
 					m_channel_names[ch] = bore.GetTag(tag,tag);
 					std::cout<<"    "<<tag<<": "<<m_channel_names[ch]<<std::endl;
 				}
+		// extracting the timing calibration
+		const RawDataEvent & in_bore = dynamic_cast<const RawDataEvent &>(bore);
+		for (uint8_t id = 0; id < in_bore.NumBlocks();){
+			RawDataEvent::data_t data = in_bore.GetBlock(id++);
+			char buffer [5];
+			std::memcpy(&buffer,&(data[0]), 4);
+			buffer[4]='\0';
+			int ch = atoi(&buffer[1])-1;
+			data = in_bore.GetBlock(id++);
+			int n_samples = int(data.size() / sizeof(unsigned short));
+			float * raw_tcal_array = (float*) &data[0];
+			for (int i = 0; i < n_samples; i++)
+				m_tcal[ch].push_back(raw_tcal_array[i]); }
 		//todo set range
-	}
+	} // end Initialize
+
+	 virtual map<uint8_t, vector<float> > GetTimeCalibration(const Event & bore) {
+		 return this->m_tcal;
+	 } // end GetTimeCalibration
 
 	// Here, the data from the RawDataEvent is extracted into a StandardEvent.
 	// The return value indicates whether the conversion was successful.
@@ -95,8 +110,8 @@ public:
 
 			//Get Waveform
 			data = in_raw.GetBlock(id++);
-			int wave_size = data.size();
-			int n_samples =  wave_size/sizeof(unsigned short);
+			size_t wave_size = data.size();
+			int n_samples = int(wave_size / sizeof(unsigned short));
 //			std::cout<<"CH: "<<ch<<" with "
 //					<<data.size()<<" -> "<<n_samples<<"  .";//<<std::endl;
 //			std::cout<<"Trigger cell "<<trigger_cell<<", ";

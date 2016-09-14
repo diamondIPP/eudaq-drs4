@@ -95,10 +95,31 @@ namespace eudaq {
 
   void PluginManager::Initialize(const DetectorEvent & dev) {
     eudaq::Configuration conf(dev.GetTag("CONFIG"));
-	conf.Set("timeDelay",dev.GetTag("longTimeDelay","0"));
+    conf.Set("timeDelay",dev.GetTag("longTimeDelay", "0"));
+    cout << "Initiliasing!" << endl;
     for (size_t i = 0; i < dev.NumEvents(); ++i) {
       const eudaq::Event & subev = *dev.GetEvent(i);
       GetInstance().GetPlugin(subev).Initialize(subev, conf);
+    }
+  }
+
+  std::map<uint8_t, std::vector<float> > PluginManager::GetTimeCalibration(const DetectorEvent & dev) {
+
+    for (size_t i_ev = 0; i_ev < dev.NumEvents(); ++i_ev) {
+      const eudaq::Event &subev = *dev.GetEvent(i_ev);
+      if (subev.GetSubType() == "DRS4" or subev.GetSubType() == "VX1742")
+        return GetInstance().GetPlugin(subev).GetTimeCalibration(subev);
+    }
+    // if there is no sub-event DRS4
+    std::map<uint8_t, std::vector<float> > ret_val;
+    ret_val[0] = {-1};
+    return ret_val;
+  }
+
+  void PluginManager::SetConfig(const DetectorEvent & dev, Configuration * conv_cfg) {
+    for (size_t i = 0; i < dev.NumEvents(); ++i) {
+      const eudaq::Event & subev = *dev.GetEvent(i);
+      GetInstance().GetPlugin(subev).SetConfig(conv_cfg);
     }
   }
 

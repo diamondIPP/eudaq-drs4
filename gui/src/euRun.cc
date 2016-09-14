@@ -208,7 +208,7 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
     EmitStatus("TUSTAT", status->GetTag("STATUS"));
     std::string beam_current = status->GetTag("BEAM_CURR");
     beam_current.resize (5,'0');
-    EmitStatus("BEAMCURR", beam_current + " mA");
+    EmitStatus("BEAMCURR", beam_current + " uA");
     EmitStatus("COINCCOUNT", status->GetTag("COINC_COUNT"));
 
     //update Scaler Status

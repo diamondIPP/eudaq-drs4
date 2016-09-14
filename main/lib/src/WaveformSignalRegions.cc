@@ -8,11 +8,9 @@
 #include <eudaq/WaveformSignalRegions.hh>
 
 WaveformSignalRegions::WaveformSignalRegions(int channel, signed char pol, signed char pul_pol) {
-    std::cout<<"New WaveformSignalRegions "<<channel<<" "<<(int)pol<<std::flush;
     this->channel=channel;
     polarity = pol;
     pulserPolarity = pul_pol;
-    std::cout<<"."<<std::endl;
 }
 
 

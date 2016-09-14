@@ -18,7 +18,7 @@ class WaveformSignalRegion:public TObject {
         WaveformSignalRegion(int low=-1, int high=-1, std::string name="");
         virtual ~WaveformSignalRegion();
         void SetPeakPostion(Int_t peak_position);
-        UInt_t GetNIntegrals(){return integrals.size();}
+        size_t GetNIntegrals(){return integrals.size();}
         WaveformIntegral* GetIntegralPointer(UInt_t i);
         WaveformIntegral* GetIntegralPointer(std::string s);
         void ResetIntegrals();
@@ -27,9 +27,9 @@ class WaveformSignalRegion:public TObject {
         void SetPolarity(signed char pol){polarity=pol;}
         void SetPulserPolarity(signed char pol){pulserPolarity=pol;}
         void AddIntegral(WaveformIntegral integralDef);
-        int GetLowBoarder(){return low_border;}
-        int GetHighBoarder(){return high_border;}
-        int GetPeakPosition(){return peak_pos;}
+        uint16_t GetLowBoarder() {return low_border;}
+        uint16_t GetHighBoarder() {return high_border;}
+        uint16_t GetPeakPosition(){return peak_pos;}
         void SetName(std::string name){this->name = name;}
         const char *GetName(){return name.c_str();}
         float operator [](int i){return integrals[integral_names[i]].GetIntegral();}
@@ -38,9 +38,9 @@ class WaveformSignalRegion:public TObject {
         std::string name;
         signed char polarity;
         signed char pulserPolarity;
-        int low_border;
-        int high_border;
-        int peak_pos;
+        uint16_t low_border;
+        uint16_t high_border;
+        uint16_t peak_pos;
         std::map<std::string,WaveformIntegral> integrals;
         std::vector<std::string> integral_names;
 //        ClassDef(WaveformSignalRegion,1);
