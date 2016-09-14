@@ -79,6 +79,7 @@ namespace eudaq {
     std::vector<int> * f_row;
     std::vector<int> * f_adc;
     std::vector<int> * f_charge;
+    std::vector<int> * f_trig_phase;
 //    std::vector< std::vector<float>> * f_waveforms;
     int f_nwfs;
 
@@ -100,6 +101,7 @@ namespace eudaq {
     f_row    = new std::vector<int>;
     f_adc    = new std::vector<int>;
     f_charge = new std::vector<int>;
+    f_trig_phase = new std::vector<int>;
 //    f_waveforms = new std::vector< std::vector<float> >;
 
 
@@ -138,6 +140,7 @@ namespace eudaq {
     m_ttree->Branch("row", &f_row);
     m_ttree->Branch("adc", &f_adc);
     m_ttree->Branch("charge", &f_charge);
+    m_ttree->Branch("trigphase", &f_trig_phase);
 //    m_ttree->Branch("waveforms", &f_charge);
 //    m_ttree->Branch("nwfs", &f_nwfs,"n_waveforms/I");
   }
@@ -166,6 +169,7 @@ namespace eudaq {
     f_row->clear();
     f_adc->clear();
     f_charge->clear();
+    f_trig_phase->clear();
 
     uint8_t ind = 0;
     for (size_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
@@ -180,6 +184,7 @@ namespace eudaq {
           f_row->push_back(plane.GetY(ipix));
           f_adc->push_back((int) plane.GetPixel(ipix));
           f_charge->push_back(42);
+          f_trig_phase->push_back(int(plane.GetTrigPhase()));
         }
         ind++;
       }
@@ -197,6 +202,7 @@ namespace eudaq {
           f_row->push_back(plane.GetY(ipix));
           f_adc->push_back((int) plane.GetPixel(ipix));
           f_charge->push_back(42);
+          f_trig_phase->push_back(int(plane.GetTrigPhase()));
         }
         ind++;
       }
