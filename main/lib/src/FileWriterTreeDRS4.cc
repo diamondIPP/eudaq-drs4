@@ -707,7 +707,7 @@ void FileWriterTreeDRS4::FillRegionIntegrals(uint8_t iwf, const StandardWaveform
             }
             else {
                 integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
-                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf));
+                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf), 2.0);
             }
             p->SetIntegral(integral);
             p->SetTimeIntegral(time_integral);
