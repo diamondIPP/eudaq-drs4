@@ -675,8 +675,10 @@ inline void FileWriterTreeCAEN::DoSpectrumFitting(uint8_t iwf){
     if (max < 2 * noise) return;
     float threshold = 100 * 2 * noise / max;
     uint16_t size = uint16_t(data_pos.size());
-    decon.resize(size);
-    int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
+//    decon.resize(size);
+    decon = new Double_t[size];
+    Double_t * bla = &data_pos[0];
+    int peaks = spec->SearchHighRes(bla, decon, size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     for(uint8_t i=0; i < peaks; i++){
         uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
         uint16_t min_bin = bin - 5 >= 0 ? uint16_t(bin - 5) : uint16_t(0);
@@ -687,6 +689,7 @@ inline void FileWriterTreeCAEN::DoSpectrumFitting(uint8_t iwf){
         peaks_y.at(iwf)->push_back(max);
     }
     w_spectrum.Stop();
+    delete[] bla;
 } // end DoSpectrumFitting()
 
 void FileWriterTreeCAEN::FillSpectrumData(uint8_t iwf){
