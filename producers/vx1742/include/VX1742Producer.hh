@@ -63,7 +63,7 @@ private:
   bool m_running, m_terminated;
   uint32_t m_group_mask;
   eudaq::Configuration m_config;
-
+  uint32_t ch_trg_enable, trg_channel, trg_threshold;
 
 };
 
