@@ -23,7 +23,7 @@ EUDAQMonitorHistos::EUDAQMonitorHistos(const SimpleStandardEvent &ev)
   //    TracksPerEvent = new TH2I("Tracks per Event", "Tracks per Event", 1000, 0, 20000, 5, 0, 5);
   TracksPerEvent = new TProfile("Tracks per Event", "Tracks per Event", 1000, 0, 20000);
 
-  Hits_vs_EventsTotal->SetBit(TH1::kCanRebin);
+  Hits_vs_EventsTotal->SetBit(TH1::kCanRebin);  //->SetCanExtend(1); //for ROOT 6
   TracksPerEvent->SetBit(TH1::kCanRebin);
 
   for (unsigned int i=0; i<nplanes; i++)
