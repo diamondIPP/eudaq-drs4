@@ -23,8 +23,8 @@ EUDAQMonitorHistos::EUDAQMonitorHistos(const SimpleStandardEvent &ev)
   //    TracksPerEvent = new TH2I("Tracks per Event", "Tracks per Event", 1000, 0, 20000, 5, 0, 5);
   TracksPerEvent = new TProfile("Tracks per Event", "Tracks per Event", 1000, 0, 20000);
 
-  Hits_vs_EventsTotal->SetCanExtend(1);
-  TracksPerEvent->SetCanExtend(1);
+  Hits_vs_EventsTotal->SetBit(TH1::kCanRebin);  //->SetCanExtend(1); //for ROOT 6
+  TracksPerEvent->SetBit(TH1::kCanRebin);
 
   for (unsigned int i=0; i<nplanes; i++)
   {
@@ -72,9 +72,9 @@ EUDAQMonitorHistos::EUDAQMonitorHistos(const SimpleStandardEvent &ev)
       TLUdelta_perEventHisto[i]->SetLineColor(i+2);
       TLUdelta_perEventHisto[i]->SetMarkerColor(i+2);
     }
-    Hits_vs_Events[i]->SetCanExtend(1);
-    TriggerPhasePerEvent[i]->SetCanExtend(1);
-    TLUdelta_perEventHisto[i]->SetCanExtend(1);
+    Hits_vs_Events[i]->SetBit(TH1::kCanRebin);
+    TriggerPhasePerEvent[i]->SetBit(TH1::kCanRebin);
+    TLUdelta_perEventHisto[i]->SetBit(TH1::kCanRebin);
   }
 
 }

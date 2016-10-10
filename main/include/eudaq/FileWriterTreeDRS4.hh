@@ -169,8 +169,8 @@ namespace eudaq {
         TMacro *macro;
 
         // spectrum
-        std::vector<double> data_pos;
-        Double_t * decon;
+        std::vector<float> data_pos;
+        std::vector<float> decon;
         std::vector<std::vector<uint16_t> *> peaks_x;
         std::vector<std::vector<float> *> peaks_x_time;
         std::vector<std::vector<float> *> peaks_y;
