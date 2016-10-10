@@ -151,7 +151,7 @@ public:
           float wave_array[samples_per_channel];
 	  		  uint16_t *raw_wave_array = (uint16_t*)(&data[0]);
 			    for (int i = 0; i < samples_per_channel; i++){
-            wave_array[i] = float(1000. * (raw_wave_array[i] / 4096.) - 512.); //convert to mV
+            wave_array[i] = (1000.0*(raw_wave_array[i]/4096.0 - 0.5)); //convert to mV
 	   	    }
 
           uint32_t ch_nr = channels*grp+ch;

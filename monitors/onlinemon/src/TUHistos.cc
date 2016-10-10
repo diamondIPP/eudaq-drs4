@@ -49,7 +49,7 @@ TUHistos::TUHistos(){
   _EventCount->SetMarkerStyle(34);
   _EventCount->SetMarkerSize(1);
   _EventCount->SetMarkerColor(4);
-  _AvgBeamCurrent = new TH1I("Average Beam Current", "Average Beam Current [mA]; Run Time [s]",60000, 0, 60000);
+  _AvgBeamCurrent = new TH1I("Average Beam Current", "Average Beam Current [uA]; Run Time [s]",60000, 0, 60000);
   _AvgBeamCurrent->SetMarkerStyle(34);
   _AvgBeamCurrent->SetMarkerSize(1);
   _AvgBeamCurrent->SetMarkerColor(2);

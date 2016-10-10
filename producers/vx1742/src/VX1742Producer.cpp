@@ -88,6 +88,12 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
     trn_polarity = conf.Get("TRn_polarity", 1);
     trn_readout = conf.Get("TRn_readout", 1);
 
+    ch_trg_enable = conf.Get("ch_trg_enable", 0);
+    trg_channel = conf.Get("trg_channel", 0);
+    uint32_t trg_grp = trg_channel/8; //4 groups a 8 channels
+    uint32_t trg_ch = trg_channel%8;
+    trg_threshold = conf.Get("trg_threshold", 0);
+
     //DC offsets for channels
     for(int ch=0; ch < vmec::VX1742_CHANNELS; ch++){
       std::string ch_name = "DC_CH" + std::to_string(ch);
@@ -112,6 +118,12 @@ void VX1742Producer::OnConfigure(const eudaq::Configuration& conf) {
 
     usleep(10000);
     caen->enableTRn(trn_enable, trn_threshold, trn_offset, trn_polarity, trn_readout);
+
+    if(ch_trg_enable and !trn_enable[0] and !trn_enable[1]){
+      caen->enableTransparentMode(1);
+      caen->setGroupChannelTriggerMask(trg_grp, trg_ch);
+      caen->setChannelTriggerThreshold(trg_grp, trg_ch, trg_threshold);
+    }
 
     caen->initializeDRS4CorrectionTables(sampling_frequency);
     usleep(400000);
