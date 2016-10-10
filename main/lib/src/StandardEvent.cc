@@ -63,13 +63,13 @@ float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const
 
 float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> * tcal, float sspeed) const {
 	if (high_bin > this->GetNSamples() - 1) high_bin = uint16_t(this->GetNSamples() - 1);
-	float max_low_length = (peak_pos - low_bin) * float(1/sspeed);
-	float max_high_length = (high_bin - peak_pos) * float(1/sspeed);
+	float max_low_length = (peak_pos - low_bin) * 1 / sspeed;
+	float max_high_length = (high_bin - peak_pos) * 1 / sspeed;
     uint16_t size = uint16_t(std::min(m_samples.size(), tcal->size()));
 	float integral = tcal->at((tcell + peak_pos) % size) * m_samples.at(peak_pos);  // take the value at the peak pos as start value
 	// sum up the times if the bins to the left side of the peak pos until max length is reached
 	uint16_t i = uint16_t(peak_pos - 1);
-	float low_length = tcal->at((peak_pos + tcell) % size) / float(sspeed);
+	float low_length = tcal->at((peak_pos + tcell) % size) / float(2.);
 	while (low_length + tcal->at((i + tcell) % size) < max_low_length) {
 		low_length += tcal->at((i + tcell) % size);
 		integral += m_samples.at(i) * tcal->at((i + tcell) % size);
@@ -79,7 +79,7 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
 	integral += (max_low_length - low_length) * m_samples.at(i);
 	// same thing for the right side
 	i = uint16_t(peak_pos + 1);
-	float high_length = tcal->at((peak_pos + tcell) % size) / float(sspeed);
+	float high_length = tcal->at((peak_pos + tcell) % size) / float(2.);
 	while (high_length+tcal->at((i + tcell) % size) < max_high_length) {
 		high_length += tcal->at((i + tcell) % size);
 		integral += m_samples.at(i) * tcal->at((i + tcell) % size);
@@ -87,7 +87,7 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
 		i++;
 	}
 	integral += (max_high_length - high_length) * m_samples.at(i);
-	return integral / (max_high_length + max_low_length + float(1/sspeed));
+	return integral / (max_high_length + max_low_length + 1 / sspeed);
 }
 
 
