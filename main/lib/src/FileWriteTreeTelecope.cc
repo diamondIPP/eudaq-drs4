@@ -69,7 +69,7 @@ namespace eudaq {
 
     // Scalar Branches
     int f_event_number;
-    float f_time;
+    double f_time;
 
     // Vector Branches
     std::vector<uint16_t> * f_plane;
@@ -132,7 +132,7 @@ namespace eudaq {
 
     // Set Branch Addresses
     m_ttree->Branch("event_number",&f_event_number, "event_number/I");
-    m_ttree->Branch("time",&f_time, "time/F");
+    m_ttree->Branch("time", &f_time, "time/D");
 
     // telescope
     m_ttree->Branch("plane", &f_plane);
@@ -168,7 +168,7 @@ namespace eudaq {
         f_time = sev.GetTimestamp();
     }
     else
-      f_time = sev.GetTimestamp() / float(384066.);
+      f_time = sev.GetTimestamp() / 384066.;
 
     f_plane->clear();
     f_col->clear();

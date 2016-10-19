@@ -218,6 +218,28 @@ uint32_t VX1742Interface::TRnReadoutEnabled(){
   return 0;
 }
 
+void VX1742Interface::enableTransparentMode(bool param){
+  if(param){
+    vx1742->group_conf.trigger_trn_enable = 1;
+    std::cout << "###Enabling DRS4 Transparent Mode for triggering on individual channels.." << std::endl;}
+  else{
+    vx1742->group_conf.trigger_trn_enable = 0;
+  }
+}
+
+void VX1742Interface::setGroupChannelTriggerMask(uint32_t grp, uint32_t ch){
+  uint32_t trg_mask = 0;
+  trg_mask |= (1 << ch);
+  vx1742->group_n_conf[grp].ch_trg_enable_mask = trg_mask;
+  std::cout << "Group " << grp << " trigger mask: " << trg_mask << std::endl;
+}
+
+
+void VX1742Interface::setChannelTriggerThreshold(uint32_t grp, uint32_t ch, uint32_t threshold){
+  uint32_t val = ((ch&0xf)<<12) + (threshold&0xfff);
+  vx1742->group_n_conf[grp].ch_thres = val;
+  std::cout << "Group " << grp << " threshold channel(" << ch << "): " << val;
+}
 
 
 void VX1742Interface::setPostTriggerSamples(uint32_t param){
@@ -319,7 +341,7 @@ void VX1742Interface::setChannelDCOffsets(uint32_t param[]){
   }
 }
 
-
+//method for channel threshold and channel trigger mask
 
 uint32_t VX1742Interface::readFlashPage(uint32_t group, int8_t* page, uint32_t pagenumber){
 	uint32_t flash_addr;
@@ -469,7 +491,7 @@ uint32_t VX1742Interface::loadDRS4CorrectionTables(uint32_t group, uint32_t freq
 
 uint32_t VX1742Interface::initializeDRS4CorrectionTables(uint32_t frequency){
 	uint ret = 0;
-
+  std::cout << std::endl;
 	switch(frequency){
 		case 0:
 			std::cout << "Initializing correction tables for 5 GS/s sampling speed:" << std::endl;

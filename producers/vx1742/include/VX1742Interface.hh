@@ -67,6 +67,11 @@ class VX1742Interface{
 	void enableTRn(uint32_t enable[2], uint32_t threshold[2], uint32_t offset[2], uint32_t polarity, uint32_t trn_readout);
 	uint32_t TRnReadoutEnabled();
 
+	//for transparent mode
+	void enableTransparentMode(bool param);
+	void setGroupChannelTriggerMask(uint32_t grp, uint32_t ch);
+	void setChannelTriggerThreshold(uint32_t grp, uint32_t ch, uint32_t threshold);
+
 	void setCustomSize(uint32_t param);
 	uint32_t getCustomSize();
 

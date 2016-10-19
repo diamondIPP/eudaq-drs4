@@ -33,7 +33,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     f_event_number = -1;
     f_pulser_events = 0;
     f_signal_events = 0;
-    f_time = -1;
+    f_time = -1.;
     f_pulser = -1;
     v_forc_pos = new vector<uint16_t>;
     v_forc_time = new vector<float>;
@@ -645,7 +645,6 @@ inline void FileWriterTreeDRS4::DoSpectrumFitting(uint8_t iwf){
     if (max < 2 * noise) return;
     float threshold = 100 * 2 * noise / max;
     uint16_t size = uint16_t(data_pos.size());
-    decon.resize(size);
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     for(uint8_t i=0; i < peaks; i++){
         uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
@@ -705,7 +704,7 @@ void FileWriterTreeDRS4::FillRegionIntegrals(uint8_t iwf, const StandardWaveform
             }
             else {
                 integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
-                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf));
+                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf), 2.0);
             }
             p->SetIntegral(integral);
             p->SetTimeIntegral(time_integral);
@@ -855,7 +854,7 @@ void FileWriterTreeDRS4::SetTimeStamp(StandardEvent sev) {
             f_time = sev.GetTimestamp();
     }
     else
-        f_time = sev.GetTimestamp() / float(384066.);
+        f_time = sev.GetTimestamp() / 384066.;
 }
 
 #endif // ROOT_FOUND

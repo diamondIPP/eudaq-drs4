@@ -54,7 +54,7 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     f_event_number = -1;
     f_pulser_events = 0;
     f_signal_events = 0;
-    f_time = -1;
+    f_time = -1.;
     f_pulser = -1;
     v_forc_pos = new vector<uint16_t>;
     v_forc_time = new vector<float>;
@@ -369,7 +369,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
             f_time = sev.GetTimestamp();
     }
     else
-        f_time = sev.GetTimestamp() / float(384066.);
+        f_time = sev.GetTimestamp() / 384066.;
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
@@ -675,7 +675,6 @@ inline void FileWriterTreeCAEN::DoSpectrumFitting(uint8_t iwf){
     if (max < 2 * noise) return;
     float threshold = 100 * 2 * noise / max;
     uint16_t size = uint16_t(data_pos.size());
-    decon.resize(size);
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     for(uint8_t i=0; i < peaks; i++){
         uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
@@ -735,7 +734,7 @@ void FileWriterTreeCAEN::FillRegionIntegrals(uint8_t iwf, const StandardWaveform
             }
             else {
                 integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
-                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf));
+                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf), 2.5);
             }
             p->SetIntegral(integral);
             p->SetTimeIntegral(time_integral);
@@ -823,7 +822,7 @@ void FileWriterTreeCAEN::UpdateWaveforms(uint8_t iwf){
 
 inline int FileWriterTreeCAEN::IsPulserEvent(const StandardWaveform *wf){
     float pulser_int = wf->getIntegral(uint16_t(ranges["pulserDRS4"]->first), uint16_t(ranges["pulserDRS4"]->second), true);
-    return pulser_int > pulser_threshold;
+    return abs(pulser_int - wf->getIntegral(0, 20, true)) > pulser_threshold;
 } //end IsPulserEvent
 
 inline void FileWriterTreeCAEN::ExtractForcTiming(vector<float> * data) {
