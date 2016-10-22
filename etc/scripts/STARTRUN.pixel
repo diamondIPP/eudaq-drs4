@@ -5,7 +5,7 @@
 export CMS=true
 export CAEN=false
 export CLK=true
-export CMS_DIG=false
+export CMS_DIG=true
 export DRS=false
 
 export HOSTNAME=192.168.1.102
