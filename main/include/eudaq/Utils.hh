@@ -15,6 +15,7 @@
 #include <fstream>
 #include <sys/types.h>
 #include "eudaq/Platform.hh"
+#include <map>
 
 #if ((defined WIN32) && (defined __CINT__))
 typedef unsigned long long uint64_t
@@ -30,7 +31,7 @@ namespace eudaq {
   std::string DLLEXPORT ucase(const std::string &);
   std::string DLLEXPORT lcase(const std::string &);
 //  std::string DLLEXPORT trim(const std::string & s);
-  std::string DLLEXPORT trim(const std::string & s, std::string trim_characters="\t\n\r\v");
+  std::string DLLEXPORT trim(const std::string & s, std::string trim_characters="\t\n\r\v ");
   std::string DLLEXPORT firstline(const std::string & s);
   std::string DLLEXPORT escape(const std::string &);
   std::vector<std::string> DLLEXPORT split(const std::string & str, const std::string & delim = "\t");
@@ -38,6 +39,7 @@ namespace eudaq {
 
  void DLLEXPORT bool2uchar(const bool* inBegin, const bool* inEnd, std::vector<unsigned char>& out);
  void DLLEXPORT uchar2bool(const unsigned char* inBegin, const unsigned char* inEnd, std::vector<bool>& out);
+ void DLLEXPORT print_banner(std::string message, const char seperator = '=', uint16_t max_lenght = 100);
 
   /** Sleep for a specified number of milliseconds.
    * \param ms The number of milliseconds
@@ -55,6 +57,18 @@ namespace eudaq {
       s << std::setfill('0') << std::setw(digits) << x;
       return s.str();
     }
+
+    inline std::string to_string(signed char & x) {
+      return std::to_string(x * 1);
+    }
+
+    inline std::string to_string(std::vector<signed char> & x) {
+        std::ostringstream os;
+        for (auto i: x)
+            os << "," << to_string(i);
+        return os.str();
+    }
+
   template <typename T, typename Q>
       inline std::string to_string(const std::pair<T,Q> & x) {
         std::ostringstream s;
@@ -77,12 +91,24 @@ namespace eudaq {
       return to_string(x, ",", digits);
     }
 
+  template <typename T, typename Q>
+    inline std::string to_string(const std::map<Q, std::vector<T> > & x, const std::string & sep1 = "; ", const std::string & sep2 = "/ ", int digits = 0) {
+        if (sep1 == ", " || sep2 == ", " || sep1 == sep2) throw "wrong separator";
+        std::ostringstream os;
+        if (x.size()) os << to_string(x.begin()->first) << sep2 << to_string(x.at(0), digits);
+        typename std::map<Q, std::vector<T> >::const_iterator it = x.begin();
+        it++;
+        for (it; it != x.end(); it++) os << sep1 << to_string(it->first, digits) << sep2 << to_string(it->second, digits);
+        return os.str();
+    }
+
   inline std::string to_string(const std::string & x, int /*digits*/ = 0) {
     return x;
   }
   inline std::string to_string(const char * x, int /*digits*/ = 0) {
     return x;
   }
+
 
   /** Converts any type that has an ostream streamer to a string in hexadecimal.
    * \param x The value to be converted.
@@ -137,6 +163,11 @@ namespace eudaq {
     }
 
   template<>
+    inline signed char DLLEXPORT from_string(const std::string & x, const signed char & def) {
+        return x == "" ? def : static_cast<signed char>(atoi(x.c_str()));
+    }
+
+  template<>
     int64_t DLLEXPORT from_string(const std::string & x, const int64_t & def);
   template<>
     uint64_t DLLEXPORT from_string(const std::string & x, const uint64_t & def);
@@ -160,17 +191,31 @@ namespace eudaq {
   }
 
   template<typename P>
-  std::vector<P> DLLEXPORT from_string(const  std::string & x, const std::vector<P>  & def) {
+  std::vector<P> DLLEXPORT from_string(const  std::string & x, const std::vector<P> & def) {
       std::string trimmed_string = trim(x," \t\n\r\v");
       trimmed_string = trim(trimmed_string,"{}[]()<>");
-      std::vector<std::string> splitted_string = split(trimmed_string,",");
+      std::vector<std::string> split_string = split(trimmed_string,",");
       std::vector<P> vec;
-      if (splitted_string.size() > def.size())
+      if (split_string.size() > def.size())
           return def;
-      for (int i =0; i < splitted_string.size();i++)
-          vec.push_back(from_string(splitted_string.at(i),def.at(i)));
-      std::cout<<"Converted \""<<x<<"\" to "<<to_string(vec)<<std::endl;
+      for (auto i: split_string) {
+          vec.push_back(from_string(i, def.at(0)));
+      }
+//      std::cout<<"Converted \""<<x<<"\" to "<<to_string(vec)<<std::endl;
       return vec;
+  }
+
+  template<typename T, typename Q>
+  std::map<Q, std::vector<T> > DLLEXPORT from_string(const std::string & x, const std::map<Q, std::vector<T> > & def) {
+      std::string trimmed_string = trim(x, " \t\n\r\v");
+      trimmed_string = trim(trimmed_string, "{}[]()<>");
+      std::vector<std::string> split_string1 = split(trimmed_string, ";");
+      std::map<Q, std::vector<T> > ret_val;
+      for (uint8_t i = 0; i < split_string1.size(); i++) {
+          std::vector<std::string> split_string2 = split(split_string1.at(i), "/");
+          ret_val[from_string(split_string2.at(0), def.begin()->first)] = from_string(split_string2.at(1), def.begin()->second);
+      }
+      return ret_val;
   }
 
   template <typename T>
@@ -300,6 +345,14 @@ namespace eudaq {
     inline void WriteToFile(const std::string & fname, const T & val) {
       WriteStringToFile(fname, to_string(val));
     }
+
+  template <typename T>
+    std::string DLLEXPORT append_spaces(const uint16_t max, const T str, const bool app_str = true) {
+      std::string ret = app_str ? to_string(str) : "";
+      size_t spaces = (int(max) - int(to_string(str).size())) > 0 ? max - to_string(str).size() : 0;
+      return ret + std::string(spaces, ' ');
+    }
+
 
 }
 
