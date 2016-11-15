@@ -176,6 +176,8 @@ namespace eudaq {
     //StandardEvent event(dev.GetRunNumber(), dev.GetEventNumber(), dev.GetTimestamp());
 
     StandardEvent event(dev);
+
+    // Convert a "EUDRB" event first if you find one
     for (size_t i = 0; i < dev.NumEvents(); ++i) {
       const Event * ev = dev.GetEvent(i);
       if (!ev) EUDAQ_THROW("Null event!");
@@ -183,6 +185,7 @@ namespace eudaq {
         ConvertStandardSubEvent(event, *ev);
       }
     }
+    // Now convert the rest
     for (size_t i = 0; i < dev.NumEvents(); ++i) {
       const Event * ev = dev.GetEvent(i);
       if (!ev) EUDAQ_THROW("Null event!");
