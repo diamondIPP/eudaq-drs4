@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include "eudaq/Platform.hh"
 #include <map>
+#include <sys/ioctl.h>
 
 #if ((defined WIN32) && (defined __CINT__))
 typedef unsigned long long uint64_t
@@ -353,6 +354,26 @@ namespace eudaq {
       return ret + std::string(spaces, ' ');
     }
 
+    class ProgressBar {
+
+    private:
+        uint32_t nEvents;
+        uint32_t currentEvent;
+        bool useETA;
+        struct winsize w;
+        uint8_t barLength;
+        uint16_t updateFrequency;
+        clock_t lastTime;
+        uint8_t nCycles;
+        float timePerCycle;
+
+    public:
+        ProgressBar(uint32_t, bool use_ETA=true, uint16_t update=100);
+        ~ProgressBar() { };
+        void update(uint32_t=0);
+        void averageTime();
+        float getTime();
+    };
 
 }
 
