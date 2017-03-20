@@ -57,6 +57,7 @@ namespace eudaq {
     virtual ~FileWriterTreeTelescope();
     // Add to get maximum number of events: DA
     virtual long GetMaxEventNumber();
+    virtual string GetStats(const DetectorEvent &);
   private:
     TFile * m_tfile; // book the pointer to a file (to store the otuput)
     TTree * m_ttree; // book the tree (to store the needed event info)
@@ -143,6 +144,10 @@ namespace eudaq {
     m_ttree->Branch("charge", &f_charge);
     m_ttree->Branch("trigger_phase", &f_trig_phase);
 
+  }
+
+  string FileWriterTreeTelescope::GetStats(const DetectorEvent & dev) {
+    return PluginManager::GetStats(dev);
   }
 
   void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {

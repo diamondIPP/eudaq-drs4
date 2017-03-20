@@ -116,6 +116,18 @@ namespace eudaq {
     return ret_val;
   }
 
+  std::string PluginManager::GetStats(const DetectorEvent &dev) {
+
+    for (size_t i_ev = 0; i_ev < dev.NumEvents(); ++i_ev) {
+      const eudaq::Event &subev = *dev.GetEvent(i_ev);
+      if (subev.GetSubType() == "CMSPixelDUT" or subev.GetSubType() == "CMSPixelREF"){
+        std::string stats = GetInstance().GetPlugin(subev).GetStats();
+        std::cout << stats << endl;
+      }
+    }
+    return "";
+  }
+
   void PluginManager::SetConfig(const DetectorEvent & dev, Configuration * conv_cfg) {
     for (size_t i = 0; i < dev.NumEvents(); ++i) {
       const eudaq::Event & subev = *dev.GetEvent(i);

@@ -25,6 +25,7 @@ namespace eudaq {
     virtual bool GetStandardSubEvent(StandardEvent & out, const Event & in) const {
       return m_converter.GetStandardSubEvent(out,in);
     }
+    virtual std::string GetStats() { return m_converter.GetStats(); }
     virtual void set_conversion(bool val){m_converter.set_conversion(val);}
     virtual bool get_conversion(){return m_converter.get_conversion();}
 #if USE_LCIO && USE_EUTELESCOPE

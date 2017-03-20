@@ -93,6 +93,11 @@ namespace eudaq {
 	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
     }
 
+    std::string GetStats() {
+      std::cout << "Getting decoding statistics for detector " << m_detector << std::endl;
+      return decoding_stats.getString();
+    }
+
     void read_PHCalibrationData(const Configuration & cnf){
       std::cout << "READ PH CALIBRATION..." << std::endl;
       for (auto i: cnf.GetSections()){
@@ -207,7 +212,7 @@ namespace eudaq {
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
       // todo: read this by a config file or even better, write it to the data!
-      decoder.setOffset(21);
+      decoder.setOffset(25);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
       try{
@@ -222,7 +227,8 @@ namespace eudaq {
           decoding_stats += decoder.getStatistics();
       }
       catch (std::exception& e){
-          EUDAQ_WARN("Decoding crashed");
+          EUDAQ_WARN("Decoding crashed:");
+          std::cout<<e.what()<<std::endl;
 //cout << e.what() << '\n';
           return false;
       }
