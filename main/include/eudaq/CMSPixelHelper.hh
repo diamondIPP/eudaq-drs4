@@ -143,6 +143,7 @@ namespace eudaq {
         
         TString filename = fname;
         filename += "_C"+ i2c + ".dat";
+        std::cout << "Filename in CMSPixelHelper: " << filename << std::endl;
         fp = fopen (filename, "r");
 
         VCALDict tmp_vcaldict;

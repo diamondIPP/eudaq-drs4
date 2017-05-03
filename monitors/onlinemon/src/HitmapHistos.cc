@@ -375,7 +375,8 @@ void HitmapHistos::Fill(const SimpleStandardHit & hit)
     if (_lvl1Distr != NULL) _lvl1Distr->Fill(hit.getLVL1());
   }
   if (_pixelChargeProfile)
-      _pixelChargeProfile->Fill(_eventNumber,hit.getTOT());
+      if(hit.getTOT()>0)
+        _pixelChargeProfile->Fill(_eventNumber,hit.getTOT());
 }
 
 void HitmapHistos::Fill(const SimpleStandardPlane & plane, unsigned event_no,unsigned time_stamp)
