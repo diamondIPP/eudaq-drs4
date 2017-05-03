@@ -18,6 +18,10 @@ namespace eudaq{
             }
 
             virtual bool GetStandardSubEvent(eudaq::StandardEvent &sev, const eudaq::Event &ev) const{
+
+                // Check if we have BORE or EORE:
+                if (ev.IsBORE() || ev.IsEORE()) { return true; }
+
                 const RawDataEvent & in_raw = dynamic_cast<const RawDataEvent &>(ev);
                 int valid = std::stoi(in_raw.GetTag("valid"));
                 int nblocks = in_raw.NumBlocks();

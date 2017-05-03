@@ -152,6 +152,7 @@ namespace eudaq {
       cout << "loading the first event...." << endl;
       return;
     } else if (ev.IsEORE()) {
+      eudaq::PluginManager::ConvertToStandard(ev);
       cout << "loading the last event...." << endl;
       return;
     }

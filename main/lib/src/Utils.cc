@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <cctype>
+#include <stdio.h>
+#include <unistd.h>
 
 // for cross-platform sleep:
 #include <chrono>
@@ -22,6 +24,8 @@
 #else
 # include <unistd.h>
 #endif
+
+using namespace std;
 
 namespace eudaq {
     void PressEnterToContinue()
@@ -207,5 +211,71 @@ namespace eudaq {
     std::string banner = std::string(mes_length, seperator);
     std::cout << "\n" << banner << "\n" << send_msg << "\n" << banner << "\n" << std::endl;
   }
+
+    ProgressBar::ProgressBar(uint32_t n_events, bool use_ETA, uint16_t update): nEvents(n_events), currentEvent(0), useETA(use_ETA), updateFrequency(update), lastTime(clock()),
+                              nCycles(0), timePerCycle(0) {
+      ioctl(0, TIOCGWINSZ, &w);
+      uint8_t diff = not use_ETA ? uint8_t(26) : uint8_t(37);
+      barLength = uint8_t(w.ws_col - diff);
+    }
+
+    void ProgressBar::update(uint32_t event) {
+
+      if (!currentEvent) cout << endl;
+
+      if (!event) currentEvent++;
+      else currentEvent = event;
+
+      if (currentEvent % updateFrequency == 0 && currentEvent){
+        stringstream ss;
+        ss << "\rEvent: "  << setw(7) << setfill('0') << fixed << currentEvent;
+        uint8_t current_bar_length = uint8_t(float(currentEvent) / nEvents * barLength);
+        ss << " [" << string(current_bar_length, '=') << ">" << string(barLength - current_bar_length, ' ') << "] ";
+        ss << setprecision(2) << setw(6) << setfill('0') << fixed << float(currentEvent) / nEvents * 100 << "%";
+        if (useETA) {
+          averageTime();
+          float tot = (nEvents - currentEvent) / updateFrequency * timePerCycle;
+          ss << setprecision(0) << " ETA: " << setw(2) << setfill('0') << tot / 60 << ":" << setw(2) << setfill('0') << tot - int(tot) / 60 * 60;
+        }
+
+        cout << ss.str() << flush;
+
+
+//        if ( stopAt - ievent < 10 ) cout << "|" <<string( 50 , '=') << ">";
+//        else cout << "|" <<string(int(float(ievent) / stopAt * 100) / 2, '=') << ">";
+//        if ( stopAt - ievent < 10 ) cout << "| 100%    ";
+//        else cout << string(50 - int(float(ievent) / stopAt * 100) / 2, ' ') << "| 100%    " << endl;
+//        float all_seconds = (stopAt - ievent) / speed;
+//        uint16_t minutes = all_seconds / 60;
+//        uint16_t seconds = all_seconds - int(all_seconds) / 60 * 60;
+//        uint16_t miliseconds =  (all_seconds - int(all_seconds)) * 1000;
+////        if (speed) cout << "time left:\t\t" << setprecision(2) << fixed << (nEntries - ievent) / speed <<  " seconds     " << minutes;
+//        if (speed) {
+//          cout << "time left:\t\t" << setw(2) << setfill('0') << minutes;
+//          cout << ":" << setw(2) << setfill('0') << seconds;
+//          cout << ":" << setw(3) << setfill('0') << miliseconds << "      ";
+//        }
+//        //else cout << "time left: ???";// Don't know why it is persistent. Commented it :P
+      }
+      if (currentEvent == nEvents) {
+        cout << "\rEvent: "  << setw(7) << setfill('0') << fixed << nEvents;
+        cout << " [" << string(barLength, '=') << ">" << "] 100.00%" << endl;
+      }
+
+    }
+    float ProgressBar::getTime() {
+      clock_t now = clock();
+      float ret = float(now - lastTime) / CLOCKS_PER_SEC;
+      lastTime = now;
+      return ret;
+    }
+
+    void ProgressBar::averageTime() {
+      if (nCycles < 10)
+        timePerCycle = (timePerCycle * nCycles + getTime()) / (nCycles + 1);
+      else
+        timePerCycle = float(.98) * timePerCycle + float(.02) * getTime();
+      nCycles++;
+    }
 
 }

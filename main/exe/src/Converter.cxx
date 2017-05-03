@@ -52,6 +52,7 @@ int main(int, char ** argv) {
       writer->SetConfig(&config);
       writer->SetFilePattern(opat.Value());
       writer->StartRun(reader.RunNumber());
+      ProgressBar bla(uint32_t(writer->GetMaxEventNumber()));
 	  int event_nr=0;
       do {
 		  if (!numbers.empty()&&reader.GetDetectorEvent().GetEventNumber()>numbers.back())
@@ -62,7 +63,10 @@ int main(int, char ** argv) {
         writer->WriteEvent(reader.GetDetectorEvent());
         if(dbg>0)std::cout<< "writing one more event" << std::endl;
         ++event_nr;
-        if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
+        if (writer->GetMaxEventNumber())
+          bla.update(event_nr);
+        else
+          if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
       }
       } while (reader.NextEvent() && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
       if(dbg>0)std::cout<< "no more events to read" << std::endl;

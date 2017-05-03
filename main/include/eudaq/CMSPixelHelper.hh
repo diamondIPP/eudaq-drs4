@@ -171,7 +171,7 @@ namespace eudaq {
     bool GetStandardSubEvent(StandardEvent & out, const Event & in) const {
 
       // If we receive the EORE print the collected statistics:
-      if (in.IsEORE()) {
+      if (out.IsEORE()) {
 	// Set decoder to INFO level for statistics printout:
 	std::cout << "Decoding statistics for detector " << m_detector << std::endl;
 	pxar::Log::ReportingLevel() = pxar::Log::FromString("INFO");
@@ -200,7 +200,7 @@ namespace eudaq {
       else { plane_id = 8; }                         // REF
 
       // Set decoder to reasonable verbosity (still informing about problems:
-      pxar::Log::ReportingLevel() = pxar::Log::FromString("WARNING");
+      pxar::Log::ReportingLevel() = pxar::Log::FromString("CRITICAL");
       //pxar::Log::ReportingLevel() = pxar::Log::FromString("DEBUGPIPES");
 
       // The pipeworks:
@@ -208,7 +208,7 @@ namespace eudaq {
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
       // todo: read this by a config file or even better, write it to the data!
-      decoder.setOffset(25);
+      decoder.setOffset(21);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
       try{
