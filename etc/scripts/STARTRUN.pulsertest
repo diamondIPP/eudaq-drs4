@@ -58,7 +58,7 @@ echo -e "${GREEN}Please wait ..${RESTORE}\n"
 sleep 2
 
 echo 'TUProducer @ DAQ'
-xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -T 'TU' -e '~/eudaq-drs4/bin/TUProducer.exe -r tcp://$HOSTNAME:$RCPORT'  &
+xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -T 'TU' -e $eudaq_dir'/bin/TUProducer.exe -r tcp://$HOSTNAME:$RCPORT'  &
 xpos=$((xpos+pixelwidth+space))
 echo -e "${GREEN}Please wait ..${RESTORE}\n"
 sleep 2
