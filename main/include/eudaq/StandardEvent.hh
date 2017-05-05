@@ -75,6 +75,7 @@ public:
     float getMedian(uint32_t min, uint32_t max) const;
 
 		std::vector<uint16_t> * getAllPeaksAbove(uint16_t min, uint16_t max, float threshold) const;
+		std::pair<uint16_t, float> getMaxPeak() const;
     float getSpreadInRange(int min, int max) const{return (getMaxInRange(min,max)-getMinInRange(min,max));};
     float getPeakToPeak(int min, int max) const{return getSpreadInRange(min,max);}
     float getIntegral(uint16_t min, uint16_t max, bool _abs=false) const;
