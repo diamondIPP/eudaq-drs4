@@ -133,7 +133,6 @@ void FileWriterTreeWaveForm::StartRun(unsigned runnumber) {
     // DUT
     m_ttree->Branch("peak_positions", &v_peak_positions);
     m_ttree->Branch("peak_values", &v_peak_values);
-  cout << "BLAa2" << endl;
     m_ttree->Branch("peak_timings", &v_peak_timings);
     m_ttree->Branch("pedestals", &v_pedestals);
 
@@ -144,7 +143,6 @@ void FileWriterTreeWaveForm::StartRun(unsigned runnumber) {
     -------------------------WRITE EVENT---------------------------------
     =====================================================================*/
 void FileWriterTreeWaveForm::WriteEvent(const DetectorEvent & ev) {
-    cout << "BLA" << endl;
     if (ev.IsBORE()) {
         PluginManager::SetConfig(ev, m_config);
         eudaq::PluginManager::Initialize(ev);
@@ -405,7 +403,7 @@ void FileWriterTreeWaveForm::FillPeaks(uint8_t iwf, const StandardWaveform *wf){
         v_peak_positions->at(iwf) = peak.first;
         v_peak_values->at(iwf) = peak.second;
         v_peak_timings->at(iwf) = getTriggerTime(iwf, peak.first);
-        v_pedestals->at(iwf) = wf->getIntegral(uint16_t(ranges["pedestal"]->first), uint16_t(ranges["pedestal"]->second), true);
+        v_pedestals->at(iwf) = wf->getIntegral(uint16_t(ranges["pedestal"]->first), uint16_t(ranges["pedestal"]->second), false);
     }
 }
 
