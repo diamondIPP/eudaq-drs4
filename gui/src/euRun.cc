@@ -199,6 +199,7 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
     registered = true;}
 
   if (id.GetType() == "DataCollector") {
+    m_event_number = from_string(status->GetTag("EVENT"), uint32_t(0));
     m_filebytes = from_string(status->GetTag("FILEBYTES"), 0LL);
     EmitStatus("EVENT", status->GetTag("EVENT"));
     EmitStatus("FILEBYTES", to_bytes(status->GetTag("FILEBYTES")));} 

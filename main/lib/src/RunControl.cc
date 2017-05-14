@@ -44,6 +44,7 @@ namespace eudaq {
     m_idata((size_t)-1),
     m_ilog((size_t)-1),
     m_runsizelimit(0),
+    m_max_event(0),
     m_stopping(false),
     m_busy(false),
     m_producerbusy(false)
@@ -80,6 +81,8 @@ namespace eudaq {
     SendCommand("CONFIG", to_string(config));
     if (config.SetSection("RunControl")) {
       m_runsizelimit = config.Get("RunSizeLimit", 0LL);
+      m_max_event = config.Get("MaxEvent", uint32_t(0));
+      EUDAQ_INFO("Max Event Number = " + to_string(m_max_event));
     } else {
       m_runsizelimit = 0;
     }
