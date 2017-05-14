@@ -45,7 +45,9 @@ FileWriterTreeWaveForm::FileWriterTreeWaveForm(const std::string & /*param*/)
     v_peak_values = new vector<float>;
     v_peak_timings = new vector<float>;
     v_pedestals = new vector<float>;
+    v_peak_integrals = new vector<float>;
     v_peak_positions->resize(4, 0);
+    v_peak_integrals->resize(4, 0);
     v_pedestals->resize(4, 0);
     v_peak_values->resize(4, 0);
     v_peak_timings->resize(4, 0);
@@ -73,6 +75,7 @@ void FileWriterTreeWaveForm::Configure(){
 
     // default ranges
     ranges["pedestal"] = new pair<float, float>(m_config->Get("pedestal_range", make_pair(0, 100)));
+    ranges["int"] = new pair<float, float>(m_config->Get("integral_range", make_pair(15, 25)));
 
     // saved waveforms
     save_waveforms = m_config->Get("save_waveforms", uint16_t(9));
@@ -135,6 +138,7 @@ void FileWriterTreeWaveForm::StartRun(unsigned runnumber) {
     m_ttree->Branch("peak_values", &v_peak_values);
     m_ttree->Branch("peak_timings", &v_peak_timings);
     m_ttree->Branch("pedestals", &v_pedestals);
+    m_ttree->Branch("peak_integrals", &v_peak_integrals);
 
     EUDAQ_INFO("Done with creating Branches!");
 }
@@ -404,6 +408,11 @@ void FileWriterTreeWaveForm::FillPeaks(uint8_t iwf, const StandardWaveform *wf){
         v_peak_values->at(iwf) = peak.second;
         v_peak_timings->at(iwf) = getTriggerTime(iwf, peak.first);
         v_pedestals->at(iwf) = wf->getIntegral(uint16_t(ranges["pedestal"]->first), uint16_t(ranges["pedestal"]->second), false);
+        if (peak.first < 1024 - uint16_t(ranges["int"]->second) and peak.first > uint16_t(ranges["int"]->first)) {
+          uint16_t low_bin = peak.first - uint16_t(ranges["int"]->first);
+          uint16_t high_bin = peak.first + uint16_t(ranges["int"]->second);
+          v_peak_integrals->at(iwf) = wf->getIntegral(low_bin, high_bin, peak.first, f_trigger_cell, &tcal.at(iwf), 2.0);
+        } else v_peak_integrals->at(iwf) = -999;
     }
 }
 
