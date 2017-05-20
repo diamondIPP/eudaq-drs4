@@ -97,7 +97,7 @@ std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16
         if (values.size() > 1) value = values[i2c];
         else value = values[0];
         std::cout << "Overwriting DAC " << name << " from file value: " << old_value << " -> " << value << std::endl;
-        EUDAQ_INFO("Overwriting DAC " + name + " from file value: " + old_value + " -> " + value);
+        EUDAQ_INFO("Overwriting DAC " + name + " from file value: " + std::to_string(old_value) + " -> " + std::to_string(value));
         overwritten_dacs++;
             }
 
