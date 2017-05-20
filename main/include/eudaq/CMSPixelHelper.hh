@@ -213,7 +213,7 @@ namespace eudaq {
       pxar::Event* evt ;
       try{
           // Connect the data source and set up the pipe:
-          src = evtSource(0, m_nplanes, 0, m_tbmtype, m_roctype);
+          src = evtSource(0, m_nplanes, m_tbmtype, m_roctype);
           src >> splitter >> decoder >> Eventpump;
 
           // Transform from EUDAQ data, add it to the datasource:
