@@ -12,18 +12,22 @@
 #include "SimpleStandardEvent.hh"
 #include "TProfile.h"
 #include "TH2I.h"
+#include "TGraph.h"
 
 using namespace std;
 
 
-EventAlignmentHistos::EventAlignmentHistos(): _bin_size(5000), max_event_number(uint32_t(5e7)), _lastNClusters(0)
+EventAlignmentHistos::EventAlignmentHistos(): _bin_size(5000), max_event_number(uint32_t(5e7)), _lastNClusters(0), fillColor(821)
 {
     _Alignment = init_profile("p_al", "Fraction of Hits at Pulser Events");
     _AlignmentPlus1 = init_profile("p_al1", "Fraction of Hits at Pulser Events + 1");
     _PulserRate = init_profile("p_pu", "Pulser Rate", 50, "Fraction of Pulser Events [%]");
-    _PulserRate->SetFillColor(821);
+    _3DPixelCorrelation = init_tgraph("p_pc1", "3D Pixel Correlation", "Correlation Factor");
+    _SilPixelCorrelation = init_tgraph("p_pc2", "Silicon Pixel Correlation", "Correlation Factor");
+    _PulserRate->SetFillColor(fillColor);
     _IsAligned = init_th2i("h_al", "Event Alignment");
     _IsAlignedPlus1 = init_th2i("h_al1", "Event Alignment Plus 1");
+    _Corr = new TGraph();
 }
 
 EventAlignmentHistos::~EventAlignmentHistos(){}
@@ -35,11 +39,72 @@ void EventAlignmentHistos::Write(){
     _PulserRate->Write();
     _IsAligned->Write();
     _IsAlignedPlus1->Write();
+    _3DPixelCorrelation->Write();
+    _SilPixelCorrelation->Write();
 }
+
+void EventAlignmentHistos::FillCorrelationVectors(const SimpleStandardEvent &sev) {
+
+    int iRef1 = (sev.getPlane(0).getName() == "DUT") ? 4 : 0;
+    int iRef2 = (sev.getPlane(0).getName() == "DUT") ? 5 : 1;
+    int iDut1 = (sev.getPlane(0).getName() == "DUT") ? 2 : 5;
+    int iDut2 = (sev.getPlane(0).getName() == "DUT") ? 1 : 4;
+    SimpleStandardPlane pAna1 = sev.getPlane(iDut1);
+    SimpleStandardPlane pAna2 = sev.getPlane(iDut2);
+    SimpleStandardPlane pDig1 = sev.getPlane(iRef1);
+    SimpleStandardPlane pDig2 = sev.getPlane(iRef2);
+    if (pAna1.getNClusters() == 1 and pDig1.getNClusters() == 1){
+      evntNumbers1.push_back(sev.getEvent_number());
+      rowAna1.push_back(uint8_t(pAna1.getCluster(0).getY()));
+      rowDig3D.push_back(uint8_t(pDig1.getCluster(0).getY()));
+    }
+  if (pAna2.getNClusters() == 1 and pDig2.getNClusters() == 1){
+    evntNumbers2.push_back(sev.getEvent_number());
+    rowAna2.push_back(uint8_t(pAna2.getCluster(0).getY()));
+    rowDigSil.push_back(uint8_t(pDig2.getCluster(0).getY()));
+  }
+}
+
+void EventAlignmentHistos::BuildCorrelation() {
+
+  if (evntNumbers1.size() == 500){
+    double mean_evt = mean(evntNumbers1);
+    double corr = pearsoncoeff(rowAna1, rowDig3D);
+    _3DPixelCorrelation->SetPoint(_3DPixelCorrelation->GetN(), mean_evt, corr);
+    rowDig3D.clear();
+    rowAna1.clear();
+    evntNumbers1.clear();
+    _3DPixelCorrelation->GetYaxis()->SetRangeUser(-.2, 1);
+  }
+  if (evntNumbers2.size() == 500){
+//    cout << evntNumbers2.size() << " " << rowAna2.size() << " " << ro
+    double mean_evt = mean(evntNumbers2);
+    double corr = pearsoncoeff(rowAna2, rowDigSil);
+    _SilPixelCorrelation->SetPoint(_SilPixelCorrelation->GetN(), mean_evt, corr);
+    rowDigSil.clear();
+    rowAna2.clear();
+    evntNumbers2.clear();
+    _SilPixelCorrelation->GetYaxis()->SetRangeUser(-.2, 1);
+  }
+}
+
+template <typename T>
+double EventAlignmentHistos::pearsoncoeff(std::vector<T> X, std::vector<T> Y) {
+
+  for (uint16_t i_ev = 0; i_ev < X.size(); i_ev++)
+    _Corr->SetPoint(i_ev, X.at(i_ev), Y.at(i_ev));
+  double corr_fac =  _Corr->GetCorrelationFactor();
+  _Corr->Clear();
+  return corr_fac;
+}
+
 
 void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
 
     //we need at least on waveform!
+  FillCorrelationVectors(sev);
+  BuildCorrelation();
+  hasWaveForm = bool(sev.getNWaveforms());
     if (!sev.getNWaveforms())
         return;
     uint32_t event_no = sev.getEvent_number();
@@ -72,6 +137,18 @@ TProfile * EventAlignmentHistos::init_profile(std::string name, std::string titl
     prof->GetYaxis()->SetTitleOffset(1.3);
 
     return prof;
+}
+
+TGraph * EventAlignmentHistos::init_tgraph(std::string name, std::string title, std::string y_tit) {
+
+  TGraph * gr = new TGraph();
+  gr->SetNameTitle(name.c_str(), title.c_str());
+  gr->GetYaxis()->SetTitle(y_tit.c_str());
+  gr->GetYaxis()->SetTitleOffset(1.2);
+  gr->GetYaxis()->SetRangeUser(-.2, 1);
+  gr->SetMarkerSize(.5);
+  gr->SetMarkerStyle(20);
+  return gr;
 }
 
 TH2I * EventAlignmentHistos::init_th2i(std::string name, std::string title){
