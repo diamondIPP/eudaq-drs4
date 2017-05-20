@@ -88,7 +88,7 @@ namespace eudaq {
   }
 
   FileWriterTreeTelescope::FileWriterTreeTelescope(const std::string & /*param*/)
-    : m_tfile(0), m_ttree(0),m_noe(0),chan(4),n_pixels(90*90+60*60)
+    : m_tfile(0), m_ttree(0),m_noe(0),chan(4),n_pixels(90*90+60*60), f_event_number(0)
   {
     gROOT->ProcessLine("#include <vector>");
     //Initialize for configuration file:
