@@ -471,8 +471,8 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
   if (_mon == NULL)
     return;
   string tree = "Correlations/HitFraction at Pulser Events";
-  _mon->getOnlineMon()->registerTreeItem(tree);
   if (simpev.getNWaveforms()) {
+    _mon->getOnlineMon()->registerTreeItem(tree);
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentHisto(), "", 0);
     tree = "Correlations/HitFraction at Pulser Events +1";
     _mon->getOnlineMon()->registerTreeItem(tree);
@@ -485,16 +485,21 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedPlus1Histo(), "COL", 0);
   }
   else{
-    tree = "Correlations/3D Pixel Correlation";
+    tree = "Correlations/PixelCorrelation/PC 3D";
     _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerGraph(tree, _evAlign->get3DPixelCorrelation(), "apl", 0);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->get3DPixelCorrelation(), "hist", 0);
 
-    tree = "Correlations/Silicon Pixel Correlation";
+    tree = "Correlations/PixelCorrelation/PC Silicon";
     _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerGraph(tree, _evAlign->getSilPixelCorrelation(), "apl", 0);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getSilPixelCorrelation(), "hist", 0);
+
+    tree = "Correlations/PixelCorrelation/Pixel Alignment";
+    _mon->getOnlineMon()->registerTreeItem(tree);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelIsAlignedHisto(), "COL", 0);
   }
 
   _mon->getOnlineMon()->makeTreeItemSummary("Correlations"); //make summary page
+  _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PixelCorrelation"); //make summary page
 
   if (simpev.getNWaveforms()) {
     tree = "Correlations/Pulser Rate";

@@ -19,6 +19,7 @@ class SimpleStandardEvent;
 class RootMonitor;
 class TString;
 class TGraph;
+class TProfile2D;
 
 #include <cstdint>
 #include <string>
@@ -34,9 +35,10 @@ protected:
     TH1 *_PulserRate;
     TH2I *_IsAligned;
     TH2I *_IsAlignedPlus1;
-    TGraph * _3DPixelCorrelation;
-    TGraph * _SilPixelCorrelation;
+    TH1 * _3DPixelCorrelation;
+    TH1 * _SilPixelCorrelation;
     uint16_t _lastNClusters;
+    TH2F * _PixelIsAligned;
     std::vector<size_t> evntNumbers1;
     std::vector<size_t> evntNumbers2;
     std::vector<uint8_t> rowAna1;
@@ -59,10 +61,11 @@ public:
     TProfile *getAlignmentHisto() { return (TProfile *) _Alignment; }
     TProfile *getAlignmentPlus1Histo() { return (TProfile *) _AlignmentPlus1; }
     TProfile *getPulserRate() { return (TProfile *) _PulserRate; }
-    TGraph * get3DPixelCorrelation() { return _3DPixelCorrelation; }
-    TGraph * getSilPixelCorrelation() { return _SilPixelCorrelation; }
+    TProfile * get3DPixelCorrelation() { return (TProfile *)_3DPixelCorrelation; }
+    TProfile * getSilPixelCorrelation() { return (TProfile *)_SilPixelCorrelation; }
     TH2I *getIsAlignedHisto() { return _IsAligned; }
     TH2I *getIsAlignedPlus1Histo() { return _IsAlignedPlus1; }
+    TH2F *getPixelIsAlignedHisto() { return _PixelIsAligned; }
     bool hasWaveForm;
 
 private:
@@ -70,10 +73,8 @@ private:
     const uint32_t max_event_number;
 
     TProfile *init_profile(std::string, std::string, uint16_t bin_size = 0, std::string ytit = "Fraction of Hits @ Pulser Events [%]");
-
-    TGraph * init_tgraph(std::string, std::string, std::string);
-
     TH2I *init_th2i(std::string, std::string);
+    TH2F * init_pix_align();
 
     void FillIsAligned(TProfile *, TH2I *, TProfile *);
 

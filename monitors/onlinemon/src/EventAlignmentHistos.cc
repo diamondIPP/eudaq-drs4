@@ -22,11 +22,14 @@ EventAlignmentHistos::EventAlignmentHistos(): _bin_size(5000), max_event_number(
     _Alignment = init_profile("p_al", "Fraction of Hits at Pulser Events");
     _AlignmentPlus1 = init_profile("p_al1", "Fraction of Hits at Pulser Events + 1");
     _PulserRate = init_profile("p_pu", "Pulser Rate", 50, "Fraction of Pulser Events [%]");
-    _3DPixelCorrelation = init_tgraph("p_pc1", "3D Pixel Correlation", "Correlation Factor");
-    _SilPixelCorrelation = init_tgraph("p_pc2", "Silicon Pixel Correlation", "Correlation Factor");
+    _3DPixelCorrelation = init_profile("p_pc1", "Pixel Correlation - 3D", _bin_size, "Correlation Factor");
+    _3DPixelCorrelation->SetFillColor(fillColor);
+    _SilPixelCorrelation = init_profile("p_pc2", "Pixel Correlation - Silicon", _bin_size, "Correlation Factor");
+    _SilPixelCorrelation->SetFillColor(fillColor);
     _PulserRate->SetFillColor(fillColor);
     _IsAligned = init_th2i("h_al", "Event Alignment");
     _IsAlignedPlus1 = init_th2i("h_al1", "Event Alignment Plus 1");
+    _PixelIsAligned = init_pix_align();
     _Corr = new TGraph();
 }
 
@@ -39,6 +42,7 @@ void EventAlignmentHistos::Write(){
     _PulserRate->Write();
     _IsAligned->Write();
     _IsAlignedPlus1->Write();
+    _PixelIsAligned->Write();
     _3DPixelCorrelation->Write();
     _SilPixelCorrelation->Write();
 }
@@ -70,21 +74,22 @@ void EventAlignmentHistos::BuildCorrelation() {
   if (evntNumbers1.size() == 500){
     double mean_evt = mean(evntNumbers1);
     double corr = pearsoncoeff(rowAna1, rowDig3D);
-    _3DPixelCorrelation->SetPoint(_3DPixelCorrelation->GetN(), mean_evt, corr);
+    _3DPixelCorrelation->Fill(mean_evt, corr);
     rowDig3D.clear();
     rowAna1.clear();
     evntNumbers1.clear();
     _3DPixelCorrelation->GetYaxis()->SetRangeUser(-.2, 1);
+    _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), 4, (corr > .4) ? 3 : 5);
   }
   if (evntNumbers2.size() == 500){
-//    cout << evntNumbers2.size() << " " << rowAna2.size() << " " << ro
     double mean_evt = mean(evntNumbers2);
     double corr = pearsoncoeff(rowAna2, rowDigSil);
-    _SilPixelCorrelation->SetPoint(_SilPixelCorrelation->GetN(), mean_evt, corr);
+    _SilPixelCorrelation->Fill(mean_evt, corr);
     rowDigSil.clear();
     rowAna2.clear();
     evntNumbers2.clear();
     _SilPixelCorrelation->GetYaxis()->SetRangeUser(-.2, 1);
+    _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), 2, (corr > .4) ? 3 : 5);
   }
 }
 
@@ -101,29 +106,29 @@ double EventAlignmentHistos::pearsoncoeff(std::vector<T> X, std::vector<T> Y) {
 
 void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
 
-    //we need at least on waveform!
+  uint32_t event_no = sev.getEvent_number();
+  ResizeObjects(event_no);
   FillCorrelationVectors(sev);
   BuildCorrelation();
-  hasWaveForm = bool(sev.getNWaveforms());
-    if (!sev.getNWaveforms())
-        return;
-    uint32_t event_no = sev.getEvent_number();
-    ResizeObjects(event_no);
 
-    SimpleStandardWaveform wf = sev.getWaveform(0);
-    uint16_t n_clusters = 0;
-    for (uint8_t i_pl = 0; i_pl < sev.getNPlanes(); i_pl++){
-        SimpleStandardPlane pl = sev.getPlane(i_pl);
-        n_clusters += pl.getNClusters();
-    }
-    _PulserRate->Fill(event_no, 100 * wf.isPulserEvent());
-    if (wf.isPulserEvent() and _PulserRate->GetBinContent(_PulserRate->GetNbinsX() - 1) < 30){
-        _Alignment->Fill(event_no, n_clusters ? 100 : .1);
-        _AlignmentPlus1->Fill(event_no, _lastNClusters ? 100 : .1);
-        FillIsAligned(getAlignmentHisto(), _IsAligned, getPulserRate());
-        FillIsAligned(getAlignmentPlus1Histo(), _IsAlignedPlus1, getPulserRate());
-    }
-    _lastNClusters = n_clusters;
+  //we need at least on waveform!
+  if (!sev.getNWaveforms())
+      return;
+
+  SimpleStandardWaveform wf = sev.getWaveform(0);
+  uint16_t n_clusters = 0;
+  for (uint8_t i_pl = 0; i_pl < sev.getNPlanes(); i_pl++){
+      SimpleStandardPlane pl = sev.getPlane(i_pl);
+      n_clusters += pl.getNClusters();
+  }
+  _PulserRate->Fill(event_no, 100 * wf.isPulserEvent());
+  if (wf.isPulserEvent() and _PulserRate->GetBinContent(_PulserRate->GetNbinsX() - 1) < 30){
+      _Alignment->Fill(event_no, n_clusters ? 100 : .1);
+      _AlignmentPlus1->Fill(event_no, _lastNClusters ? 100 : .1);
+      FillIsAligned(getAlignmentHisto(), _IsAligned, getPulserRate());
+      FillIsAligned(getAlignmentPlus1Histo(), _IsAlignedPlus1, getPulserRate());
+  }
+  _lastNClusters = n_clusters;
 }
 
 TProfile * EventAlignmentHistos::init_profile(std::string name, std::string title, uint16_t bin_size, string ytit) {
@@ -139,18 +144,6 @@ TProfile * EventAlignmentHistos::init_profile(std::string name, std::string titl
     return prof;
 }
 
-TGraph * EventAlignmentHistos::init_tgraph(std::string name, std::string title, std::string y_tit) {
-
-  TGraph * gr = new TGraph();
-  gr->SetNameTitle(name.c_str(), title.c_str());
-  gr->GetYaxis()->SetTitle(y_tit.c_str());
-  gr->GetYaxis()->SetTitleOffset(1.2);
-  gr->GetYaxis()->SetRangeUser(-.2, 1);
-  gr->SetMarkerSize(.5);
-  gr->SetMarkerStyle(20);
-  return gr;
-}
-
 TH2I * EventAlignmentHistos::init_th2i(std::string name, std::string title){
     TH2I * histo = new TH2I(name.c_str(), title.c_str(), max_event_number / _bin_size, 0, max_event_number, 5, 0, 5);
     histo->SetStats(false);
@@ -161,6 +154,17 @@ TH2I * EventAlignmentHistos::init_th2i(std::string name, std::string title){
     histo->GetXaxis()->SetTitle("Event Number");
     return histo;
 }
+TH2F * EventAlignmentHistos::init_pix_align(){
+  TH2F * histo = new TH2F("h_pal", "Pixel Event Aignment", max_event_number / _bin_size, 0, max_event_number, 5, 0, 5);
+  histo->SetStats(false);
+  histo->GetZaxis()->SetRangeUser(0, 5);
+  histo->GetXaxis()->SetRangeUser(0, _bin_size);
+  histo->GetYaxis()->SetBinLabel(2, "3D");
+  histo->GetYaxis()->SetBinLabel(4, "Sil");
+  histo->GetXaxis()->SetTitle("Event Number");
+  return histo;
+}
+
 void EventAlignmentHistos::FillIsAligned(TProfile * prof, TH2I * histo, TProfile * pulser) {
     if (pulser->GetBinContent(pulser->GetNbinsX() - 1) > 30)
         return;
@@ -184,7 +188,11 @@ void EventAlignmentHistos::ResizeObjects(uint32_t ev_no) {
         _AlignmentPlus1->SetBins(bins, 0, max);
         _IsAligned->GetXaxis()->SetRangeUser(0, max);
         _IsAlignedPlus1->GetXaxis()->SetRangeUser(0, max);
+        _PixelIsAligned->GetXaxis()->SetRangeUser(0, max);
+        _3DPixelCorrelation->SetBins(bins, 0, max);
+        _SilPixelCorrelation->SetBins(bins, 0, max);
     }
+
     if (_PulserRate->GetXaxis()->GetXmax() < ev_no) {
         uint16_t bin_size = uint16_t(_PulserRate->GetBinWidth(0));
         uint32_t bins = (ev_no + bin_size) / bin_size;
