@@ -57,6 +57,7 @@ namespace eudaq {
     virtual ~FileWriterTreeTelescope();
     // Add to get maximum number of events: DA
     virtual long GetMaxEventNumber();
+    virtual string GetStats(const DetectorEvent &);
   private:
     TFile * m_tfile; // book the pointer to a file (to store the otuput)
     TTree * m_ttree; // book the tree (to store the needed event info)
@@ -77,7 +78,7 @@ namespace eudaq {
     std::vector<uint16_t> * f_row;
     std::vector<int16_t> * f_adc;
     std::vector<uint32_t> * f_charge;
-    std::vector<uint16_t> * f_trig_phase;
+    std::vector<int16_t> * f_trig_phase;
 //    std::vector< std::vector<float>> * f_waveforms;
 
   };
@@ -87,7 +88,7 @@ namespace eudaq {
   }
 
   FileWriterTreeTelescope::FileWriterTreeTelescope(const std::string & /*param*/)
-    : m_tfile(0), m_ttree(0),m_noe(0),chan(4),n_pixels(90*90+60*60)
+    : m_tfile(0), m_ttree(0),m_noe(0),chan(4),n_pixels(90*90+60*60), f_event_number(0)
   {
     gROOT->ProcessLine("#include <vector>");
     //Initialize for configuration file:
@@ -99,7 +100,8 @@ namespace eudaq {
     f_row    = new std::vector<uint16_t>;
     f_adc    = new std::vector<int16_t>;
     f_charge = new std::vector<uint32_t>;
-    f_trig_phase = new std::vector<uint16_t>;
+    f_trig_phase = new std::vector<int16_t>;
+    f_trig_phase->resize(2);
 
 //    f_waveforms = new std::vector< std::vector<float> >;
 
@@ -140,8 +142,12 @@ namespace eudaq {
     m_ttree->Branch("row", &f_row);
     m_ttree->Branch("adc", &f_adc);
     m_ttree->Branch("charge", &f_charge);
-    m_ttree->Branch("trigphase", &f_trig_phase);
+    m_ttree->Branch("trigger_phase", &f_trig_phase);
 
+  }
+
+  string FileWriterTreeTelescope::GetStats(const DetectorEvent & dev) {
+    return PluginManager::GetStats(dev);
   }
 
   void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {
@@ -176,21 +182,20 @@ namespace eudaq {
     f_row->clear();
     f_adc->clear();
     f_charge->clear();
-    f_trig_phase->clear();
-
+    fill(f_trig_phase->begin(), f_trig_phase->end(), -1);
     uint8_t ind = 0;
     for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
 
       const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
       if(plane.Sensor() == "DUT") {
         std::vector<double> cds = plane.GetPixels<double>();
+        f_trig_phase->at(0) = int16_t(plane.GetTrigPhase());
         for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
           f_plane->push_back(ind); // has to be ind and not iplane, so that the DUT are always first and REF after
           f_col->push_back(uint16_t(plane.GetX(ipix)));
           f_row->push_back(uint16_t(plane.GetY(ipix)));
           f_adc->push_back(int16_t(plane.GetPixel(ipix)));
           f_charge->push_back(42);                        // todo: do charge conversion here!
-          f_trig_phase->push_back(uint16_t(plane.GetTrigPhase()));
         }
         ind++;
       }
@@ -200,13 +205,13 @@ namespace eudaq {
       const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
       if(plane.Sensor() != "DUT") {
         std::vector<double> cds = plane.GetPixels<double>();
+        f_trig_phase->at(1) = int16_t(plane.GetTrigPhase());
         for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
           f_plane->push_back(ind); // has to be ind and not iplane, so that the DUT are always first and REF after
           f_col->push_back(uint16_t(plane.GetX(ipix)));
           f_row->push_back(uint16_t(plane.GetY(ipix)));
           f_adc->push_back(int16_t(plane.GetPixel(ipix)));
           f_charge->push_back(42);                        // todo: do charge conversion here!
-          f_trig_phase->push_back(uint16_t(plane.GetTrigPhase()));
         }
         ind++;
       }

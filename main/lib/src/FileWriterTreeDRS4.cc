@@ -62,6 +62,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     wf_thr = {125, 10, 40, 300};
 
     // spectrum vectors
+    decon.resize(1024, 0);
     peaks_x.resize(4, new std::vector<uint16_t>);
     peaks_x_time.resize(4, new std::vector<float>);
     peaks_y.resize(4, new std::vector<float>);

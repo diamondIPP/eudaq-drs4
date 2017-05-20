@@ -1,3 +1,4 @@
+#include <eudaq/PluginManager.hh>
 #include "eudaq/FileReader.hh"
 #include "eudaq/FileWriter.hh"
 #include "eudaq/OptionParser.hh"
@@ -53,7 +54,7 @@ int main(int, char ** argv) {
       writer->SetFilePattern(opat.Value());
       writer->StartRun(reader.RunNumber());
       ProgressBar bla(uint32_t(writer->GetMaxEventNumber()));
-	  int event_nr=0;
+	  uint32_t event_nr=0;
       do {
 		  if (!numbers.empty()&&reader.GetDetectorEvent().GetEventNumber()>numbers.back())
 		  {
@@ -63,8 +64,11 @@ int main(int, char ** argv) {
         writer->WriteEvent(reader.GetDetectorEvent());
         if(dbg>0)std::cout<< "writing one more event" << std::endl;
         ++event_nr;
-        if (writer->GetMaxEventNumber())
+        if (writer->GetMaxEventNumber()){
+          if (event_nr == writer->GetMaxEventNumber() + 1)
+            writer->GetStats(reader.GetDetectorEvent());
           bla.update(event_nr);
+        }
         else
           if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
       }

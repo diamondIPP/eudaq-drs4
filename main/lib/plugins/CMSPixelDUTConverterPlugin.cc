@@ -26,6 +26,8 @@ namespace eudaq {
       return m_converter.GetStandardSubEvent(out,in);
     }
 
+    virtual std::string GetStats() { return m_converter.GetStats(); }
+
 #if USE_LCIO && USE_EUTELESCOPE
     virtual void GetLCIORunHeader(lcio::LCRunHeader & header, eudaq::Event const & bore, eudaq::Configuration const & conf) const {
       return m_converter.GetLCIORunHeader(header, bore, conf);

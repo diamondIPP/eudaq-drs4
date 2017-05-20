@@ -91,6 +91,13 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
 }
 
 
+std::pair<uint16_t, float> StandardWaveform::getMaxPeak() const {
+    auto max = std::max_element(m_samples.begin(), m_samples.end());
+    auto min = std::min_element(m_samples.begin(), m_samples.end());
+    auto peak = (abs(int(*max)) > abs(int(*min))) ? max : min;
+    return std::make_pair(uint16_t(std::distance(m_samples.begin(), peak)), *peak);
+}
+
 std::vector<uint16_t> * StandardWaveform::getAllPeaksAbove(uint16_t min, uint16_t max, float threshold) const {
 	std::vector<uint16_t> * peak_positions = new std::vector<uint16_t>;
 	// make sure min does not start at zero

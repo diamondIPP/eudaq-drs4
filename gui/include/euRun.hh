@@ -123,6 +123,10 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
     }
     void timer() {
       if (!m_stopping) {
+        if (m_event_number >= m_max_event and m_event_number){
+          EUDAQ_INFO("Max event number reached! Stopping run!");
+          on_btnStop_clicked();
+        }
         if (m_runsizelimit >= 1024 && m_filebytes >= m_runsizelimit) {
           EUDAQ_INFO("File limit reached: " + to_string(m_filebytes) + " > " + to_string(m_runsizelimit));
           eudaq::mSleep(1000);
@@ -161,5 +165,6 @@ signals:
     int m_prevcoinc;
     double m_prevtime, m_runstarttime;
     int64_t m_filebytes;
+    uint32_t m_event_number;
     bool dostatus;
 };
