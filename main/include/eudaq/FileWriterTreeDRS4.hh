@@ -138,8 +138,8 @@ namespace eudaq {
         std::vector<bool> *v_is_saturated;
         std::vector<float> *v_median;
         std::vector<float> *v_average;
-        std::vector<std::vector<uint16_t> *> v_peak_positions;
-        std::vector<std::vector<float> *> v_peak_timings;
+        std::vector<uint16_t> * v_max_peak_position;
+        std::vector<float> * v_max_peak_time;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;
