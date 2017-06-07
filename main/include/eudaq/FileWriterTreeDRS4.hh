@@ -46,6 +46,7 @@ namespace eudaq {
         float avgWF(float, float, int);
         virtual ~FileWriterTreeDRS4();
         virtual long GetMaxEventNumber() { return max_event_number; }
+        virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
 
     private:
         unsigned runnumber;
