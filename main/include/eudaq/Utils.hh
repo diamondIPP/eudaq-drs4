@@ -17,6 +17,9 @@
 #include "eudaq/Platform.hh"
 #include <map>
 #include <sys/ioctl.h>
+#include <numeric>
+#include <cmath>
+#include <deque>
 
 #if ((defined WIN32) && (defined __CINT__))
 typedef unsigned long long uint64_t
@@ -354,6 +357,23 @@ namespace eudaq {
       return ret + std::string(spaces, ' ');
     }
 
+  template <typename T>
+  std::pair<float, float> calc_mean(std::vector<T> vec){
+
+    float mean = std::accumulate(vec.begin(), vec.end(), 0.0) / float(vec.size());
+    float sq_sum = std::inner_product(vec.begin(), vec.end(), vec.begin(), 0.0);
+    float stdev = std::sqrt(sq_sum / vec.size() - mean * mean);
+    return std::make_pair(mean, stdev);
+  }
+
+  template <typename T>
+  std::pair<float, float> calc_mean(std::deque<T> deq){
+
+    float mean = std::accumulate(deq.begin(), deq.end(), 0.0) / float(deq.size());
+    float sq_sum = std::inner_product(deq.begin(), deq.end(), deq.begin(), 0.0);
+    float stdev = std::sqrt(sq_sum / deq.size() - mean * mean);
+    return std::make_pair(mean, stdev);
+  }
     class ProgressBar {
 
     private:
