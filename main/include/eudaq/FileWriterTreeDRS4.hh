@@ -170,6 +170,10 @@ namespace eudaq {
         TMacro *macro;
 
         // spectrum
+        unsigned peak_noise_pos;
+        std::vector<std::pair<float, float> >* noise;
+        std::vector<std::deque<float> *> noise_vectors;
+        void calc_noise(uint8_t);
         std::vector<float> data_pos;
         std::vector<float> decon;
         std::vector<std::vector<uint16_t> *> peaks_x;

@@ -64,6 +64,9 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     wf_thr = {125, 10, 40, 300};
 
     // spectrum vectors
+    noise = new vector<pair<float, float> >;
+    noise->resize(4);
+    noise_vectors.resize(4, new deque<float>);
     decon.resize(1024, 0);
     peaks_x.resize(4, new std::vector<uint16_t>);
     peaks_x_time.resize(4, new std::vector<float>);
@@ -130,6 +133,7 @@ void FileWriterTreeDRS4::Configure(){
     max_event_number = m_config->Get("max_event_number", 0);
 
     // spectrum and fft
+    peak_noise_pos = m_config->Get("peak_noise_pos", unsigned(0));
     spec_sigma = m_config->Get("spectrum_sigma", 5);
     spec_decon_iter = m_config->Get("spectrum_deconIterations", 3);
     spec_aver_win = m_config->Get("spectrum_averageWindow", 5);
@@ -668,8 +672,17 @@ void FileWriterTreeDRS4::FillSpectrumData(uint8_t iwf){
         data_pos.resize(data->size());
         for (uint16_t i = 0; i < data->size(); i++)
             data_pos.at(i) = polarities.at(iwf) * data->at(i);
+      calc_noise(iwf);
     }
 } // end FillSpectrumData()
+
+void FileWriterTreeDRS4::calc_noise(uint8_t iwf) {
+  float value = data_pos.at(peak_noise_pos);
+  noise_vectors.at(iwf)->push_back(value);
+  if (f_event_number >= 1000)
+    noise_vectors.at(iwf)->pop_front();
+  noise->at(iwf) = calc_mean(*noise_vectors.at(iwf));
+}
 
 void FileWriterTreeDRS4::FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf){
     if (regions->count(iwf) == 0) return;
