@@ -646,11 +646,12 @@ inline void FileWriterTreeDRS4::DoSpectrumFitting(uint8_t iwf){
     if (!UseWaveForm(spectrum_waveforms, iwf)) return;
 
     w_spectrum.Start(false);
-    uint16_t noise = 20; // todo: find a way to extract to maximum noise
     float max = *max_element(data_pos.begin(), data_pos.end());
-    //return if the max element is not about the noise level
-    if (max < 2 * noise) return;
-    float threshold = 100 * 2 * noise / max;
+    //return if the max element is lower than 4 sigma of the noise
+    float threshold = 4 * noise->at(iwf).second + noise->at(iwf).first;
+    if (max <= threshold) return;
+    // tspec threshold is in per cent to max peak
+    threshold = threshold / max * 100;
     uint16_t size = uint16_t(data_pos.size());
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     for(uint8_t i=0; i < peaks; i++){
