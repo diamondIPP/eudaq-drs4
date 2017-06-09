@@ -1,5 +1,4 @@
 #include "eudaq/StandardEvent.hh"
-#include "eudaq/Exception.hh"
 #include <TMath.h>
 namespace eudaq {
 
@@ -56,7 +55,7 @@ float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const
         if(!_abs)
             integral += m_samples.at(i);
         else
-            integral += abs(m_samples.at(i));
+            integral += std::abs(m_samples.at(i));
     }
     return integral/(float)(max-(int)min);
 }
