@@ -13,13 +13,12 @@ namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
 FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
 : m_tfile(0), m_ttree(0), m_noe(0), chan(4), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0) {
 
+    gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
-//    gROOT->ProcessLine(".L ~/lib/root_loader.c+"); // what is that for? MR
-//    gROOT->ProcessLine(".L loader.C+");
-    gROOT->ProcessLine( "gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <pair>");
     gROOT->ProcessLine("#include <map>");
-    gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >,vector<vector<Float_t> >","vector;string;map");
+//    gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >", "vector;string;map");
+    gInterpreter->GenerateDictionary("vector<vector<Float_t> >;vector<vector<UShort_t> >");
     //Polarities of signals, default is positive signals
     polarities.resize(4, 1);
     pulser_polarities.resize(4, 1);
