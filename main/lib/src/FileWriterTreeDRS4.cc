@@ -396,6 +396,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         if (verbose > 3) cout << "number of samples in my wf " << n_samples << std::endl;
         // load the waveforms into the vector
         data = waveform.GetData();
+        calc_noise(iwf);
 
         this->FillSpectrumData(iwf);
         if (verbose > 3) cout<<"DoSpectrumFitting "<<iwf<<endl;
@@ -671,14 +672,15 @@ void FileWriterTreeDRS4::FillSpectrumData(uint8_t iwf){
         data_pos.resize(data->size());
         for (uint16_t i = 0; i < data->size(); i++)
             data_pos.at(i) = polarities.at(iwf) * data->at(i);
-      calc_noise(iwf);
     }
 } // end FillSpectrumData()
 
 void FileWriterTreeDRS4::calc_noise(uint8_t iwf) {
-  float value = data_pos.at(peak_noise_pos);
-  noise_vectors.at(iwf)->push_back(value);
-  if (f_event_number >= 1000)
+  float value = data->at(peak_noise_pos);
+  // filter out peaks at the pedestal
+  if (std::abs(value) < 6 * noise->at(iwf).second + std::abs(noise->at(iwf).first) or noise_vectors.at(iwf)->size() < 10)
+    noise_vectors.at(iwf)->push_back(value);
+  if (noise_vectors.at(iwf)->size() >= 1000)
     noise_vectors.at(iwf)->pop_front();
   noise->at(iwf) = calc_mean(*noise_vectors.at(iwf));
 }
