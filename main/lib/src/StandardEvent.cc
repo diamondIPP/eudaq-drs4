@@ -98,12 +98,32 @@ std::pair<uint16_t, float> StandardWaveform::getMaxPeak() const {
 }
 
 std::vector<uint16_t> * StandardWaveform::getAllPeaksAbove(uint16_t min, uint16_t max, float threshold) const {
+
 	std::vector<uint16_t> * peak_positions = new std::vector<uint16_t>;
-	// make sure min does not start at zero
-	if (!min) min++;
-	for (uint16_t j = uint16_t(min + 1); j <= max; j++)
-		if (abs(m_samples.at(j)) > threshold && abs(m_samples.at(uint16_t(j - 1))) < threshold)
-			peak_positions->push_back(j);
+  uint16_t low(0), high;
+
+	for (uint16_t j = uint16_t(min + 1); j <= max - 1; j++){
+    float val = std::abs(m_samples.at(j));
+    //find point when waveform gets above threshold
+    if (val > threshold and std::abs(m_samples.at(uint16_t(j - 1))) < threshold)
+      low = j;
+    //find point when waveform gets below threshold and find max in between
+    if (val > threshold and std::abs(m_samples.at(uint16_t(j + 1))) < threshold){
+      high = j;
+      // the peak has to have a certain width -> avoid spikes
+      if (high > low + 5){
+        auto min = std::min_element(m_samples.begin() + low, m_samples.begin() + high);
+        auto max = std::max_element(m_samples.begin() + low, m_samples.begin() + high);
+        auto peak = (std::abs((*max)) > std::abs(*min)) ? max : min;
+        uint16_t pos = uint16_t(std::distance(m_samples.begin(), peak));
+        if (not peak_positions->size())
+          peak_positions->push_back(pos);
+          // value has to be at least in the next bunch
+        else if (pos > peak_positions->back() + 35)
+          peak_positions->push_back(pos);
+      }
+    }
+  }
 	return peak_positions;
 }
 
