@@ -141,6 +141,9 @@ namespace eudaq {
         std::vector<float> *v_average;
         std::vector<uint16_t> * v_max_peak_position;
         std::vector<float> * v_max_peak_time;
+        std::vector<std::vector<uint16_t> > * v_peak_positions;
+        std::vector<std::vector<float> > * v_peak_times;
+        std::vector<uint8_t> * v_npeaks;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;

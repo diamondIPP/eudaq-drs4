@@ -55,6 +55,12 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     v_max_peak_position = new vector<uint16_t>;
     v_max_peak_time = new vector<float>;
     v_max_peak_position->resize(4, 0);
+    v_peak_positions = new vector<vector<uint16_t> >;
+    v_peak_times = new vector<vector<float> >;
+    v_peak_positions->resize(4);
+    v_peak_times->resize(4);
+    v_npeaks = new vector<uint8_t>;
+    v_npeaks->resize(4, 0);
     v_max_peak_time->resize(4, 0);
 
     // waveforms
@@ -286,6 +292,9 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     if (active_regions){
       m_ttree->Branch(TString::Format("max_peak_position"), &v_max_peak_position);
       m_ttree->Branch(TString::Format("max_peak_time"), &v_max_peak_time);
+      m_ttree->Branch("peak_positions", &v_peak_positions);
+      m_ttree->Branch("peak_times", &v_peak_times);
+      m_ttree->Branch("n_peaks", &v_npeaks);
     }
 
     // fft stuff and spectrum
@@ -548,6 +557,8 @@ inline void FileWriterTreeDRS4::ClearVectors(){
     f_adc->clear();
     f_charge->clear();
 
+    for (auto vec: *v_peak_positions) vec.clear();
+    for (auto vec: *v_peak_times) vec.clear();
     for (auto peak: peaks_x) peak->clear();
     for (auto peak: peaks_x_time) peak->clear();
     for (auto peak: peaks_y) peak->clear();
@@ -777,11 +788,13 @@ void FileWriterTreeDRS4::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
-//        vector<uint16_t> * peak_positions = wf->getAllPeaksAbove(0, 1023, 50);
-//        v_peak_positions.at(iwf) = peak_positions;
-//        vector<float> * peak_timings = new vector<float>;
-//        for (auto i_pos:*peak_positions) peak_timings->push_back(getTriggerTime(iwf, i_pos));
-//        v_peak_timings.at(iwf) = peak_timings;
+        float threshold = polarities.at(iwf) * 4 * noise->at(iwf).second + noise->at(iwf).first;
+        vector<uint16_t> * peak_positions = wf->getAllPeaksAbove(0, 1023, threshold);
+        v_peak_positions->at(iwf) = *peak_positions;
+        v_npeaks->at(iwf) = uint8_t(v_peak_positions->at(iwf).size());
+        vector<float> peak_timings;
+        for (auto i_pos:*peak_positions) peak_timings.push_back(getTriggerTime(iwf, i_pos));
+        v_peak_times->at(iwf) = peak_timings;
     }
 }
 
