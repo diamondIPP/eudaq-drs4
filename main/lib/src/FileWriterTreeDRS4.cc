@@ -65,7 +65,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     // spectrum vectors
     noise = new vector<pair<float, float> >;
     noise->resize(4);
-    noise_vectors.resize(4, new deque<float>);
+    for (uint8_t i = 0; i < 4; i++) noise_vectors[i] = new deque<float>;
     decon.resize(1024, 0);
     peaks_x.resize(4, new std::vector<uint16_t>);
     peaks_x_time.resize(4, new std::vector<float>);
