@@ -470,19 +470,26 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
 
   if (_mon == NULL)
     return;
-  string tree = "Correlations/HitFraction at Pulser Events";
+  string tree;
   if (simpev.getNWaveforms()) {
+    tree = "Correlations/PadCorrelation/HitFraction at Pulser Events";
     _mon->getOnlineMon()->registerTreeItem(tree);
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentHisto(), "", 0);
-    tree = "Correlations/HitFraction at Pulser Events +1";
+    tree = "Correlations/PadCorrelation/HitFraction at Pulser Events +1";
     _mon->getOnlineMon()->registerTreeItem(tree);
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentPlus1Histo(), "", 0);
-    tree = "Correlations/Is Aligned";
+    tree = "Correlations/PadCorrelation/Is Aligned";
     _mon->getOnlineMon()->registerTreeItem(tree);
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedHisto(), "COL", 0);
-    tree = "Correlations/Plus 1 Is Aligned";
+    tree = "Correlations/PadCorrelation/Plus 1 Is Aligned";
     _mon->getOnlineMon()->registerTreeItem(tree);
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedPlus1Histo(), "COL", 0);
+
+    tree = "Correlations/PadCorrelation/Pulser Rate";
+    _mon->getOnlineMon()->registerTreeItem(tree);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPulserRate(), "hist", 0);
+
+    _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PadCorrelation"); //make summary page
   }
   else{
     tree = "Correlations/PixelCorrelation/PC 3D";
@@ -496,16 +503,13 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
     tree = "Correlations/PixelCorrelation/Pixel Alignment";
     _mon->getOnlineMon()->registerTreeItem(tree);
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelIsAlignedHisto(), "COL", 0);
+
+    _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PixelCorrelation"); //make summary page
   }
 
   _mon->getOnlineMon()->makeTreeItemSummary("Correlations"); //make summary page
-  _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PixelCorrelation"); //make summary page
 
-  if (simpev.getNWaveforms()) {
-    tree = "Correlations/Pulser Rate";
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPulserRate(), "hist", 0);
-  }
+  cout << "TEST" << endl;
 }
 
 bool CorrelationCollection::getCorrelateAllPlanes() const

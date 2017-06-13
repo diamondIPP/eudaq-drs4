@@ -108,12 +108,13 @@ void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
 
   uint32_t event_no = sev.getEvent_number();
   ResizeObjects(event_no);
-  FillCorrelationVectors(sev);
-  BuildCorrelation();
 
-  //we need at least on waveform!
-  if (!sev.getNWaveforms())
-      return;
+  // Pixel Stuff
+  if (!sev.getNWaveforms()){
+    FillCorrelationVectors(sev);
+    BuildCorrelation();
+    return;
+  }
 
   SimpleStandardWaveform wf = sev.getWaveform(0);
   uint16_t n_clusters = 0;
