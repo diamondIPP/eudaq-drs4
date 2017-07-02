@@ -95,7 +95,8 @@ namespace eudaq {
 
     std::string GetStats() {
       std::cout << "Getting decoding statistics for detector " << m_detector << std::endl;
-      return decoding_stats.getString();
+      // return decoding_stats.getString();
+      return "";
     }
 
     void read_PHCalibrationData(const Configuration & cnf){
