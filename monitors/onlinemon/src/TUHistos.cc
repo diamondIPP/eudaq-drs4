@@ -16,7 +16,6 @@
 
 
 TUHistos::TUHistos(): n_scaler(4){
-  std::cout << "1" << std::endl;
 
   _CoincidenceCount = create_th1i("Concidence Rate", "Coincidence Rate [Hz]; Run Time [s]");
   _CoincidenceCountNoScint = create_th1i("Coincidence Rate No Scintillator", "Coincidence Rate No Scintillator [Hz]; Run Time [s]");
@@ -26,10 +25,8 @@ TUHistos::TUHistos(): n_scaler(4){
   _AcceptedPulserEvents = create_th1i("Accepted Pulser Event Rate", "Accepted Pulser Event Rate [Hz]; Run Time [s]");
   _EventCount = create_th1i("Event Rate", "Event Rate [Hz]; Run Time [s]");
   _AvgBeamCurrent = create_th1i("Average Beam Current", "Average Beam Current [uA]; Run Time [s]");
-  std::cout << "2" << std::endl;
   for (unsigned i(0); i < n_scaler; i++)
     _Scaler.push_back(create_th1i(TString::Format("Rate Plane Scaler %d", i + 1), TString::Format("Rate Plane Scaler %d [Hz]; Run Time [s]", i + 1)));
-  std::cout << "3" << std::endl;
 
 
   called = false;
@@ -95,8 +92,10 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       uint32_t accepted_pulser_events = ev.GetAcceptedPulserCount();
       uint32_t handshake_count = ev.GetHandshakeCount();
       uint32_t cal_beam_current = ev.GetBeamCurrent();
-      uint64_t scaler1 = ev.GetScalerValue(1);
-      uint64_t scaler2 = ev.GetScalerValue(2);
+
+      std::vector<uint32_t> scaler;
+      for (unsigned i(0); i < n_scaler; i++)
+        scaler.push_back(unsigned(ev.GetScalerValue(i)));
 
       uint32_t readout_interval = 500;
       uint32_t t_diff = (uint32_t) (new_timestamp - old_timestamp);
@@ -129,7 +128,7 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       _EventCount->Fill(x_axis, 1000*(handshake_count - old_handshake_count)/t_diff);
       _AvgBeamCurrent->Fill(x_axis, cal_beam_current);
       for (unsigned i(0); i < n_scaler; i++)
-        _Scaler.at(i)->Fill(x_axis, 1000*(scaler1 - old_scaler.at(i))/t_diff);
+        _Scaler.at(i)->Fill(x_axis, 1000 * (scaler.at(i) - old_scaler.at(i))/t_diff);
       }
       old_xaxis = x_axis;
     }
