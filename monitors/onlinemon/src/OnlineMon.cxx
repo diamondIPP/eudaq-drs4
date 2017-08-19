@@ -280,7 +280,7 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
     simpEv.setEvent_number(ev.GetEventNumber());
     simpEv.setEvent_timestamp(ev.GetTimestamp());
 
-    // Get Information wheater this event is an Pulser event
+    // Get Information whether this event is an Pulser event
     // this is a hardcoded fix for setup at psi, think about a different option
     bool isPulserEvent = false;
     for (unsigned int i = 0; i < nwf;i++){
@@ -296,27 +296,27 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
         }
     }//end for
 
-    for (unsigned int i = 0; i < nwf;i++){
-      const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
+    for (unsigned int i = 0; i < nwf;i++) {
+      const eudaq::StandardWaveform &waveform = ev.GetWaveform(i);
 
 
       #ifdef DEBUG
-       cout << "Waveform ID          " << waveform.ID()<<endl;
-       cout << "Waveform Size        " << sizeof(waveform) <<endl;
-       //cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
-       cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
-       cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
-       cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
-       cout << "Waveform Type        " << waveform.GetType() << endl;
-       cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
+      cout << "Waveform ID          " << waveform.ID()<<endl;
+      cout << "Waveform Size        " << sizeof(waveform) <<endl;
+      //cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
+      cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
+      cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
+      cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
+      cout << "Waveform Type        " << waveform.GetType() << endl;
+      cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
       #endif
 
       std::string sensorname;
       sensorname = waveform.GetType();
-      SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);
+      SimpleStandardWaveform simpWaveform(sensorname, waveform.ID(), waveform.GetNSamples(), &mon_configdata);
       simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
       simpWaveform.setNSamples(waveform.GetNSamples());
-      simpWaveform.addData(&(*waveform.GetData())[0]);      
+      simpWaveform.addData(&(*waveform.GetData())[0]);
       simpWaveform.Calculate();
       simpWaveform.setTimestamp(waveform.GetTimeStamp());
       simpWaveform.setEvent(ev.GetEventNumber());
@@ -324,23 +324,20 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       simpWaveform.setChannelNumber(waveform.GetChannelNumber());
       simpWaveform.setPulserEvent(isPulserEvent);
       simpEv.addWaveform(simpWaveform);
-
-
+    }
 
 /************************************** Start TU Event Stuff **************************************/
 //don't blame me for this code ..
 
-      unsigned int ntu = (unsigned int) ev.NumTUEvents();
+      if (ntu > 0) {
 
-      if(ntu > 0){
-
-        if(ntu > 1){std::cout << "There is more than 1 TUEvent in the vector. Not good.." << std::endl;}
+        if (ntu > 1) std::cout << "There is more than 1 TUEvent in the vector. Not good.." << std::endl;
         const eudaq::StandardTUEvent &tuev = ev.GetTUEvent(0);
         SimpleStandardTUEvent simpleTUEvent(tuev.GetType());
- 
+
         //just transfer data to SimpleStandardTUEvent for processing:
         bool valid = tuev.GetValid();
-        if(valid){
+        if (valid) {
           simpleTUEvent.SetValid(1);
           simpleTUEvent.SetTimeStamp(tuev.GetTimeStamp());
           simpleTUEvent.SetCoincCount(tuev.GetCoincCount());
@@ -351,10 +348,10 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
           simpleTUEvent.SetAcceptedPulserCount(tuev.GetAcceptedPulserCount());
           simpleTUEvent.SetHandshakeCount(tuev.GetHandshakeCount());
           simpleTUEvent.SetBeamCurrent(tuev.GetBeamCurrent());
-          for(int idx=0; idx<10; idx++){ //hard coded beause..., that's why
+          for (int idx = 0; idx < 10; idx++) { //hard coded beause..., that's why
             simpleTUEvent.SetScalerValue(idx, tuev.GetScalerValue(idx));
           }
-        }else{
+        } else {
           simpleTUEvent.SetValid(0);
         }
 
@@ -363,9 +360,6 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       }//if ntu > 0
 
 /************************************** End TU Event Stuff **************************************/
-
-
-    }
 
 
     if (skip_dodgy_event){
