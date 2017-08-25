@@ -492,7 +492,7 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
     _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PadCorrelation"); //make summary page
   }
   else{
-    for (uint8_t idig(0); idig < _evAlign->getNDigPlanes(); idig++){
+    for (uint8_t idig(0); idig < simpev.getNPlanes() - _evAlign->getNAnaPlanes(); idig++){
       tree = string(TString::Format("Correlations/PixelCorrelation/REF %d", idig + 7));
       _mon->getOnlineMon()->registerTreeItem(tree);
       _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelCorrelation(idig ), "hist", 0);

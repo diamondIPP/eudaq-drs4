@@ -72,6 +72,7 @@ public:
     TH2I *getIsAlignedPlus1Histo() { return _IsAlignedPlus1; }
     TH2F *getPixelIsAlignedHisto() { return _PixelIsAligned; }
     uint8_t getNDigPlanes() { return _n_dig_planes; }
+    uint8_t getNAnaPlanes() { return _n_analogue_planes; }
     bool hasWaveForm;
 
 private:
