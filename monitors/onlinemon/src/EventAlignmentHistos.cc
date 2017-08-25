@@ -17,15 +17,13 @@
 using namespace std;
 
 
-EventAlignmentHistos::EventAlignmentHistos(): _bin_size(5000), max_event_number(uint32_t(5e7)), _lastNClusters(0), fillColor(821)
+EventAlignmentHistos::EventAlignmentHistos(): _bin_size(5000), max_event_number(uint32_t(5e7)), _n_analogue_planes(4), _n_dig_planes(0), _lastNClusters(0), fillColor(821)
 {
     _Alignment = init_profile("p_al", "Fraction of Hits at Pulser Events");
     _AlignmentPlus1 = init_profile("p_al1", "Fraction of Hits at Pulser Events + 1");
     _PulserRate = init_profile("p_pu", "Pulser Rate", 50, "Fraction of Pulser Events [%]");
-    _3DPixelCorrelation = init_profile("p_pc1", "Pixel Correlation - 3D", _bin_size, "Correlation Factor");
-    _3DPixelCorrelation->SetFillColor(fillColor);
-    _SilPixelCorrelation = init_profile("p_pc2", "Pixel Correlation - Silicon", _bin_size, "Correlation Factor");
-    _SilPixelCorrelation->SetFillColor(fillColor);
+    for (uint8_t i(7); i < 10; i++)
+      _PixelCorrelations.push_back(init_profile(string(TString::Format("p_pc%d", i)), string(TString::Format("Pixel Correlation - REF %d", i)), _bin_size, "Correlation Factor", fillColor));
     _PulserRate->SetFillColor(fillColor);
     _IsAligned = init_th2i("h_al", "Event Alignment");
     _IsAlignedPlus1 = init_th2i("h_al1", "Event Alignment Plus 1");
@@ -43,53 +41,45 @@ void EventAlignmentHistos::Write(){
     _IsAligned->Write();
     _IsAlignedPlus1->Write();
     _PixelIsAligned->Write();
-    _3DPixelCorrelation->Write();
-    _SilPixelCorrelation->Write();
+    for (auto icor:_PixelCorrelations)
+      icor->Write();
 }
 
 void EventAlignmentHistos::FillCorrelationVectors(const SimpleStandardEvent &sev) {
 
-    int iRef1 = (sev.getPlane(0).getName() == "DUT") ? 4 : 0;
-    int iRef2 = (sev.getPlane(0).getName() == "DUT") ? 5 : 1;
-    int iDut1 = (sev.getPlane(0).getName() == "DUT") ? 2 : 5;
-    int iDut2 = (sev.getPlane(0).getName() == "DUT") ? 1 : 4;
-    SimpleStandardPlane pAna1 = sev.getPlane(iDut1);
-    SimpleStandardPlane pAna2 = sev.getPlane(iDut2);
-    SimpleStandardPlane pDig1 = sev.getPlane(iRef1);
-    SimpleStandardPlane pDig2 = sev.getPlane(iRef2);
-    if (pAna1.getNClusters() == 1 and pDig1.getNClusters() == 1){
-      evntNumbers1.push_back(sev.getEvent_number());
-      rowAna1.push_back(uint8_t(pAna1.getCluster(0).getY()));
-      rowDig3D.push_back(uint8_t(pDig1.getCluster(0).getY()));
+    //TODO: dp that the first time we get an event!
+    vector<int> ana_planes;
+    vector<SimpleStandardPlane> pDigs;
+    for (uint8_t iplane(0); iplane < _n_analogue_planes; iplane++)
+      ana_planes.push_back((sev.getPlane(0).getName() == "DUT") ? iplane : _n_analogue_planes + iplane);
+    for (uint8_t iplane(0); iplane < sev.getNPlanes() - _n_analogue_planes; iplane++)
+      pDigs.push_back(sev.getPlane((sev.getPlane(0).getName() == "DUT") ? _n_analogue_planes + iplane : iplane));
+    // choose planes closest to digital planes
+    SimpleStandardPlane pAna1 = sev.getPlane(ana_planes.at(2));
+    SimpleStandardPlane pAna2 = sev.getPlane(ana_planes.at(1));
+
+    for (uint8_t iplane(0); iplane < pDigs.size(); iplane++){
+      if (pAna1.getNClusters() == 1 and pDigs.at(iplane).getNClusters() == 1){
+        eventNumbers.at(iplane).push_back(sev.getEvent_number());
+        rowAna1.push_back(uint8_t(pAna1.getCluster(0).getY()));
+        rowDig.at(iplane).push_back(uint8_t(pDigs.at(iplane).getCluster(0).getY()));
+      }
     }
-  if (pAna2.getNClusters() == 1 and pDig2.getNClusters() == 1){
-    evntNumbers2.push_back(sev.getEvent_number());
-    rowAna2.push_back(uint8_t(pAna2.getCluster(0).getY()));
-    rowDigSil.push_back(uint8_t(pDig2.getCluster(0).getY()));
-  }
 }
 
 void EventAlignmentHistos::BuildCorrelation() {
 
-  if (evntNumbers1.size() == 500){
-    double mean_evt = mean(evntNumbers1);
-    double corr = pearsoncoeff(rowAna1, rowDig3D);
-    _3DPixelCorrelation->Fill(mean_evt, corr);
-    rowDig3D.clear();
-    rowAna1.clear();
-    evntNumbers1.clear();
-    _3DPixelCorrelation->GetYaxis()->SetRangeUser(-.2, 1);
-    _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), 4, (corr > .4) ? 3 : 5);
-  }
-  if (evntNumbers2.size() == 500){
-    double mean_evt = mean(evntNumbers2);
-    double corr = pearsoncoeff(rowAna2, rowDigSil);
-    _SilPixelCorrelation->Fill(mean_evt, corr);
-    rowDigSil.clear();
-    rowAna2.clear();
-    evntNumbers2.clear();
-    _SilPixelCorrelation->GetYaxis()->SetRangeUser(-.2, 1);
-    _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), 2, (corr > .4) ? 3 : 5);
+  for (uint8_t iplane(0); iplane < _n_dig_planes; iplane++) {
+    if (eventNumbers.at(iplane).size() == 500) {
+      double mean_evt = mean(eventNumbers.at(iplane));
+      double corr = pearsoncoeff(rowAna1, rowDig.at(iplane));
+      _PixelCorrelations.at(iplane)->Fill(mean_evt, corr);
+      rowDig.at(iplane).clear();
+      rowAna1.clear();
+      eventNumbers.at(iplane).clear();
+      _PixelCorrelations.at(iplane)->GetYaxis()->SetRangeUser(-.2, 1);
+      _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), 4, (corr > .4) ? 3 : 5);
+    }
   }
 }
 
@@ -106,6 +96,11 @@ double EventAlignmentHistos::pearsoncoeff(std::vector<T> X, std::vector<T> Y) {
 
 void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
 
+
+  if (not _n_dig_planes){
+    _n_dig_planes = uint8_t(sev.getNPlanes() - _n_analogue_planes);
+    InitVectors();
+  }
   uint32_t event_no = sev.getEvent_number();
   ResizeObjects(event_no);
 
@@ -132,7 +127,7 @@ void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
   _lastNClusters = n_clusters;
 }
 
-TProfile * EventAlignmentHistos::init_profile(std::string name, std::string title, uint16_t bin_size, string ytit) {
+TProfile * EventAlignmentHistos::init_profile(std::string name, std::string title, uint16_t bin_size, string ytit, Color_t fill_color) {
 
     bin_size = bin_size ? bin_size : _bin_size;
     TProfile * prof = new TProfile(name.c_str(), title.c_str(), 1, 0, bin_size);
@@ -141,6 +136,8 @@ TProfile * EventAlignmentHistos::init_profile(std::string name, std::string titl
     prof->GetXaxis()->SetTitle("Event Number");
     prof->GetYaxis()->SetTitle(ytit.c_str());
     prof->GetYaxis()->SetTitleOffset(1.3);
+    if (fill_color)
+      prof->SetFillColor(fill_color);
 
     return prof;
 }
@@ -190,8 +187,8 @@ void EventAlignmentHistos::ResizeObjects(uint32_t ev_no) {
         _IsAligned->GetXaxis()->SetRangeUser(0, max);
         _IsAlignedPlus1->GetXaxis()->SetRangeUser(0, max);
         _PixelIsAligned->GetXaxis()->SetRangeUser(0, max);
-        _3DPixelCorrelation->SetBins(bins, 0, max);
-        _SilPixelCorrelation->SetBins(bins, 0, max);
+        for (uint8_t iplane(0); iplane < _n_dig_planes; iplane++)
+          _PixelCorrelations.at(iplane)->SetBins(bins, 0, max);
     }
 
     if (_PulserRate->GetXaxis()->GetXmax() < ev_no) {
@@ -209,5 +206,11 @@ void EventAlignmentHistos::Reset(){
     _IsAligned->Reset();
     _IsAlignedPlus1->Reset();
     _PulserRate->Reset();
+}
+
+void EventAlignmentHistos::InitVectors() {
+
+  eventNumbers.resize(_n_dig_planes);
+  rowDig.resize(_n_dig_planes);
 }
 

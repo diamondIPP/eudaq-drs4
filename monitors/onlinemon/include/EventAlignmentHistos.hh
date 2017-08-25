@@ -26,6 +26,7 @@ class TProfile2D;
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include "Rtypes.h"
 
 class EventAlignmentHistos {
 
@@ -35,16 +36,19 @@ protected:
     TH1 *_PulserRate;
     TH2I *_IsAligned;
     TH2I *_IsAlignedPlus1;
-    TH1 * _3DPixelCorrelation;
-    TH1 * _SilPixelCorrelation;
+    std::vector<TH1 *> _PixelCorrelations;
+//    TH1 * _3DPixelCorrelation;
+//    TH1 * _SilPixelCorrelation;
     uint16_t _lastNClusters;
     TH2F * _PixelIsAligned;
-    std::vector<size_t> evntNumbers1;
-    std::vector<size_t> evntNumbers2;
+    std::vector<std::vector<size_t> > eventNumbers;
+//    std::vector<size_t> evntNumbers1;
+//    std::vector<size_t> evntNumbers2;
     std::vector<uint8_t> rowAna1;
     std::vector<uint8_t> rowAna2;
-    std::vector<uint8_t> rowDig3D;
-    std::vector<uint8_t> rowDigSil;
+    std::vector<std::vector<uint8_t > > rowDig;
+//    std::vector<uint8_t> rowDig3D;
+//    std::vector<uint8_t> rowDigSil;
     TGraph * _Corr;
 
 public:
@@ -61,18 +65,22 @@ public:
     TProfile *getAlignmentHisto() { return (TProfile *) _Alignment; }
     TProfile *getAlignmentPlus1Histo() { return (TProfile *) _AlignmentPlus1; }
     TProfile *getPulserRate() { return (TProfile *) _PulserRate; }
-    TProfile * get3DPixelCorrelation() { return (TProfile *)_3DPixelCorrelation; }
-    TProfile * getSilPixelCorrelation() { return (TProfile *)_SilPixelCorrelation; }
+    TProfile * getPixelCorrelation(uint8_t icor) { return (TProfile *)_PixelCorrelations.at(icor); }
+//    TProfile * get3DPixelCorrelation() { return (TProfile *)_3DPixelCorrelation; }
+//    TProfile * getSilPixelCorrelation() { return (TProfile *)_SilPixelCorrelation; }
     TH2I *getIsAlignedHisto() { return _IsAligned; }
     TH2I *getIsAlignedPlus1Histo() { return _IsAlignedPlus1; }
     TH2F *getPixelIsAlignedHisto() { return _PixelIsAligned; }
+    uint8_t getNDigPlanes() { return _n_dig_planes; }
     bool hasWaveForm;
 
 private:
     const uint16_t _bin_size;
     const uint32_t max_event_number;
+    const uint8_t _n_analogue_planes;
+    uint8_t _n_dig_planes;
 
-    TProfile *init_profile(std::string, std::string, uint16_t bin_size = 0, std::string ytit = "Fraction of Hits @ Pulser Events [%]");
+    TProfile *init_profile(std::string, std::string, uint16_t bin_size = 0, std::string ytit = "Fraction of Hits @ Pulser Events [%]", Color_t fill_color = 0);
     TH2I *init_th2i(std::string, std::string);
     TH2F * init_pix_align();
 
@@ -82,8 +90,9 @@ private:
     void BuildCorrelation();
 
     void ResizeObjects(uint32_t);
+    void InitVectors();
 
-    uint16_t fillColor;
+    Color_t fillColor;
 
     template <typename T>
     T sum(std::vector<T> a) {

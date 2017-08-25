@@ -492,13 +492,11 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
     _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PadCorrelation"); //make summary page
   }
   else{
-    tree = "Correlations/PixelCorrelation/PC 3D";
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree, _evAlign->get3DPixelCorrelation(), "hist", 0);
-
-    tree = "Correlations/PixelCorrelation/PC Silicon";
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getSilPixelCorrelation(), "hist", 0);
+    for (uint8_t idig(0); idig < _evAlign->getNDigPlanes(); idig++){
+      tree = string(TString::Format("Correlations/PixelCorrelation/REF %d", idig + 7));
+      _mon->getOnlineMon()->registerTreeItem(tree);
+      _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelCorrelation(idig ), "hist", 0);
+    }
 
     tree = "Correlations/PixelCorrelation/Pixel Alignment";
     _mon->getOnlineMon()->registerTreeItem(tree);
@@ -508,8 +506,6 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
   }
 
   _mon->getOnlineMon()->makeTreeItemSummary("Correlations"); //make summary page
-
-  cout << "TEST" << endl;
 }
 
 bool CorrelationCollection::getCorrelateAllPlanes() const
