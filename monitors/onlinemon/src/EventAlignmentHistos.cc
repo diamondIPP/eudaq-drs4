@@ -170,7 +170,6 @@ void EventAlignmentHistos::FillIsAligned(TProfile * prof, TH2I * histo, TProfile
     // only fill if not already set!
     if (histo->GetBinContent(last_bin) > 0)
         return;
-//    cout << last_bin << " " << prof->GetBinContent(last_bin)
     if (prof->GetBinContent(last_bin) > 20)
         histo->SetBinContent(last_bin, 4, 5);
     else

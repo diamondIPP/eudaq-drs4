@@ -37,18 +37,12 @@ protected:
     TH2I *_IsAligned;
     TH2I *_IsAlignedPlus1;
     std::vector<TH1 *> _PixelCorrelations;
-//    TH1 * _3DPixelCorrelation;
-//    TH1 * _SilPixelCorrelation;
     uint16_t _lastNClusters;
     TH2F * _PixelIsAligned;
     std::vector<std::vector<size_t> > eventNumbers;
-//    std::vector<size_t> evntNumbers1;
-//    std::vector<size_t> evntNumbers2;
     std::vector<uint8_t> rowAna1;
     std::vector<uint8_t> rowAna2;
     std::vector<std::vector<uint8_t > > rowDig;
-//    std::vector<uint8_t> rowDig3D;
-//    std::vector<uint8_t> rowDigSil;
     TGraph * _Corr;
 
 public:
@@ -66,8 +60,6 @@ public:
     TProfile *getAlignmentPlus1Histo() { return (TProfile *) _AlignmentPlus1; }
     TProfile *getPulserRate() { return (TProfile *) _PulserRate; }
     TProfile * getPixelCorrelation(uint8_t icor) { return (TProfile *)_PixelCorrelations.at(icor); }
-//    TProfile * get3DPixelCorrelation() { return (TProfile *)_3DPixelCorrelation; }
-//    TProfile * getSilPixelCorrelation() { return (TProfile *)_SilPixelCorrelation; }
     TH2I *getIsAlignedHisto() { return _IsAligned; }
     TH2I *getIsAlignedPlus1Histo() { return _IsAlignedPlus1; }
     TH2F *getPixelIsAlignedHisto() { return _PixelIsAligned; }
@@ -126,9 +118,6 @@ private:
 
     template <typename T>
     double pearsoncoeff(std::vector<T> X, std::vector<T> Y);
-//    {
-//      return sum(multiply(minus(X, mean(X)), minus(Y, mean(Y)))) / (X.size() * stdev(X) * stdev(Y));
-//    }
 
     template <typename T>
     std::vector<T> minus(std::vector<T> a, double b) {
