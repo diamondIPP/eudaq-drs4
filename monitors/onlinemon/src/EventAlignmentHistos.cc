@@ -187,11 +187,8 @@ void EventAlignmentHistos::FillIsAligned() {
     // don't fill if already set
     if (_IsAligned->GetBinContent(last_bin) > 0 or all > _nOffsets)
         return;
-    // always set the 0 offset
-    _IsAligned->SetBinContent(last_bin, _nOffsets + 2, _Alignment.at(0)->GetBinContent(last_bin) > 20 ? 5 : 3);
     for (uint8_t i(0); i < _Alignment.size(); i++){
-      if (_Alignment.at(i - _nOffsets)->GetBinContent(last_bin) < 20)
-        _IsAligned->SetBinContent(last_bin, i + 2, 3);
+      _IsAligned->SetBinContent(last_bin, i + 2, _Alignment.at(i - _nOffsets)->GetBinContent(last_bin) < 30 ? 3 : 5);
     }
 }
 
