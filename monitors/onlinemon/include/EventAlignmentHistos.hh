@@ -20,10 +20,13 @@ class RootMonitor;
 class TString;
 class TGraph;
 class TProfile2D;
+class TText;
 
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <map>
+#include <deque>
 #include <cmath>
 #include <algorithm>
 #include "Rtypes.h"
@@ -31,13 +34,12 @@ class TProfile2D;
 class EventAlignmentHistos {
 
 protected:
-    TH1 *_Alignment;
-    TH1 *_AlignmentPlus1;
+    std::map<int, TH1 *> _Alignment;
     TH1 *_PulserRate;
+    TText * _PulserLegend;
     TH2I *_IsAligned;
-    TH2I *_IsAlignedPlus1;
     std::vector<TH1 *> _PixelCorrelations;
-    uint16_t _lastNClusters;
+    std::deque<uint8_t> _lastNClusters;
     TH2F * _PixelIsAligned;
     std::vector<std::vector<size_t> > eventNumbers;
     std::vector<uint8_t> rowAna1;
@@ -56,28 +58,30 @@ public:
 
     void Reset();
 
-    TProfile *getAlignmentHisto() { return (TProfile *) _Alignment; }
-    TProfile *getAlignmentPlus1Histo() { return (TProfile *) _AlignmentPlus1; }
+    TProfile *getAlignmentHisto() { return (TProfile *) _Alignment.at(0); }
     TProfile *getPulserRate() { return (TProfile *) _PulserRate; }
     TProfile * getPixelCorrelation(uint8_t icor) { return (TProfile *)_PixelCorrelations.at(icor); }
     TH2I *getIsAlignedHisto() { return _IsAligned; }
-    TH2I *getIsAlignedPlus1Histo() { return _IsAlignedPlus1; }
     TH2F *getPixelIsAlignedHisto() { return _PixelIsAligned; }
     uint8_t getNDigPlanes() { return _n_dig_planes; }
     uint8_t getNAnaPlanes() { return _n_analogue_planes; }
     bool hasWaveForm;
 
 private:
+    const uint8_t _nOffsets;
     const uint16_t _bin_size;
     const uint32_t max_event_number;
     const uint8_t _n_analogue_planes;
     uint8_t _n_dig_planes;
 
+    bool foundPulser;
+    uint8_t count;
+
     TProfile *init_profile(std::string, std::string, uint16_t bin_size = 0, std::string ytit = "Fraction of Hits @ Pulser Events [%]", Color_t fill_color = 0);
     TH2I *init_th2i(std::string, std::string);
     TH2F * init_pix_align();
 
-    void FillIsAligned(TProfile *, TH2I *, TProfile *);
+    void FillIsAligned();
 
     void FillCorrelationVectors(const SimpleStandardEvent &);
     void BuildCorrelation();
@@ -85,7 +89,7 @@ private:
     void ResizeObjects(uint32_t);
     void InitVectors();
 
-    Color_t fillColor;
+    const Color_t fillColor;
 
     template <typename T>
     T sum(std::vector<T> a) {
