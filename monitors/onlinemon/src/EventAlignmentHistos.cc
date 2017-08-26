@@ -178,9 +178,14 @@ TH2F * EventAlignmentHistos::init_pix_align(){
 
 void EventAlignmentHistos::FillIsAligned() {
 
+    // check if all are aligned (may happen at interruptions)
     uint16_t last_bin = uint16_t(_Alignment.at(0)->GetNbinsX() - 1);
+    uint8_t all = 0;
+    for (auto h:_Alignment)
+      if (h.second->GetBinContent(last_bin) < 20)
+        all++;
     // don't fill if already set
-    if (_IsAligned->GetBinContent(last_bin) > 0)
+    if (_IsAligned->GetBinContent(last_bin) > 0 or all > _nOffsets)
         return;
     // always set the 0 offset
     _IsAligned->SetBinContent(last_bin, _nOffsets + 2, _Alignment.at(0)->GetBinContent(last_bin) > 20 ? 5 : 3);
