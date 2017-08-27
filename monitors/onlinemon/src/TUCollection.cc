@@ -91,9 +91,11 @@ void TUCollection::bookHistograms(const SimpleStandardEvent & /*simpev*/){
     _mon->getOnlineMon()->registerTreeItem((performance_folder_name+"/Average Beam Current"));
     _mon->getOnlineMon()->registerHisto( (performance_folder_name+"/Average Beam Current"), tuevhistos->getAvgBeamCurrentHisto(), "P");
 
-    for (unsigned i(0); i < tuevhistos->getNScaler(); i++){
-      _mon->getOnlineMon()->registerTreeItem(string(TString::Format("%s/Plane Scaler %d", performance_folder_name.c_str(), i + 1)));
-      _mon->getOnlineMon()->registerHisto(string(TString::Format("%s/Plane Scaler %d", performance_folder_name.c_str(), i + 1)), tuevhistos->getScalerHisto(i), "P");
+
+    for (unsigned i(0); i <= tuevhistos->getNScaler(); i++){
+      const char * name = tuevhistos->getScalerHisto(i)->GetName();
+      _mon->getOnlineMon()->registerTreeItem(string(TString::Format("%s/%s Scaler", performance_folder_name.c_str(), name)));
+      _mon->getOnlineMon()->registerHisto(string(TString::Format("%s/%s Scaler", performance_folder_name.c_str(), name)), tuevhistos->getScalerHisto(i), "P");
     }
 
     _mon->getOnlineMon()->makeTreeItemSummary(performance_folder_name.c_str()); //make summary page

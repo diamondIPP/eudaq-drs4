@@ -25,8 +25,9 @@ TUHistos::TUHistos(): n_scaler(4){
   _AcceptedPulserEvents = create_th1i("Accepted Pulser Event Rate", "Accepted Pulser Event Rate [Hz]; Run Time [s]");
   _EventCount = create_th1i("Event Rate", "Event Rate [Hz]; Run Time [s]");
   _AvgBeamCurrent = create_th1i("Average Beam Current", "Average Beam Current [uA]; Run Time [s]");
+  _Scaler.push_back(create_th1i("Scintillator", "Scintillator Scaler [Hz]; Run Time [s]"));
   for (unsigned i(0); i < n_scaler; i++)
-    _Scaler.push_back(create_th1i(TString::Format("Rate Plane Scaler %d", i + 1), TString::Format("Rate Plane Scaler %d [Hz]; Run Time [s]", i + 1)));
+    _Scaler.push_back(create_th1i(TString::Format("Plane %d", i + 1), TString::Format("Rate Plane Scaler %d [Hz]; Run Time [s]", i + 1)));
 
 
   called = false;
@@ -38,7 +39,7 @@ TUHistos::TUHistos(): n_scaler(4){
   old_accepted_prescaled_events = 0;
   old_accepted_pulser_events = 0;
   old_handshake_count = 0;
-  old_scaler.resize(n_scaler, 0);
+  old_scaler.resize(n_scaler + 1, 0);
   old_xaxis =0;
 
 
@@ -62,7 +63,7 @@ void TUHistos::Write(){
   _AcceptedPulserEvents->Write();
   _EventCount->Write();
   _AvgBeamCurrent->Write();
-  for (unsigned i(0); i < n_scaler; i++)
+  for (unsigned i(0); i <= n_scaler; i++)
     _Scaler.at(i)->Write();
 
 }
@@ -94,7 +95,7 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       uint32_t cal_beam_current = ev.GetBeamCurrent();
 
       std::vector<uint32_t> scaler;
-      for (unsigned i(0); i < n_scaler; i++)
+      for (unsigned i(0); i <= n_scaler; i++)
         scaler.push_back(unsigned(ev.GetScalerValue(i)));
 
       uint32_t readout_interval = 500;
@@ -115,7 +116,7 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       _AcceptedPulserEvents->GetXaxis()->SetRangeUser(0, x_axis+10);
       _EventCount->GetXaxis()->SetRangeUser(0, x_axis+10);
       _AvgBeamCurrent->GetXaxis()->SetRangeUser(0, x_axis+10);
-      for (unsigned i(0); i < n_scaler; i++)
+      for (unsigned i(0); i <= n_scaler; i++)
         _Scaler.at(i)->GetXaxis()->SetRangeUser(0, x_axis+10);
 
 
@@ -127,7 +128,7 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       _AcceptedPulserEvents->Fill(x_axis, 1000*(accepted_pulser_events - old_accepted_pulser_events)/t_diff);
       _EventCount->Fill(x_axis, 1000*(handshake_count - old_handshake_count)/t_diff);
       _AvgBeamCurrent->Fill(x_axis, cal_beam_current);
-      for (unsigned i(0); i < n_scaler; i++)
+      for (unsigned i(0); i <= n_scaler; i++)
         _Scaler.at(i)->Fill(x_axis, 1000 * (scaler.at(i) - old_scaler.at(i))/t_diff);
       }
       old_xaxis = x_axis;
@@ -141,7 +142,7 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       old_accepted_prescaled_events = ev.GetAcceptedPrescaledEvents();
       old_accepted_pulser_events = ev.GetAcceptedPulserCount();
       old_handshake_count = ev.GetHandshakeCount();
-      for (unsigned i(0); i < n_scaler; i++)
+      for (unsigned i(0); i <= n_scaler; i++)
         old_scaler.at(i) = ev.GetScalerValue(i);
   }
 
@@ -157,7 +158,7 @@ void TUHistos::Reset(){
   _AcceptedPulserEvents->Reset();
   _EventCount->Reset();
   _AvgBeamCurrent->Reset();
-  for (unsigned i(0); i < n_scaler; i++)
+  for (unsigned i(0); i <= n_scaler; i++)
     _Scaler.at(i)->Reset();
 }
 
