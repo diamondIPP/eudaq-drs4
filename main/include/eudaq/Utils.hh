@@ -395,6 +395,8 @@ namespace eudaq {
         float getTime();
     };
 
+  std::string DLLEXPORT join(std::string s1, std::string s2);
+
 }
 
 #endif // EUDAQ_INCLUDED_Utils
