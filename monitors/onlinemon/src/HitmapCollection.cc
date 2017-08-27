@@ -121,144 +121,153 @@ void HitmapCollection::registerPlane(const SimpleStandardPlane &p) {
   _map[p] = tmphisto;
   //std::cout << "Registered Plane: " << p.getName() << " " << p.getID() << std::endl;
   //PlaneRegistered(p.getName(),p.getID());
-  if (_mon != NULL)
-  {
-    if (_mon->getOnlineMon()==NULL)
-    {
+  if (_mon != nullptr) {
+    if (_mon->getOnlineMon()== nullptr)
       return; // don't register items
-    }
+
     //cout << "HitmapCollection:: Monitor running in online-mode" << endl;
-    char tree[1024], folder[1024];
-    sprintf(tree,"%s/Sensor %i/RawHitmap",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getHitmapHisto(), "COLZ",0);
 
-    sprintf(tree,"%s/Sensor %i/RawChargemap",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getChargemapHisto(), "COLZ",0);
+    string folder = p.getName();
+    string tree = string(TString::Format("%s/Sensor %i", folder.c_str(), p.getID()));
+    string name;
+    
+    name = eudaq::join(tree, "Raw Hit Map");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getHitmapHisto(), "COLZ", 0);
 
+    /** adding hit maps to overview plot */
+    _mon->getOnlineMon()->addTreeItemSummary(folder, name);
+    _mon->getOnlineMon()->addTreeItemSummary(tree, name);
 
-    sprintf(folder,"%s",p.getName().c_str());
+    name = eudaq::join(tree, "Raw Charge Map");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName() ,p.getID())->getChargemapHisto(), "COLZ", 0);
+
 #ifdef DEBUG
     cout << "DEBUG "<< p.getName().c_str() <<endl;
     cout << "DEBUG "<< folder << " "<<tree<<  endl;
 #endif
-    _mon->getOnlineMon()->addTreeItemSummary(folder,tree);
 
-    sprintf(tree,"%s/Sensor %i/Hitmap X Projection",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getHitXmapHisto());
+    name = eudaq::join(tree, "Hit Map X Projection");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getHitXmapHisto());
 
-    sprintf(tree,"%s/Sensor %i/Hitmap Y Projection",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getHitYmapHisto());
+    name = eudaq::join(tree, "Hit Map Y Projection");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getHitYmapHisto());
 
-    sprintf(tree,"%s/Sensor %i/Clustermap",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getClusterMapHisto(), "COLZ",0);
+    name = eudaq::join(tree, "Cluster Map");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getClusterMapHisto(), "COLZ", 0);
+    _mon->getOnlineMon()->addTreeItemSummary(tree, name);
+
     if (p.is_CMSPIXEL){
-        sprintf(tree,"%s/Sensor %i/SinglePixelCharge",p.getName().c_str(),p.getID());
-        _mon->getOnlineMon()->registerTreeItem(tree);
-        _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getTOTSingleHisto());
+        name = eudaq::join(tree, "Single Pixel Charge");
+        _mon->getOnlineMon()->registerTreeItem(name);
+        _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getTOTSingleHisto());
 
-		sprintf(tree,"%s/Sensor %i/PixelChargeProfile",p.getName().c_str(),p.getID());
-		_mon->getOnlineMon()->registerTreeItem(tree);
-		_mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getPixelChargeProfile());
+        name = eudaq::join(tree, "Pixel Charge Profile");
+        _mon->getOnlineMon()->registerTreeItem(name);
+        _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getPixelChargeProfile());
 
-		sprintf(tree,"%s/Sensor %i/ClusterCharge",p.getName().c_str(),p.getID());
-		_mon->getOnlineMon()->registerTreeItem(tree);
-		_mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getTOTClusterHisto());
+        name = eudaq::join(tree, "Cluster Charge");
+        _mon->getOnlineMon()->registerTreeItem(name);
+        _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getTOTClusterHisto());
 
-		sprintf(tree,"%s/Sensor %i/ClusterChargeProfile",p.getName().c_str(),p.getID());
-		_mon->getOnlineMon()->registerTreeItem(tree);
-		_mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getClusterChargeProfile());
+        name = eudaq::join(tree, "Cluster Charge Profile");
+        _mon->getOnlineMon()->registerTreeItem(name);
+        _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getClusterChargeProfile());
 
-		sprintf(tree,"%s/Sensor %i/ClusterChargeTimeProfile",p.getName().c_str(),p.getID());
-		        _mon->getOnlineMon()->registerTreeItem(tree);
-		        _mon->getOnlineMon()->registerHisto(tree,(TProfile*)getHitmapHistos(p.getName(),p.getID())->getHisto("ClusterChargeTimeProfile"));
+        name = eudaq::join(tree, "Cluster Charge Time Profile");
+        _mon->getOnlineMon()->registerTreeItem(name);
+		    _mon->getOnlineMon()->registerHisto(name, (TProfile*)getHitmapHistos(p.getName(), p.getID())->getHisto("ClusterChargeTimeProfile"));
     }
-    if ((p.is_APIX) || (p.is_USBPIX) || (p.is_USBPIXI4) )
-    {
-      sprintf(tree,"%s/Sensor %i/LVL1Distr",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getLVL1Histo());
+    
+    char old_tree[1024];
+    if ((p.is_APIX) || (p.is_USBPIX) || (p.is_USBPIXI4) ) {
+      sprintf(old_tree,"%s/Sensor %i/LVL1Distr",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getLVL1Histo());
 
-      sprintf(tree,"%s/Sensor %i/LVL1Cluster",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getLVL1ClusterHisto());
+      sprintf(old_tree,"%s/Sensor %i/LVL1Cluster",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getLVL1ClusterHisto());
 
-      sprintf(tree,"%s/Sensor %i/LVL1Width",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getLVL1WidthHisto());
+      sprintf(old_tree,"%s/Sensor %i/LVL1Width",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getLVL1WidthHisto());
 
-      sprintf(tree,"%s/Sensor %i/SingleTOT",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getTOTSingleHisto());
+      sprintf(old_tree,"%s/Sensor %i/SingleTOT",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getTOTSingleHisto());
 
-      sprintf(tree,"%s/Sensor %i/ClusterTOT",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getTOTClusterHisto());
+      sprintf(old_tree,"%s/Sensor %i/ClusterTOT",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getTOTClusterHisto());
 
-      sprintf(tree,"%s/Sensor %i/ClusterWidthX",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getClusterWidthXHisto());
+      sprintf(old_tree,"%s/Sensor %i/ClusterWidthX",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getClusterWidthXHisto());
 
-      sprintf(tree,"%s/Sensor %i/ClusterWidthY",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getClusterWidthYHisto());
-    }
-    if (p.is_DEPFET)
-    {
-      sprintf(tree,"%s/Sensor %i/SingleTOT",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getTOTSingleHisto());
+      sprintf(old_tree,"%s/Sensor %i/ClusterWidthY",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getClusterWidthYHisto());
     }
 
-    sprintf(tree,"%s/Sensor %i/Clustersize",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getClusterSizeHisto());
+    if (p.is_DEPFET) {
+      sprintf(old_tree,"%s/Sensor %i/SingleTOT",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getTOTSingleHisto());
+    }
 
-    sprintf(tree,"%s/Sensor %i/NumHits",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getNHitsHisto());
+    name = eudaq::join(tree, "Cluster Size");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getClusterSizeHisto());
+    _mon->getOnlineMon()->addTreeItemSummary(tree, name);
 
-    sprintf(tree,"%s/Sensor %i/NumBadHits",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getNbadHitsHisto());
-    sprintf(tree,"%s/Sensor %i/NumHotPixels",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getNHotPixelsHisto());
+    name = eudaq::join(tree, "Number of Hits");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getNHitsHisto());
 
-    sprintf(tree,"%s/Sensor %i/NumClusters",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getNClustersHisto());
+    name = eudaq::join(tree, "Number of Bad Hits");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getNbadHitsHisto());
 
-    sprintf(tree,"%s/Sensor %i/Efficency",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getEfficencyPerEvent());
+    name = eudaq::join(tree, "Number of Hot Pixels");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getNHotPixelsHisto());
 
-    sprintf(tree,"%s/Sensor %i/HitOcc",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getHitOccHisto(), "",1);
+    name = eudaq::join(tree, "Number of Clusters");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getNClustersHisto());
 
-    sprintf(tree,"%s/Sensor %i/Hot Pixel Map",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getHotPixelMapHisto(), "COLZ",0);
+    name = eudaq::join(tree, "Efficiency");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getEfficencyPerEvent());
+    _mon->getOnlineMon()->addTreeItemSummary(tree, name);
 
-    if (p.is_MIMOSA26)
-    {
+    /** adding efficiencies to overview plot */
+    _mon->getOnlineMon()->addTreeItemSummary(folder, name);
+
+    name = eudaq::join(tree, "Hit Occupancy");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getHitOccHisto(), "", 1);
+
+    name = eudaq::join(tree, "Hot Pixel Map");
+    _mon->getOnlineMon()->registerTreeItem(name);
+    _mon->getOnlineMon()->registerHisto(name, getHitmapHistos(p.getName(), p.getID())->getHotPixelMapHisto(), "COLZ", 0);
+
+    if (p.is_MIMOSA26) {
       // setup histogram showing the number of hits per section of a Mimosa26
-      sprintf(tree,"%s/Sensor %i/Hitmap Sections",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getHitmapSectionsHisto());
-      sprintf(tree,"%s/Sensor %i/Pivot Pixel",p.getName().c_str(),p.getID());
-      _mon->getOnlineMon()->registerTreeItem(tree);
-      _mon->getOnlineMon()->registerHisto(tree,getHitmapHistos(p.getName(),p.getID())->getNPivotPixelHisto());
-
+      sprintf(old_tree,"%s/Sensor %i/Hitmap Sections",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getHitmapSectionsHisto());
+      sprintf(old_tree,"%s/Sensor %i/Pivot Pixel",p.getName().c_str(),p.getID());
+      _mon->getOnlineMon()->registerTreeItem(old_tree);
+      _mon->getOnlineMon()->registerHisto(old_tree,getHitmapHistos(p.getName(),p.getID())->getNPivotPixelHisto());
     }
 
-    sprintf(tree,"%s/Sensor %i",p.getName().c_str(),p.getID());
-    _mon->getOnlineMon()->makeTreeItemSummary(tree);
+//    _mon->getOnlineMon()->makeTreeItemSummary(tree);
 
     if (p.is_MIMOSA26)
     {
@@ -290,8 +299,8 @@ void HitmapCollection::registerPlane(const SimpleStandardPlane &p) {
         }
 
 
-        sprintf(tree,"%s/Sensor %i/Section %i",p.getName().c_str(),p.getID(),section);
-        _mon->getOnlineMon()->makeTreeItemSummary(tree); //make summary page
+        sprintf(old_tree,"%s/Sensor %i/Section %i",p.getName().c_str(),p.getID(),section);
+        _mon->getOnlineMon()->makeTreeItemSummary(old_tree); //make summary page
       }
     }
 

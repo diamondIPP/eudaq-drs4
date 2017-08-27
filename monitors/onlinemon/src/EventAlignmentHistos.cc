@@ -133,7 +133,7 @@ void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
       if (_lastNClusters.size() > ioff + _nOffsets)
         _Alignment.at(ioff)->Fill(event_no, _lastNClusters.at(uint8_t(ioff + _nOffsets)) ? 100 : .1);
 
-      FillIsAligned();
+    FillIsAligned();
   }
 
 }
