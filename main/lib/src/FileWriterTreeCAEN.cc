@@ -821,8 +821,11 @@ void FileWriterTreeCAEN::UpdateWaveforms(uint8_t iwf){
 } // end UpdateWaveforms()
 
 inline int FileWriterTreeCAEN::IsPulserEvent(const StandardWaveform *wf){
-    float pulser_int = wf->getIntegral(uint16_t(ranges["pulserDRS4"]->first), uint16_t(ranges["pulserDRS4"]->second), true);
-    return abs(pulser_int - wf->getIntegral(0, 20, true)) > pulser_threshold;
+    uint16_t xmin = uint16_t(ranges["pulserDRS4"]->first);
+    uint16_t xmax = uint16_t(ranges["pulserDRS4"]->second);
+    float pulser_int = wf->getIntegral(xmin, xmax, true);
+    float baseline_int = wf->getIntegral(5, uint16_t(xmax - xmin + 5), true);
+    return abs(pulser_int - baseline_int) > pulser_threshold;
 } //end IsPulserEvent
 
 inline void FileWriterTreeCAEN::ExtractForcTiming(vector<float> * data) {
