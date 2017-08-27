@@ -213,7 +213,7 @@ namespace eudaq {
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
       // todo: read this by a config file or even better, write it to the data!
-      decoder.setOffset(23);
+      decoder.setOffset(25);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
       try{
