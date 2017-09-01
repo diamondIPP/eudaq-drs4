@@ -299,9 +299,8 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
       zero_plane_array();
     }
 
-  } else {
-    std::cout << "No max sensorsize known!" << std::endl;
-  }
+  } else
+      std::cout << "No max sensorsize known!" << std::endl;
 
 }
 
