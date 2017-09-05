@@ -50,7 +50,7 @@ namespace eudaq {
   class CMSPixelHelper {
   public:
     std::map<std::string, float > roc_calibrations = {{"psi46v2", 65}, {"psi46digv21respin", 47}, {"proc600", 47}};
-    CMSPixelHelper(std::string event_type) : do_conversion(false), m_event_type(event_type), m_conv_cfg(0) {};
+    CMSPixelHelper(std::string event_type) : do_conversion(true), m_event_type(event_type), m_conv_cfg("") {};
     void set_conversion(bool val){do_conversion = val;}
     bool get_conversion(){return do_conversion;}
     std::map< std::string, VCALDict> vcal_vals;
@@ -66,7 +66,7 @@ namespace eudaq {
         //std::cout<<"get Charge: "<<val<<" "<<d.par0<<" "<<d.par1<<" "<<d.par2<<" "<<d.par3<<" "<<charge<<std::endl;
         return charge;
     }
-    virtual void SetConfig(Configuration * conv_cfg) { m_conv_cfg = conv_cfg; }
+    virtual void SetConfig(Configuration conv_cfg) { m_conv_cfg = conv_cfg; }
 
     void Initialize(const Event & bore, const Configuration & cnf) {
       DeviceDictionary* devDict;
@@ -107,7 +107,9 @@ namespace eudaq {
         if (roctype == "") continue;
         bool is_digital = (roctype.find("dig") == -1) ? false : true;
 
-        std::string fname = m_conv_cfg ? m_conv_cfg->Get("phCalibrationFile", "") : "";
+        m_conv_cfg.SetSection("Converter.telescopetree");
+        std::string fname = m_conv_cfg.GetKeys().size() > 0 ? m_conv_cfg.Get("phCalibrationFile", "") : "";
+        std::cout << "FILENAME: " << fname << std::endl;
         if (fname == "") fname = cnf.Get("phCalibrationFile","");
         if (fname == "") {
           fname = cnf.Get("dacFile", "");
@@ -395,7 +397,7 @@ namespace eudaq {
     std::string m_event_type;
     mutable pxar::statistics decoding_stats;
     bool do_conversion;
-    Configuration * m_conv_cfg;
+    Configuration m_conv_cfg;
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
 
       // Transform data of form char* to vector<int16_t>

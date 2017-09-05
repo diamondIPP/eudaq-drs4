@@ -68,20 +68,21 @@ using namespace std;
 
 RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & datafile, int /*x*/, int /*y*/, int /*w*/,
        int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
-       const std::string & conffile):eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false){
+       const std::string & conffile): eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile, conffile), _offline(offline), _planesInitialized(false){
 
   if (_offline <= 0){
     onlinemon = new OnlineMonWindow(gClient->GetRoot(),800,600);
-    if (onlinemon==NULL){
-      cerr<< "Error Allocationg OnlineMonWindow"<<endl;
-      exit(-1);}
+    if (onlinemon == nullptr){
+      cerr << "Error Allocationg OnlineMonWindow" << endl;
+      exit(-1);
+    }
   }
 
   hmCollection = new HitmapCollection();
   corrCollection = new CorrelationCollection();
   wfCollection = new WaveformCollection();
   tuCollection = new TUCollection();
-  MonitorPerformanceCollection *monCollection = new MonitorPerformanceCollection();
+  auto * monCollection = new MonitorPerformanceCollection();
   eudaqCollection = new EUDAQMonitorCollection();
 
 
@@ -92,6 +93,7 @@ RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & dat
   _colls.push_back(tuCollection);
   _colls.push_back(monCollection);
   _colls.push_back(eudaqCollection);
+
   // set the root Monitor
 
   if (_offline <= 0) {
@@ -568,6 +570,7 @@ string RootMonitor::GetSnapShotDir(){
 }
 
 int main(int argc, const char ** argv) {
+
   eudaq::OptionParser op("EUDAQ Root Monitor", "1.0", "A Monitor using root for gui and graphics");
   eudaq::Option<std::string> rctrl(op, "r", "runcontrol", "tcp://localhost:44000", "address",
       "The address of the RunControl application");
@@ -620,7 +623,7 @@ int main(int argc, const char ** argv) {
 
 
     // start the GUI
-    TApplication theApp("App", &argc, const_cast<char**>(argv),0,0);
+    TApplication theApp("App", &argc, const_cast<char**>(argv));
     RootMonitor mon(rctrl.Value(), file.Value(), x.Value(), y.Value(),
         w.Value(), h.Value(), argc, offline.Value(), limit.Value(),
         skipping.Value(), skip_counter.Value(), configfile.Value());

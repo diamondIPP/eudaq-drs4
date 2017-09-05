@@ -20,7 +20,7 @@ namespace eudaq {
        * \param runcontrol A string containing the address of the RunControl to connect to.
        */
       Monitor(const std::string & name, const std::string & runcontrol, const unsigned lim,
-          const unsigned skip_, const unsigned int skip_evts, const std::string & datafile = "");
+          const unsigned skip_, const unsigned int skip_evts, const std::string & datafile = "", const std::string config="");
       virtual ~Monitor() {}
       bool ProcessEvent();
       virtual void OnIdle();

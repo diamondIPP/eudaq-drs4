@@ -20,7 +20,7 @@ namespace eudaq {
     virtual void Initialize(const Event & bore, const Configuration & cnf) {
       m_converter.Initialize(bore,cnf);
     }
-    virtual void SetConfig(Configuration * conv_cfg) { m_converter.SetConfig(conv_cfg); }
+    virtual void SetConfig(Configuration conv_cfg) { m_converter.SetConfig(conv_cfg); }
 
     virtual bool GetStandardSubEvent(StandardEvent & out, const Event & in) const {
       return m_converter.GetStandardSubEvent(out,in);

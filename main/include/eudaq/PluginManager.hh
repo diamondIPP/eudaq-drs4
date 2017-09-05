@@ -32,12 +32,9 @@ namespace eudaq {
       static PluginManager & GetInstance();
 
       static unsigned GetTriggerID(const Event &);
-
-	  static int IsSyncWithTLU(eudaq::Event const & ev,eudaq::TLUEvent const & tlu);
-	  static t_eventid getEventId( eudaq::Event const & ev);
-
-	  static void setCurrentTLUEvent(eudaq::Event & ev,eudaq::TLUEvent const & tlu);
-      static void Initialize(const DetectorEvent &);
+      static int IsSyncWithTLU(eudaq::Event const & ev,eudaq::TLUEvent const & tlu);static t_eventid getEventId( eudaq::Event const & ev);
+      static void setCurrentTLUEvent(eudaq::Event & ev,eudaq::TLUEvent const & tlu);
+      static void Initialize(const DetectorEvent &, std::string config="");
       static std::map<uint8_t, std::vector<float> > GetTimeCalibration(const DetectorEvent & dev);
       static std::string GetStats(const DetectorEvent & dev);
       static void SetConfig(const DetectorEvent & dev, Configuration *);

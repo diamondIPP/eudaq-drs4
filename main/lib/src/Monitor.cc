@@ -10,7 +10,7 @@
 namespace eudaq {
 
   Monitor::Monitor(const std::string & name, const std::string & runcontrol, const unsigned lim,
-      const unsigned skip_, const unsigned int skip_evts, const std::string & datafile) :
+      const unsigned skip_, const unsigned int skip_evts, const std::string & datafile, const std::string config) :
     CommandReceiver("Monitor", name, runcontrol, false),
     m_run(0),
     m_callstart(false),
@@ -23,7 +23,7 @@ namespace eudaq {
     if (datafile != "") {
       // set offline
       m_reader = std::shared_ptr<FileReader>(new FileReader(datafile));
-      PluginManager::Initialize(m_reader->GetDetectorEvent()); // process BORE
+      PluginManager::Initialize(m_reader->GetDetectorEvent(), config); // process BORE
       //m_callstart = true;
       std::cout << "DEBUG: Reading file " << datafile << " -> " << m_reader->Filename() << std::endl;
       //OnStartRun(m_run);

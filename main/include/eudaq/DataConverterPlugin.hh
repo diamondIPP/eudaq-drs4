@@ -18,6 +18,7 @@ using namespace UTIL;
 using lcio::TrackerDataImpl;
 #endif
 #include "TLUEvent.hh"
+#include "Configuration.hh"
 
 #define NOTIMESTAMPSET (uint64_t)-1
 #define NOTIMEDURATIONSET 0
@@ -131,8 +132,6 @@ namespace eudaq{
   }
 
 
-  class Configuration;
-
   /**
    *  The DataConverterPlugin is the abstract base for all plugins. The
    *  actual impementation provides the GetLCIOEvent() and GetStandardEvent()
@@ -151,6 +150,7 @@ namespace eudaq{
       virtual void Initialize(eudaq::Event const &, eudaq::Configuration const &) {}
 			virtual std::string GetStats() {}
       virtual std::map<uint8_t, std::vector<float> > GetTimeCalibration(const Event & bore);
+      virtual void SetConfig(Configuration conv_cfg) {}
       virtual void SetConfig(Configuration * conv_cfg) {}
 
       virtual unsigned GetTriggerID(eudaq::Event const &) const;
