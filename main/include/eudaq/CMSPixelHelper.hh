@@ -99,7 +99,8 @@ namespace eudaq {
     }
 
     void read_PHCalibrationData(const Configuration & cnf){
-      std::cout << "READ PH CALIBRATION..." << std::endl;
+      std::cout << "TRY TO READ PH CALIBRATION DATA... ";
+      bool foundData;
       for (auto i: cnf.GetSections()){
         if (i.find("Producer.")==-1) continue;
         cnf.SetSection(i);
@@ -109,7 +110,6 @@ namespace eudaq {
 
         m_conv_cfg.SetSection("Converter.telescopetree");
         std::string fname = m_conv_cfg.GetKeys().size() > 0 ? m_conv_cfg.Get("phCalibrationFile", "") : "";
-        std::cout << "FILENAME: " << fname << std::endl;
         if (fname == "") fname = cnf.Get("phCalibrationFile","");
         if (fname == "") {
           fname = cnf.Get("dacFile", "");
@@ -119,19 +119,21 @@ namespace eudaq {
         fname += (is_digital) ? "/phCalibrationFitErr" : "/phCalibrationGErfFit";
         std::string i2c = cnf.Get("i2c","i2caddresses","0");
         if (i.find("REF") != -1)
-          read_PH_CalibrationFile("REF", fname, i2c, roc_calibrations.at(roctype));
+          foundData = read_PH_CalibrationFile("REF", fname, i2c, roc_calibrations.at(roctype));
         else if (i.find("ANA") != -1)
-          read_PH_CalibrationFile("ANA", fname, i2c, roc_calibrations.at(roctype));
+          foundData = read_PH_CalibrationFile("ANA", fname, i2c, roc_calibrations.at(roctype));
         else if (i.find("DIG") != -1)
-          read_PH_CalibrationFile("DIG", fname, i2c, roc_calibrations.at(roctype));
+          foundData = read_PH_CalibrationFile("DIG", fname, i2c, roc_calibrations.at(roctype));
         else if (i.find("TRP") != -1)
-          read_PH_CalibrationFile("TRP", fname, i2c, roc_calibrations.at(roctype));
+          foundData = read_PH_CalibrationFile("TRP", fname, i2c, roc_calibrations.at(roctype));
         else
-          read_PH_CalibrationFile("DUT", fname, i2c, roc_calibrations.at(roctype));
+          foundData = read_PH_CalibrationFile("DUT", fname, i2c, roc_calibrations.at(roctype));
       }
+      /** only do a conversion if we found data */
+      do_conversion = foundData;
     }
 
-    void read_PH_CalibrationFile(std::string roc_type,std::string fname, std::string i2cs,float factor){
+    bool read_PH_CalibrationFile(std::string roc_type,std::string fname, std::string i2cs,float factor){
       std::vector<std::string> vec_i2c = split(i2cs," ");
       size_t nRocs  = vec_i2c.size();
 
@@ -154,10 +156,13 @@ namespace eudaq {
         fp = fopen (filename, "r");
 
         VCALDict tmp_vcaldict;
-        if (!fp) std::cout <<  "  DID NOT FIND A FILE TO GO FROM ADC TO CHARGE!!" << std::endl;
+        if (!fp) {
+//          std::cout <<  "  DID NOT FIND A FILE TO GO FROM ADC TO CHARGE!!" << std::endl;
+          return false;
+        }
         else{
           // jump to fourth line
-          for (uint8_t i = 0; i < 3; i++) if (!getline(&line, &len, fp)) return;
+          for (uint8_t i = 0; i < 3; i++) if (!getline(&line, &len, fp)) return false;
 
           int q = 0;
           while (fscanf(fp, "%f %f %f %f %s %d %d", &par0, &par1, &par2, &par3, trash,&col, &row) == 7){
@@ -173,6 +178,7 @@ namespace eudaq {
           fclose(fp);
         }
       }
+      return true;
     }
 
     bool GetStandardSubEvent(StandardEvent & out, const Event & in) const {
