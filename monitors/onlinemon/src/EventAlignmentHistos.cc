@@ -31,6 +31,8 @@ EventAlignmentHistos::EventAlignmentHistos(): _nOffsets(5), _bin_size(1000), max
     _IsAligned = init_th2i("h_al", "Event Alignment");
     _PixelIsAligned = init_pix_align();
     _Corr = new TGraph();
+    rowAna1 = new vector<vector<uint8_t> >;
+    rowDig = new vector<vector<uint8_t> >;
 }
 
 EventAlignmentHistos::~EventAlignmentHistos(){}
@@ -48,7 +50,7 @@ void EventAlignmentHistos::Write(){
 
 void EventAlignmentHistos::FillCorrelationVectors(const SimpleStandardEvent &sev) {
 
-    //TODO: dp that the first time we get an event!
+    //TODO: d0 that the first time we get an event!
     vector<int> ana_planes;
     vector<SimpleStandardPlane> pDigs;
     for (uint8_t iplane(0); iplane < _n_analogue_planes; iplane++)
@@ -62,8 +64,8 @@ void EventAlignmentHistos::FillCorrelationVectors(const SimpleStandardEvent &sev
     for (uint8_t iplane(0); iplane < pDigs.size(); iplane++){
       if (pAna1.getNClusters() == 1 and pDigs.at(iplane).getNClusters() == 1){
         eventNumbers.at(iplane).push_back(sev.getEvent_number());
-        rowAna1.push_back(uint8_t(pAna1.getCluster(0).getY()));
-        rowDig.at(iplane).push_back(uint8_t(pDigs.at(iplane).getCluster(0).getY()));
+        rowAna1->at(iplane).push_back(uint8_t(pAna1.getCluster(0).getY()));
+        rowDig->at(iplane).push_back(uint8_t(pDigs.at(iplane).getCluster(0).getY()));
       }
     }
 }
@@ -73,10 +75,10 @@ void EventAlignmentHistos::BuildCorrelation() {
   for (uint8_t iplane(0); iplane < _n_dig_planes; iplane++) {
     if (eventNumbers.at(iplane).size() == 500) {
       double mean_evt = mean(eventNumbers.at(iplane));
-      double corr = pearsoncoeff(rowAna1, rowDig.at(iplane));
+      double corr = pearsoncoeff(rowAna1->at(iplane), rowDig->at(iplane));
       _PixelCorrelations.at(iplane)->Fill(mean_evt, corr);
-      rowDig.at(iplane).clear();
-      rowAna1.clear();
+      rowDig->at(iplane).clear();
+      rowAna1->at(iplane).clear();
       eventNumbers.at(iplane).clear();
       _PixelCorrelations.at(iplane)->GetYaxis()->SetRangeUser(-.2, 1);
       _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), 4, (corr > .4) ? 3 : 5);
@@ -98,7 +100,7 @@ double EventAlignmentHistos::pearsoncoeff(std::vector<T> X, std::vector<T> Y) {
 void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
 
 
-  if (not _n_dig_planes){
+  if (_n_dig_planes == 0u){
     _n_dig_planes = uint8_t(sev.getNPlanes() - _n_analogue_planes);
     InitVectors();
   }
@@ -106,7 +108,7 @@ void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
   ResizeObjects(event_no);
 
   // Pixel Stuff
-  if (!sev.getNWaveforms()){
+  if (sev.getNWaveforms() == 0){
     FillCorrelationVectors(sev);
     BuildCorrelation();
     return;
@@ -231,6 +233,7 @@ void EventAlignmentHistos::Reset(){
 void EventAlignmentHistos::InitVectors() {
 
   eventNumbers.resize(_n_dig_planes);
-  rowDig.resize(_n_dig_planes);
+  rowDig->resize(_n_dig_planes);
+  rowAna1->resize(_n_dig_planes);
 }
 

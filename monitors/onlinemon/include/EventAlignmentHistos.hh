@@ -42,9 +42,8 @@ protected:
     std::deque<uint8_t> _lastNClusters;
     TH2F * _PixelIsAligned;
     std::vector<std::vector<size_t> > eventNumbers;
-    std::vector<uint8_t> rowAna1;
-    std::vector<uint8_t> rowAna2;
-    std::vector<std::vector<uint8_t > > rowDig;
+    std::vector<std::vector<uint8_t> > * rowAna1, * rowAna2;
+    std::vector<std::vector<uint8_t > > * rowDig;
     TGraph * _Corr;
 
 public:
