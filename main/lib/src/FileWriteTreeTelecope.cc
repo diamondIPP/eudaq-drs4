@@ -153,6 +153,7 @@ namespace eudaq {
   void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {
 
     if (ev.IsBORE()) {
+      eudaq::PluginManager::SetConfig(ev, m_config);
       eudaq::PluginManager::Initialize(ev);
       //firstEvent =true;
       cout << "loading the first event...." << endl;

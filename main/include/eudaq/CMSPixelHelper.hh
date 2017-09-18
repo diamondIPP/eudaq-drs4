@@ -50,7 +50,7 @@ namespace eudaq {
   class CMSPixelHelper {
   public:
     std::map<std::string, float > roc_calibrations = {{"psi46v2", 65}, {"psi46digv21respin", 47}, {"proc600", 47}};
-    CMSPixelHelper(std::string event_type) : do_conversion(true), m_event_type(event_type), m_conv_cfg("") {};
+    CMSPixelHelper(std::string event_type) : do_conversion(true), m_event_type(event_type){ m_conv_cfg = new Configuration(""); }
     void set_conversion(bool val){do_conversion = val;}
     bool get_conversion(){return do_conversion;}
     std::map< std::string, VCALDict> vcal_vals;
@@ -66,7 +66,7 @@ namespace eudaq {
         //std::cout<<"get Charge: "<<val<<" "<<d.par0<<" "<<d.par1<<" "<<d.par2<<" "<<d.par3<<" "<<charge<<std::endl;
         return charge;
     }
-    virtual void SetConfig(Configuration conv_cfg) { m_conv_cfg = conv_cfg; }
+    virtual void SetConfig(Configuration * conv_cfg) { std::cout<<"<<<<a>>>"<<std::endl;m_conv_cfg = conv_cfg; }
 
     void Initialize(const Event & bore, const Configuration & cnf) {
       DeviceDictionary* devDict;
@@ -88,6 +88,9 @@ namespace eudaq {
       read_PHCalibrationData(cnf);
       initializeFitfunction();
 
+      m_conv_cfg->SetSection("Converter.telescopetree");
+      decodingOffset = m_conv_cfg->Get("decoding_offset", 25);
+
       std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type 
 	       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
 	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
@@ -108,8 +111,7 @@ namespace eudaq {
         if (roctype == "") continue;
         bool is_digital = (roctype.find("dig") == -1) ? false : true;
 
-        m_conv_cfg.SetSection("Converter.telescopetree");
-        std::string fname = m_conv_cfg.GetKeys().size() > 0 ? m_conv_cfg.Get("phCalibrationFile", "") : "";
+        std::string fname = m_conv_cfg->GetKeys().size() > 0 ? m_conv_cfg->Get("phCalibrationFile", "") : "";
         if (fname == "") fname = cnf.Get("phCalibrationFile","");
         if (fname == "") {
           fname = cnf.Get("dacFile", "");
@@ -221,7 +223,7 @@ namespace eudaq {
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
       // todo: read this by a config file or even better, write it to the data!
-      decoder.setOffset(25);
+      decoder.setOffset(decodingOffset);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
       try{
@@ -403,7 +405,8 @@ namespace eudaq {
     std::string m_event_type;
     mutable pxar::statistics decoding_stats;
     bool do_conversion;
-    Configuration m_conv_cfg;
+    Configuration * m_conv_cfg;
+    uint8_t decodingOffset;
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
 
       // Transform data of form char* to vector<int16_t>
