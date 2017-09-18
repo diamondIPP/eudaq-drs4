@@ -66,7 +66,7 @@ namespace eudaq {
         //std::cout<<"get Charge: "<<val<<" "<<d.par0<<" "<<d.par1<<" "<<d.par2<<" "<<d.par3<<" "<<charge<<std::endl;
         return charge;
     }
-    virtual void SetConfig(Configuration * conv_cfg) { std::cout<<"<<<<a>>>"<<std::endl;m_conv_cfg = conv_cfg; }
+    virtual void SetConfig(Configuration * conv_cfg) { m_conv_cfg = conv_cfg; }
 
     void Initialize(const Event & bore, const Configuration & cnf) {
       DeviceDictionary* devDict;
