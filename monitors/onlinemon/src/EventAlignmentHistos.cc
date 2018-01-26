@@ -29,7 +29,6 @@ EventAlignmentHistos::EventAlignmentHistos(): _nOffsets(5), _bin_size(1000), max
     for (uint8_t i(7); i < 10; i++)
       _PixelCorrelations.push_back(init_profile(string(TString::Format("p_pc%d", i)), string(TString::Format("Pixel Correlation - REF %d", i)), _bin_size, "Correlation Factor", fillColor));
     _IsAligned = init_th2i("h_al", "Event Alignment");
-    _PixelIsAligned = init_pix_align();
     _Corr = new TGraph();
     rowAna1 = new vector<vector<uint8_t> >;
     rowDig = new vector<vector<uint8_t> >;
@@ -81,7 +80,7 @@ void EventAlignmentHistos::BuildCorrelation() {
       rowAna1->at(iplane).clear();
       eventNumbers.at(iplane).clear();
       _PixelCorrelations.at(iplane)->GetYaxis()->SetRangeUser(-.2, 1);
-      _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), 4, (corr > .4) ? 3 : 5);
+      _PixelIsAligned->SetBinContent(_PixelIsAligned->GetXaxis()->FindBin(mean_evt), iplane * 2 + 2, (corr > .4) ? 3 : 5);
     }
   }
 }
@@ -167,13 +166,16 @@ TH2I * EventAlignmentHistos::init_th2i(std::string name, std::string title){
     histo->GetXaxis()->SetTitle("Event Number");
     return histo;
 }
-TH2F * EventAlignmentHistos::init_pix_align(){
-  TH2F * histo = new TH2F("h_pal", "Pixel Event Aignment", max_event_number / _bin_size, 0, max_event_number, 5, 0, 5);
+TH2F * EventAlignmentHistos::init_pix_align(uint16_t n_planes){
+
+  int n_cols = n_planes * 2 + 1;
+  TH2F * histo = new TH2F("h_pal", "Pixel Event Alignment", max_event_number / _bin_size, 0, max_event_number, n_cols, 0, n_cols);
   histo->SetStats(false);
   histo->GetZaxis()->SetRangeUser(0, 5);
   histo->GetXaxis()->SetRangeUser(0, _bin_size);
-  histo->GetYaxis()->SetBinLabel(2, "3D");
-  histo->GetYaxis()->SetBinLabel(4, "Sil");
+  for (int i_pl(0); i_pl < n_planes; i_pl++)
+    histo->GetYaxis()->SetBinLabel(2 * i_pl + 2, TString::Format("DUT%d", i_pl));
+//  histo->GetYaxis()->SetBinLabel(4, "Sil");
   histo->GetXaxis()->SetTitle("Event Number");
   return histo;
 }
@@ -235,5 +237,12 @@ void EventAlignmentHistos::InitVectors() {
   eventNumbers.resize(_n_dig_planes);
   rowDig->resize(_n_dig_planes);
   rowAna1->resize(_n_dig_planes);
+}
+
+TH2F* EventAlignmentHistos::getPixelIsAlignedHisto(const SimpleStandardEvent & sev) {
+
+  _PixelIsAligned = init_pix_align(uint16_t(sev.getNPlanes() - _n_analogue_planes));
+  return _PixelIsAligned;
+
 }
 

@@ -61,7 +61,7 @@ public:
     TProfile *getPulserRate() { return (TProfile *) _PulserRate; }
     TProfile * getPixelCorrelation(uint8_t icor) { return (TProfile *)_PixelCorrelations.at(icor); }
     TH2I *getIsAlignedHisto() { return _IsAligned; }
-    TH2F *getPixelIsAlignedHisto() { return _PixelIsAligned; }
+    TH2F *getPixelIsAlignedHisto(const SimpleStandardEvent &);
     uint8_t getNDigPlanes() { return _n_dig_planes; }
     uint8_t getNAnaPlanes() { return _n_analogue_planes; }
     bool hasWaveForm;
@@ -78,7 +78,7 @@ private:
 
     TProfile *init_profile(std::string, std::string, uint16_t bin_size = 0, std::string ytit = "Fraction of Hits @ Pulser Events [%]", Color_t fill_color = 0);
     TH2I *init_th2i(std::string, std::string);
-    TH2F * init_pix_align();
+    TH2F * init_pix_align(uint16_t);
 
     void FillIsAligned();
 

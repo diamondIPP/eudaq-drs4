@@ -495,7 +495,7 @@ void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &si
 
     tree = "Correlations/PixelCorrelation/Pixel Alignment";
     _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelIsAlignedHisto(), "COL", 0);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelIsAlignedHisto(simpev), "COL", 0);
 
     _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PixelCorrelation"); //make summary page
   }
