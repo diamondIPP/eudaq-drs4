@@ -392,9 +392,6 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // ---------- get and save all info for all waveforms -----------------
     // --------------------------------------------------------------------
 
-    StandardTUEvent tuev = sev.GetTUEvent(0);
-    if (tuev.GetValid())
-      cout << f_event_number << " " << tuev.GetBeamCurrent() << endl;
     //use different order of wfs in order to 'know' if its a pulser event or not.
     vector<uint8_t > wf_order = {2,1,0,3};
     ResizeVectors(sev.GetNWaveforms());
