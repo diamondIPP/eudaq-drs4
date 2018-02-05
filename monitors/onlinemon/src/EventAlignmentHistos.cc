@@ -18,7 +18,7 @@
 using namespace std;
 
 
-EventAlignmentHistos::EventAlignmentHistos(): _nOffsets(5), _bin_size(1000), max_event_number(uint32_t(5e7)), _n_analogue_planes(4), _n_dig_planes(0), foundPulser(false),
+EventAlignmentHistos::EventAlignmentHistos(): hasWaveForm(true), _nOffsets(5), _bin_size(1000), max_event_number(uint32_t(5e7)), _n_analogue_planes(4), _n_dig_planes(0), foundPulser(false),
                                               count(0), _lastNClusters(0), fillColor(821)
 {
     for (int ioff(-_nOffsets); ioff <= _nOffsets; ioff++)
@@ -101,6 +101,7 @@ void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
 
   if (_n_dig_planes == 0u){
     _n_dig_planes = uint8_t(sev.getNPlanes() - _n_analogue_planes);
+    hasWaveForm = _n_analogue_planes == sev.getNPlanes();
     InitVectors();
   }
   uint32_t event_no = sev.getEvent_number();
@@ -204,9 +205,11 @@ void EventAlignmentHistos::ResizeObjects(uint32_t ev_no) {
         for (auto h:_Alignment)
           h.second->SetBins(bins, 0, max);
         _IsAligned->GetXaxis()->SetRangeUser(0, max);
-        _PixelIsAligned->GetXaxis()->SetRangeUser(0, max);
-        for (uint8_t iplane(0); iplane < _n_dig_planes; iplane++)
-          _PixelCorrelations.at(iplane)->SetBins(bins, 0, max);
+        if (not hasWaveForm){
+          _PixelIsAligned->GetXaxis()->SetRangeUser(0, max);
+          for (uint8_t iplane(0); iplane < _n_dig_planes; iplane++)
+            _PixelCorrelations.at(iplane)->SetBins(bins, 0, max);
+        }
     }
 
     if (_PulserRate->GetXaxis()->GetXmax() < ev_no) {
