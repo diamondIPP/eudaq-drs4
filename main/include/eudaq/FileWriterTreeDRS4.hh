@@ -69,6 +69,7 @@ namespace eudaq {
         std::string GetBitMask(uint16_t bitmask);
         std::string GetPolarities(std::vector<signed char> pol);
         void SetTimeStamp(StandardEvent);
+        void SetBeamCurrent(StandardEvent);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
@@ -104,6 +105,7 @@ namespace eudaq {
         int f_pulser_events;
         int f_signal_events;
         double f_time;
+        uint16_t f_beam_current;
 
         //drs4
         uint16_t f_trigger_cell;

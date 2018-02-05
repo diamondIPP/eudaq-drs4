@@ -34,6 +34,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     f_signal_events = 0;
     f_time = -1.;
     f_pulser = -1;
+    f_beam_current = UINT16_MAX;
     v_forc_pos = new vector<uint16_t>;
     v_forc_time = new vector<float>;
 
@@ -262,6 +263,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("time",& f_time, "time/D");
     m_ttree->Branch("pulser",& f_pulser, "pulser/I");
     m_ttree->Branch("nwfs", &f_nwfs, "n_waveforms/I");
+    m_ttree->Branch("beam_current", &f_beam_current, "beam_current/s");
     m_ttree->Branch("forc_pos", &v_forc_pos);
     m_ttree->Branch("forc_time", &v_forc_time);
 
@@ -358,7 +360,9 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 
     f_event_number = sev.GetEventNumber();
     // set time stamp
+    /** TU STUFF */
     SetTimeStamp(sev);
+    SetBeamCurrent(sev);
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
@@ -388,7 +392,9 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // ---------- get and save all info for all waveforms -----------------
     // --------------------------------------------------------------------
 
-
+    StandardTUEvent tuev = sev.GetTUEvent(0);
+    if (tuev.GetValid())
+      cout << f_event_number << " " << tuev.GetBeamCurrent() << endl;
     //use different order of wfs in order to 'know' if its a pulser event or not.
     vector<uint8_t > wf_order = {2,1,0,3};
     ResizeVectors(sev.GetNWaveforms());
@@ -892,4 +898,11 @@ void FileWriterTreeDRS4::SetTimeStamp(StandardEvent sev) {
         f_time = sev.GetTimestamp() / 384066.;
 }
 
+void FileWriterTreeDRS4::SetBeamCurrent(StandardEvent sev) {
+
+  if (sev.hasTUEvent()){
+    StandardTUEvent tuev = sev.GetTUEvent(0);
+    f_beam_current = uint16_t(tuev.GetValid() ? tuev.GetBeamCurrent() : UINT16_MAX);
+  }
+}
 #endif // ROOT_FOUND
