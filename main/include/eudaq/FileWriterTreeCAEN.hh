@@ -9,6 +9,7 @@
 
 #include "eudaq/FileWriter.hh"
 #include "eudaq/WaveformSignalRegions.hh"
+#include "PluginManager.hh"
 
 #include "TStopwatch.h"
 #include "TVirtualFFT.h"
@@ -37,6 +38,7 @@ namespace eudaq {
         float avgWF(float, float, int);
         virtual ~FileWriterTreeCAEN();
         virtual long GetMaxEventNumber() { return max_event_number; }
+        virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
 
     private:
         unsigned runnumber;
@@ -59,6 +61,8 @@ namespace eudaq {
         bool UseWaveForm(uint16_t bitmask, uint8_t iwf) { return ((bitmask & 1 << iwf) == 1 << iwf); }
         std::string GetBitMask(uint16_t bitmask);
         std::string GetPolarities(std::vector<signed char> pol);
+        void SetTimeStamp(StandardEvent);
+        void SetBeamCurrent(StandardEvent);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
@@ -94,6 +98,7 @@ namespace eudaq {
         int f_pulser_events;
         int f_signal_events;
         double f_time;
+        uint16_t f_beam_current;
 
         //drs4
         uint16_t f_trigger_cell;
@@ -129,8 +134,11 @@ namespace eudaq {
         std::vector<bool> *v_is_saturated;
         std::vector<float> *v_median;
         std::vector<float> *v_average;
-        std::vector<std::vector<uint16_t> *> v_peak_positions;
-        std::vector<std::vector<float> *> v_peak_timings;
+        std::vector<uint16_t> * v_max_peak_position;
+        std::vector<float> * v_max_peak_time;
+        std::vector<std::vector<uint16_t> > * v_peak_positions;
+        std::vector<std::vector<float> > * v_peak_times;
+        std::vector<uint8_t> * v_npeaks;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;
@@ -160,6 +168,10 @@ namespace eudaq {
         TMacro *macro;
 
         // spectrum
+        unsigned peak_noise_pos;
+        std::vector<std::pair<float, float> >* noise;
+        std::map<uint8_t, std::deque<float> *> noise_vectors;
+        void calc_noise(uint8_t);
         std::vector<float> data_pos;
         std::vector<float> decon;
         std::vector<std::vector<uint16_t> *> peaks_x;

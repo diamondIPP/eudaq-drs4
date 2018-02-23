@@ -34,13 +34,12 @@ namespace { static RegisterFileWriter<FileWriterTreeCAEN> reg("caentree"); }
 FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
 : m_tfile(0), m_ttree(0), m_noe(0), chan(9), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0) {
 
+    gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
-//    gROOT->ProcessLine(".L ~/lib/root_loader.c+"); // what is that for? MR
-//    gROOT->ProcessLine(".L loader.C+");
-    gROOT->ProcessLine( "gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <pair>");
     gROOT->ProcessLine("#include <map>");
-    gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >,vector<vector<Float_t> >","vector;string;map");
+//    gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >", "vector;string;map");
+    gInterpreter->GenerateDictionary("vector<vector<Float_t> >;vector<vector<UShort_t> >");
     //Polarities of signals, default is positive signals
     polarities.resize(9, 1);
     pulser_polarities.resize(9, 1);
@@ -56,6 +55,7 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     f_signal_events = 0;
     f_time = -1.;
     f_pulser = -1;
+    f_beam_current = UINT16_MAX;
     v_forc_pos = new vector<uint16_t>;
     v_forc_time = new vector<float>;
 
@@ -74,15 +74,27 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     v_is_saturated = new vector<bool>;
     v_median = new vector<float>;
     v_average = new vector<float>;
-    v_peak_positions.resize(9, new vector<uint16_t>);
-    v_peak_timings.resize(9, new vector<float>);
+    v_max_peak_position = new vector<uint16_t>;
+    v_max_peak_time = new vector<float>;
+    v_max_peak_position->resize(9, 0);
+    v_peak_positions = new vector<vector<uint16_t> >;
+    v_peak_times = new vector<vector<float> >;
+    v_peak_positions->resize(9);
+    v_peak_times->resize(9);
+    v_npeaks = new vector<uint8_t>;
+    v_npeaks->resize(9, 0);
+    v_max_peak_time->resize(9, 0);
 
-    // waveforms
+  // waveforms
     for (uint8_t i = 0; i < 9; i++) f_wf[i] = new vector<float>;
     f_isDa = new vector<bool>;
     wf_thr = {125, 10, 40, 300, 200, 300, 200, 200, 200};
 
     // spectrum vectors
+    noise = new vector<pair<float, float> >;
+    noise->resize(9);
+    for (uint8_t i = 0; i < 9; i++) noise_vectors[i] = new deque<float>;
+    decon.resize(1024, 0);
     peaks_x.resize(9, new std::vector<uint16_t>);
     peaks_x_time.resize(9, new std::vector<float>);
     peaks_y.resize(9, new std::vector<float>);
@@ -148,6 +160,7 @@ void FileWriterTreeCAEN::Configure(){
     max_event_number = m_config->Get("max_event_number", 0);
 
     // spectrum and fft
+    peak_noise_pos = m_config->Get("peak_noise_pos", unsigned(0));
     spec_sigma = m_config->Get("spectrum_sigma", 5);
     spec_decon_iter = m_config->Get("spectrum_deconIterations", 3);
     spec_aver_win = m_config->Get("spectrum_averageWindow", 5);
@@ -271,6 +284,7 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("time",& f_time, "time/D");
     m_ttree->Branch("pulser",& f_pulser, "pulser/I");
     m_ttree->Branch("nwfs", &f_nwfs, "n_waveforms/I");
+    m_ttree->Branch("beam_current", &f_beam_current, "beam_current/s");
     m_ttree->Branch("forc_pos", &v_forc_pos);
     m_ttree->Branch("forc_time", &v_forc_time);
 
@@ -297,11 +311,14 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("is_saturated", &v_is_saturated);
     m_ttree->Branch("median", &v_median);
     m_ttree->Branch("average", &v_average);
-    for (uint8_t i_wf = 0; i_wf < 9; i_wf++)
-        if ((active_regions & 1 << i_wf) == 1 << i_wf){
-            m_ttree->Branch(TString::Format("peak_positions%i", i_wf), &v_peak_positions.at(i_wf));
-            m_ttree->Branch(TString::Format("peak_timings%i", i_wf), &v_peak_timings.at(i_wf));
-        }
+
+    if (active_regions){
+      m_ttree->Branch(TString::Format("max_peak_position"), &v_max_peak_position);
+      m_ttree->Branch(TString::Format("max_peak_time"), &v_max_peak_time);
+      m_ttree->Branch("peak_positions", &v_peak_positions);
+      m_ttree->Branch("peak_times", &v_peak_times);
+      m_ttree->Branch("n_peaks", &v_npeaks);
+    }
 
     // fft stuff and spectrum
     if (fft_waveforms) {
@@ -340,7 +357,6 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     =====================================================================*/
 void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     if (ev.IsBORE()) {
-        cout << "Start reading file!" << endl;
         PluginManager::SetConfig(ev, m_config);
         eudaq::PluginManager::Initialize(ev);
         tcal = PluginManager::GetTimeCalibration(ev);
@@ -351,6 +367,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         ss << "\b\b]";
         macro->AddLine(ss.str().c_str());
         cout << "loading the first event...." << endl;
+        //todo: add time stamp for the very first tu event
         return;
     }
     else if (ev.IsEORE()) {
@@ -364,12 +381,9 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
 
     f_event_number = sev.GetEventNumber();
     // set time stamp
-    if (sev.hasTUEvent()){
-        if (sev.GetTUEvent(0).GetValid())
-            f_time = sev.GetTimestamp();
-    }
-    else
-        f_time = sev.GetTimestamp() / 384066.;
+    /** TU STUFF */
+    SetTimeStamp(sev);
+    SetBeamCurrent(sev);
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
@@ -399,9 +413,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     // ---------- get and save all info for all waveforms -----------------
     // --------------------------------------------------------------------
 
-
-    //start with the pulser wf
-
+    //use different order of wfs in order to 'know' if its a pulser event or not.
     vector<uint8_t> wf_order = {pulser_channel};
     uint8_t n_wfs = sev.GetNWaveforms() < 10 ? uint8_t(sev.GetNWaveforms()) : uint8_t(9);
     for (uint8_t iwf = 0; iwf < n_wfs; iwf++)
@@ -420,6 +432,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         if (verbose > 3) cout << "number of samples in my wf " << n_samples << std::endl;
         // load the waveforms into the vector
         data = waveform.GetData();
+        calc_noise(iwf);
 
         this->FillSpectrumData(iwf);
         if (verbose > 3) cout<<"DoSpectrumFitting "<<iwf<<endl;
@@ -473,7 +486,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
             f_col->push_back(uint16_t(plane.GetX(ipix)));
             f_row->push_back(uint16_t(plane.GetY(ipix)));
             f_adc->push_back(int16_t(plane.GetPixel(ipix)));
-            f_charge->push_back(42);                        // todo: do charge conversion here!
+            f_charge->push_back(42);						// todo: do charge conversion here!
         }
     }
     m_ttree->Fill();
@@ -571,6 +584,8 @@ inline void FileWriterTreeCAEN::ClearVectors(){
     f_adc->clear();
     f_charge->clear();
 
+    for (auto vec: *v_peak_positions) vec.clear();
+    for (auto vec: *v_peak_times) vec.clear();
     for (auto peak: peaks_x) peak->clear();
     for (auto peak: peaks_x_time) peak->clear();
     for (auto peak: peaks_y) peak->clear();
@@ -582,8 +597,8 @@ inline void FileWriterTreeCAEN::ResizeVectors(size_t n_channels) {
     v_is_saturated->resize(n_channels);
     v_median->resize(n_channels);
     v_average->resize(n_channels);
-    for (auto v_t:v_peak_positions) v_t->clear();
-    for (auto v_t:v_peak_timings) v_t->clear();
+    v_max_peak_time->resize(9, 0);
+    v_max_peak_position->resize(9, 0);
 
     f_isDa->resize(n_channels);
 
@@ -669,11 +684,12 @@ inline void FileWriterTreeCAEN::DoSpectrumFitting(uint8_t iwf){
     if (!UseWaveForm(spectrum_waveforms, iwf)) return;
 
     w_spectrum.Start(false);
-    uint16_t noise = 20; // todo: find a way to extract to maximum noise
     float max = *max_element(data_pos.begin(), data_pos.end());
-    //return if the max element is not about the noise level
-    if (max < 2 * noise) return;
-    float threshold = 100 * 2 * noise / max;
+    //return if the max element is lower than 4 sigma of the noise
+    float threshold = 4 * noise->at(iwf).second + noise->at(iwf).first;
+    if (max <= threshold) return;
+    // tspec threshold is in per cent to max peak
+    threshold = threshold / max * 100;
     uint16_t size = uint16_t(data_pos.size());
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     for(uint8_t i=0; i < peaks; i++){
@@ -697,6 +713,16 @@ void FileWriterTreeCAEN::FillSpectrumData(uint8_t iwf){
             data_pos.at(i) = polarities.at(iwf) * data->at(i);
     }
 } // end FillSpectrumData()
+
+void FileWriterTreeCAEN::calc_noise(uint8_t iwf) {
+  float value = data->at(peak_noise_pos);
+  // filter out peaks at the pedestal
+  if (std::abs(value) < 6 * noise->at(iwf).second + std::abs(noise->at(iwf).first) or noise_vectors.at(iwf)->size() < 10)
+    noise_vectors.at(iwf)->push_back(value);
+  if (noise_vectors.at(iwf)->size() >= 1000)
+    noise_vectors.at(iwf)->pop_front();
+  noise->at(iwf) = calc_mean(*noise_vectors.at(iwf));
+}
 
 void FileWriterTreeCAEN::FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf){
     if (regions->count(iwf) == 0) return;
@@ -779,16 +805,23 @@ void FileWriterTreeCAEN::FillRegionVectors(){
 }
 
 void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf){
+
     signed char pol = polarities.at(iwf);
     v_is_saturated->at(iwf) = wf->getAbsMaxInRange(0, 1023) > 488; // indicator if saturation is reached in sampling region (1-1024)
     v_median->at(iwf) = pol * wf->getMedian(0, 1023); // Median over whole sampling region
     v_average->at(iwf) = pol * wf->getIntegral(0, 1023);
     if (UseWaveForm(active_regions, iwf)){
-        vector<uint16_t> * peak_positions = wf->getAllPeaksAbove(0, 1023, 50);
-        v_peak_positions.at(iwf) = peak_positions;
-        vector<float> * peak_timings = new vector<float>;
-        for (auto i_pos:*peak_positions) peak_timings->push_back(getTriggerTime(iwf, i_pos));
-        v_peak_timings.at(iwf) = peak_timings;
+
+        pair<uint16_t, float> peak = wf->getMaxPeak();
+        v_max_peak_position->at(iwf) = peak.first;
+        v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
+        float threshold = polarities.at(iwf) * 4 * noise->at(iwf).second + noise->at(iwf).first;
+        vector<uint16_t> * peak_positions = wf->getAllPeaksAbove(0, 1023, threshold);
+        v_peak_positions->at(iwf) = *peak_positions;
+        v_npeaks->at(iwf) = uint8_t(v_peak_positions->at(iwf).size());
+        vector<float> peak_timings;
+        for (auto i_pos:*peak_positions) peak_timings.push_back(getTriggerTime(iwf, i_pos));
+        v_peak_times->at(iwf) = peak_timings;
     }
 }
 
@@ -879,6 +912,23 @@ string FileWriterTreeCAEN::GetPolarities(vector<signed char> pol) {
     stringstream ss;
     for (auto i_pol:pol) ss << string(3 - to_string(i_pol).size(), ' ') << to_string(i_pol);
     return trim(ss.str(), " ");
+}
+
+void FileWriterTreeCAEN::SetTimeStamp(StandardEvent sev) {
+    if (sev.hasTUEvent()){
+        if (sev.GetTUEvent(0).GetValid())
+            f_time = sev.GetTimestamp();
+    }
+    else
+        f_time = sev.GetTimestamp() / 384066.;
+}
+
+void FileWriterTreeCAEN::SetBeamCurrent(StandardEvent sev) {
+
+  if (sev.hasTUEvent()){
+    StandardTUEvent tuev = sev.GetTUEvent(0);
+    f_beam_current = uint16_t(tuev.GetValid() ? tuev.GetBeamCurrent() : UINT16_MAX);
+  }
 }
 
 #endif // ROOT_FOUND

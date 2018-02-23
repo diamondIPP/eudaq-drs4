@@ -836,7 +836,7 @@ inline int FileWriterTreeDRS4::IsPulserEvent(const StandardWaveform *wf){
 
 inline void FileWriterTreeDRS4::ExtractForcTiming(vector<float> * data) {
     bool found_timing = false;
-    for (uint16_t j=1; j<data->size(); j++){
+    for (uint16_t j=1; j < data->size(); j++){
         if( abs(data->at(j)) > 200 && abs(data->at(uint16_t(j - 1))) < 200) {
             v_forc_pos->push_back(j);
             v_forc_time->push_back(getTriggerTime(trigger_channel, j));
