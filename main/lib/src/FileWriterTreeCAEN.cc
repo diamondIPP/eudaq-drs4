@@ -55,6 +55,9 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     f_signal_events = 0;
     f_time = -1.;
     f_pulser = -1;
+    f_rf_period = 0;
+    f_rf_phase = 0;
+    f_rf_chi2 = UINT16_MAX;
     f_beam_current = UINT16_MAX;
     v_forc_pos = new vector<uint16_t>;
     v_forc_time = new vector<float>;
@@ -173,6 +176,7 @@ void FileWriterTreeCAEN::Configure(){
     pulser_threshold = m_config->Get("pulser_drs4_threshold", 80);
     pulser_channel = uint8_t(m_config->Get("pulser_channel", 1));
     trigger_channel = uint8_t(m_config->Get("trigger_channel", 2));
+    rf_channel = uint8_t(m_config->Get("rf_channel", 99));
 
     // default ranges
     ranges["pulserDRS4"] = new pair<float, float>(m_config->Get("pulser_range_drs4", make_pair(800, 1000)));
@@ -244,6 +248,8 @@ void FileWriterTreeCAEN::Configure(){
     cout << "CHANNEL AND PULSER SETTINGS:" << endl;
     cout << append_spaces(24, "  pulser channel:") << int(pulser_channel) << endl;
     cout << append_spaces(24, "  trigger channel:") << int(trigger_channel) << endl;
+    if (rf_channel)
+      cout << append_spaces(24, "  rf channel:") << int(rf_channel) << endl;
     cout << append_spaces(24, "  pulser_int threshold:") << pulser_threshold << endl;
     cout << append_spaces(24, "  save waveforms:") << save_waveforms << ":  " << GetBitMask(save_waveforms) << endl;
     cout << append_spaces(24, "  fft waveforms:") << fft_waveforms << ":  " << GetBitMask(fft_waveforms) << endl;
@@ -287,6 +293,13 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("beam_current", &f_beam_current, "beam_current/s");
     m_ttree->Branch("forc_pos", &v_forc_pos);
     m_ttree->Branch("forc_time", &v_forc_time);
+
+    //beam rf
+    if (rf_channel < 32 ){
+      m_ttree->Branch("rf_period", &f_rf_period, "rf_period/F");
+      m_ttree->Branch("rf_phase",& f_rf_phase, "rf_phase/F");
+      m_ttree->Branch("rf_chi2",& f_rf_chi2, "rf_chi2/F");
+    }
 
     // drs4
     m_ttree->Branch("trigger_cell", &f_trigger_cell, "trigger_cell/s");
@@ -461,6 +474,13 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
             f_pulser = this->IsPulserEvent(&waveform);
             if (f_pulser) f_pulser_events++;
             else f_signal_events++;
+        }
+        //rf
+        if (iwf == rf_channel){
+          TF1 * fit = waveform.getRFFit(&tcal.at(0));
+          f_rf_period = float(fit->GetParameter(1));
+          f_rf_phase = float(fit->GetParameter(2));
+          f_rf_chi2 = float(fit->GetChisquare() / fit->GetNDF());
         }
 
         // fill waveform vectors

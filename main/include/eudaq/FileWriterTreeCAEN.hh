@@ -103,6 +103,11 @@ namespace eudaq {
         //drs4
         uint16_t f_trigger_cell;
 
+        //rf
+        float f_rf_phase;
+        float f_rf_period;
+        float f_rf_chi2;
+
         bool f_pulser;
         std::vector<uint16_t> *v_forc_pos;
         std::vector<float> *v_forc_time;
@@ -119,6 +124,7 @@ namespace eudaq {
         int pulser_threshold;
         uint8_t pulser_channel;
         uint8_t trigger_channel;
+        uint8_t rf_channel;
 
         /** VECTOR BRANCHES */
         // integrals
