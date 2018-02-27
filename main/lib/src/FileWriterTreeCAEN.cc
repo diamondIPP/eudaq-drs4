@@ -62,6 +62,9 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     v_forc_pos = new vector<uint16_t>;
     v_forc_time = new vector<float>;
 
+    f_trigger_cell = 0;
+    f_trigger_time = 0;
+
     // integrals
     regions = new std::map<int,WaveformSignalRegions* >;
     IntegralNames = new std::vector<std::string>;
@@ -175,7 +178,7 @@ void FileWriterTreeCAEN::Configure(){
     // channels
     pulser_threshold = m_config->Get("pulser_drs4_threshold", 80);
     pulser_channel = uint8_t(m_config->Get("pulser_channel", 1));
-    trigger_channel = uint8_t(m_config->Get("trigger_channel", 2));
+    trigger_channel = uint8_t(m_config->Get("trigger_channel", 99));
     rf_channel = uint8_t(m_config->Get("rf_channel", 99));
 
     // default ranges
@@ -303,6 +306,8 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
 
     // drs4
     m_ttree->Branch("trigger_cell", &f_trigger_cell, "trigger_cell/s");
+    if (trigger_channel > 0)
+      m_ttree->Branch("trigger_time", &f_trigger_time, "trigger_time/F");
 
     // waveforms
     for (uint8_t i_wf = 0; i_wf < 9; i_wf++)
@@ -466,7 +471,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
 
         // determine FORC timing: trigger WF august: 2, may: 1
         if (verbose > 3) cout << "get trigger wf " << iwf << endl;
-        if (iwf == trigger_channel) ExtractForcTiming(data);
+//        if (iwf == trigger_channel) ExtractForcTiming(data);
 
         // determine pulser events: pulser WF august: 1, may: 2
         if (verbose > 3) cout<<"get pulser wf "<<iwf<<endl;
@@ -482,6 +487,8 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
           f_rf_phase = float(fit->GetParameter(2));
           f_rf_chi2 = float(fit->GetChisquare() / fit->GetNDF());
         }
+        if (iwf == trigger_channel)
+          f_trigger_time = waveform.getTriggerTime(&tcal.at(0));
 
         // fill waveform vectors
         if (verbose > 3) cout << "fill wf " << iwf << endl;

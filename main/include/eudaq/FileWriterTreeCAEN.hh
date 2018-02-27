@@ -102,6 +102,7 @@ namespace eudaq {
 
         //drs4
         uint16_t f_trigger_cell;
+        float f_trigger_time;
 
         //rf
         float f_rf_phase;

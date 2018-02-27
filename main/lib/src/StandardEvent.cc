@@ -111,6 +111,26 @@ std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> * tca
   return t;
 }
 
+float StandardWaveform::getTriggerTime(std::vector<float> * tcal) const {
+
+  float min = calc_mean(std::vector<float>(m_samples.begin() + 5, m_samples.begin() + 15)).first;
+  float max = calc_mean(std::vector<float>(m_samples.end() - 15, m_samples.end() - 5)).first;
+  float half = (max + min) / 2;
+  std::pair<float, float> p1, p2;
+  for (uint16_t i(5); i < m_n_samples; i++){
+    if (m_samples.at(i) > half){
+      p1 = std::make_pair(getCalibratedTimes(tcal).at(uint16_t(i - 1)), m_samples.at(uint16_t(i - 1)));
+      p2 = std::make_pair(getCalibratedTimes(tcal).at(i), m_samples.at(i));
+      break;
+    }
+  }
+  std::cout << " " << p1.first << " " << p1.second << ", " << p2.first << " " << p2.second << " ";
+  // take a straight line y = mx + a through the two points and calculate at which time it's a the half point
+  float m = (p2.second - p1.second) / (p2.first - p1.first);
+  float a = p1.second - m * p1.first;
+  return (half - a) / m;
+}
+
 std::pair<uint16_t, float> StandardWaveform::getMaxPeak() const {
     auto max = std::max_element(m_samples.begin(), m_samples.end());
     auto min = std::min_element(m_samples.begin(), m_samples.end());
