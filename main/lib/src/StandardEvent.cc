@@ -1,5 +1,8 @@
 #include "eudaq/StandardEvent.hh"
 #include <TMath.h>
+#include "TF1.h"
+#include "TGraph.h"
+#include "TCanvas.h"
 namespace eudaq {
 
 EUDAQ_DEFINE_EVENT(StandardEvent, str2id("_STD"));
@@ -89,6 +92,24 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
 	return integral / (max_high_length + max_low_length + 1 / sspeed);
 }
 
+TF1 * StandardWaveform::getRFFit(std::vector<float> * tcal) const{
+
+  std::vector<float> t = getCalibratedTimes(tcal);
+  TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
+  auto fit = new TF1("rf_fit", "[0] * TMath::Sin((x+[2])*2*pi/[1])+[3]", 0, 1000);
+  fit->SetParameters(100, 20, 3, -40);
+  fit->SetParLimits(2, -25, 25);
+  gr.Fit("rf_fit", "q");
+  return fit;
+}
+
+std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> * tcal) const {
+
+  std::vector<float> t = {tcal->at(m_trigger_cell)};
+  for (uint16_t i(1); i < m_n_samples; i++)
+    t.push_back(tcal->at(unsigned((m_trigger_cell + i) % m_n_samples)) + t.back());
+  return t;
+}
 
 std::pair<uint16_t, float> StandardWaveform::getMaxPeak() const {
     auto max = std::max_element(m_samples.begin(), m_samples.end());
