@@ -49,7 +49,7 @@ namespace eudaq {
         uint16_t active_regions;
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
-        int IsPulserEvent(const StandardWaveform *wf);
+        bool IsPulserEvent(const StandardWaveform *wf);
         void ExtractForcTiming(std::vector<float> *);
         void FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf);
         void FillRegionVectors();
@@ -103,7 +103,7 @@ namespace eudaq {
         //drs4
         uint16_t f_trigger_cell;
 
-        int f_pulser;
+        bool f_pulser;
         std::vector<uint16_t> *v_forc_pos;
         std::vector<float> *v_forc_time;
 

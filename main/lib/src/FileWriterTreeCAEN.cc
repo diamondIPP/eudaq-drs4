@@ -282,7 +282,7 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     // Set Branch Addresses
     m_ttree->Branch("event_number", &f_event_number, "event_number/I");
     m_ttree->Branch("time",& f_time, "time/D");
-    m_ttree->Branch("pulser",& f_pulser, "pulser/I");
+    m_ttree->Branch("pulser",& f_pulser, "pulser/O");
     m_ttree->Branch("nwfs", &f_nwfs, "n_waveforms/I");
     m_ttree->Branch("beam_current", &f_beam_current, "beam_current/s");
     m_ttree->Branch("forc_pos", &v_forc_pos);
@@ -853,7 +853,7 @@ void FileWriterTreeCAEN::UpdateWaveforms(uint8_t iwf){
     } // data loop
 } // end UpdateWaveforms()
 
-inline int FileWriterTreeCAEN::IsPulserEvent(const StandardWaveform *wf){
+inline bool FileWriterTreeCAEN::IsPulserEvent(const StandardWaveform *wf){
     uint16_t xmin = uint16_t(ranges["pulserDRS4"]->first);
     uint16_t xmax = uint16_t(ranges["pulserDRS4"]->second);
     float pulser_int = wf->getIntegral(xmin, xmax, true);
