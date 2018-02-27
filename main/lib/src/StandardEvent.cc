@@ -124,7 +124,6 @@ float StandardWaveform::getTriggerTime(std::vector<float> * tcal) const {
       break;
     }
   }
-  std::cout << " " << p1.first << " " << p1.second << ", " << p2.first << " " << p2.second << " ";
   // take a straight line y = mx + a through the two points and calculate at which time it's a the half point
   float m = (p2.second - p1.second) / (p2.first - p1.first);
   float a = p1.second - m * p1.first;
