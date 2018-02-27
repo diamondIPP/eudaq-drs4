@@ -88,10 +88,13 @@ public:
 }
 
 	virtual map<uint8_t, vector<float> > GetTimeCalibration(const Event & bore) {
+    // TODO: read 1024 time calibration values!
 		map<uint8_t, vector<float> > tcal;
-		for (uint8_t igr = 0; igr < 4; igr++)
+		for (uint8_t igr = 0; igr < 4; igr++){
 			for (uint16_t itcell = 0; itcell < 1023; itcell++)
-				tcal[igr].push_back(time_corr[igr][itcell + 1] - time_corr[igr][itcell]);
+        tcal[igr].push_back(time_corr[igr][itcell + 1] - time_corr[igr][itcell]);
+      tcal.at(igr).push_back((tcal.at(igr).front() + tcal.at(igr).back()) / 2);
+      }
 		return tcal;
 	}
 
