@@ -30,8 +30,10 @@ class WaveformSignalRegions:public TObject{
         signed char GetPolarity() { return polarity; }
         signed char GetPulserPolarity() { return pulserPolarity; }
         WaveformSignalRegion* GetRegion(UInt_t i);
+        WaveformSignalRegion* GetRegion(std::string name);
     private:
         std::vector<WaveformSignalRegion> regions;
+        std::vector<std::string> names;
         int channel;
         signed char polarity;
         signed char pulserPolarity;
