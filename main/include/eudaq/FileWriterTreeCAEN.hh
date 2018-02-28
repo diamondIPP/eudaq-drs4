@@ -138,6 +138,7 @@ namespace eudaq {
         std::vector<float> *IntegralLength;
 
         // general waveform information
+        std::vector<float> * v_signal_peak_time;
         std::vector<bool> *v_is_saturated;
         std::vector<float> *v_median;
         std::vector<float> *v_average;

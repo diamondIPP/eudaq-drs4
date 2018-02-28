@@ -81,6 +81,7 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     v_median = new vector<float>;
     v_average = new vector<float>;
     v_max_peak_position = new vector<uint16_t>;
+    v_signal_peak_time = new vector<float>;
     v_max_peak_time = new vector<float>;
     v_max_peak_position->resize(9, 0);
     v_peak_positions = new vector<vector<uint16_t> >;
@@ -251,7 +252,7 @@ void FileWriterTreeCAEN::Configure(){
     cout << "CHANNEL AND PULSER SETTINGS:" << endl;
     cout << append_spaces(24, "  pulser channel:") << int(pulser_channel) << endl;
     cout << append_spaces(24, "  trigger channel:") << int(trigger_channel) << endl;
-    if (rf_channel)
+    if (rf_channel < 32)
       cout << append_spaces(24, "  rf channel:") << int(rf_channel) << endl;
     cout << append_spaces(24, "  pulser_int threshold:") << pulser_threshold << endl;
     cout << append_spaces(24, "  save waveforms:") << save_waveforms << ":  " << GetBitMask(save_waveforms) << endl;
@@ -267,7 +268,7 @@ void FileWriterTreeCAEN::Configure(){
     cout << "SIGNAL WINDOWS (REGIONS):" << endl;
     cout << "  " << trim(ss_ped.str(), " ,") << "  " << trim(ss_sig.str(), " ,") << "  " << trim(ss_pul.str(), " ,") << flush;
 
-    cout << "\nMAXIMUM NUMBER OF EVENTS: " << (max_event_number ? to_string(max_event_number) : "ALL") << endl;
+    cout << "\nMAXIMUM NUMBER OF EVENTS: " << (max_event_number > 0 ? to_string(max_event_number) : "ALL") << endl;
     EUDAQ_INFO("End of Configure!");
     cout << endl;
     macro->Write();
@@ -331,8 +332,9 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("average", &v_average);
 
     if (active_regions){
-      m_ttree->Branch(TString::Format("max_peak_position"), &v_max_peak_position);
-      m_ttree->Branch(TString::Format("max_peak_time"), &v_max_peak_time);
+      m_ttree->Branch("signal_peak_time", &v_signal_peak_time);
+      m_ttree->Branch("max_peak_position", &v_max_peak_position);
+      m_ttree->Branch("max_peak_time", &v_max_peak_time);
       m_ttree->Branch("peak_positions", &v_peak_positions);
       m_ttree->Branch("peak_times", &v_peak_times);
       m_ttree->Branch("n_peaks", &v_npeaks);
@@ -624,8 +626,9 @@ inline void FileWriterTreeCAEN::ResizeVectors(size_t n_channels) {
     v_is_saturated->resize(n_channels);
     v_median->resize(n_channels);
     v_average->resize(n_channels);
-    v_max_peak_time->resize(9, 0);
-    v_max_peak_position->resize(9, 0);
+    v_signal_peak_time->resize(n_channels);
+    v_max_peak_time->resize(n_channels, 0);
+    v_max_peak_position->resize(n_channels, 0);
 
     f_isDa->resize(n_channels);
 
@@ -720,6 +723,7 @@ inline void FileWriterTreeCAEN::DoSpectrumFitting(uint8_t iwf){
     uint16_t size = uint16_t(data_pos.size());
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     for(uint8_t i=0; i < peaks; i++){
+        cout << f_event_number << " " << iwf << " " << spec->GetPositionX()[i] << endl;
         uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
         uint16_t min_bin = bin - 5 >= 0 ? uint16_t(bin - 5) : uint16_t(0);
         uint16_t max_bin = bin + 5 < size ? uint16_t(bin + 5) : uint16_t(size - 1);
@@ -821,7 +825,7 @@ void FileWriterTreeCAEN::FillRegionVectors(){
                 IntegralNames->push_back(final_name);
                 IntegralValues->push_back(integral);
                 TimeIntegralValues->push_back(p->GetTimeIntegral());
-                IntegralPeaks->push_back(peak_pos);
+                IntegralPeaks->emplace_back(peak_pos);
                 IntegralPeakTime->push_back(getTriggerTime(iwf, peak_pos));
                 uint16_t bin_low = p->GetIntegralStart();
                 uint16_t bin_up = p->GetIntegralStop();
@@ -839,6 +843,8 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     v_average->at(iwf) = pol * wf->getIntegral(0, 1023);
     if (UseWaveForm(active_regions, iwf)){
 
+        WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
+        v_signal_peak_time->at(iwf) = wf->getPeakFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
@@ -856,7 +862,7 @@ void FileWriterTreeCAEN::UpdateWaveforms(uint8_t iwf){
 
     for (uint16_t j = 0; j < data->size(); j++) {
         if (UseWaveForm(save_waveforms, iwf))
-            f_wf.at(uint8_t(iwf))->push_back(data->at(j));
+            f_wf.at(uint8_t(iwf))->emplace_back(data->at(j));
         if     (iwf == 0) {
             if (f_pulser)
                 avgWF_0_pul->SetBinContent(j+1, avgWF(float(avgWF_0_pul->GetBinContent(j+1)),data->at(j),f_pulser_events));
