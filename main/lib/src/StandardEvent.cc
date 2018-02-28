@@ -1,8 +1,11 @@
 #include "eudaq/StandardEvent.hh"
 #include <TMath.h>
+
+#include <cmath>
 #include "TF1.h"
 #include "TGraph.h"
 #include "TCanvas.h"
+#include "TFitResult.h"
 namespace eudaq {
 
 EUDAQ_DEFINE_EVENT(StandardEvent, str2id("_STD"));
@@ -109,6 +112,19 @@ std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> * tca
   for (uint16_t i(1); i < m_n_samples; i++)
     t.push_back(tcal->at(unsigned((m_trigger_cell + i) % m_n_samples)) + t.back());
   return t;
+}
+
+float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
+
+  std::vector<float> t = getCalibratedTimes(tcal);
+  uint16_t high_bin = getIndex(bin_low, bin_high, pol);
+  t = std::vector<float>(t.begin() + high_bin - 3, t.begin() + high_bin + 3);
+  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 3, m_samples.begin() + high_bin + 3);
+  for (float &i : v) i = std::fabs(i);
+  TGraph gr = TGraph(unsigned(t.size()), &t[0], &v[0]);
+  TF1 gaus("gaus", "gaus", -3., 3.);
+  auto fit = gr.Fit("gaus", "qs");
+  return fit->Parameter(1);
 }
 
 float StandardWaveform::getTriggerTime(std::vector<float> * tcal) const {
