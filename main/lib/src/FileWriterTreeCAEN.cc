@@ -82,6 +82,9 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     v_average = new vector<float>;
     v_max_peak_position = new vector<uint16_t>;
     v_signal_peak_time = new vector<float>;
+    v_rise_time = new vector<float>;
+    v_rise_width = new vector<float>;
+    v_t_thresh = new vector<float>;
     v_max_peak_time = new vector<float>;
     v_max_peak_position->resize(9, 0);
     v_peak_positions = new vector<vector<uint16_t> >;
@@ -331,7 +334,10 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("median", &v_median);
     m_ttree->Branch("average", &v_average);
 
-    if (active_regions){
+    if (active_regions > 0){
+      m_ttree->Branch("rise_width", &v_rise_width);
+      m_ttree->Branch("rise_time", &v_rise_time);
+      m_ttree->Branch("t_thresh", &v_t_thresh);
       m_ttree->Branch("signal_peak_time", &v_signal_peak_time);
       m_ttree->Branch("max_peak_position", &v_max_peak_position);
       m_ttree->Branch("max_peak_time", &v_max_peak_time);
@@ -341,7 +347,7 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     }
 
     // fft stuff and spectrum
-    if (fft_waveforms) {
+    if (fft_waveforms > 0) {
         m_ttree->Branch("fft_mean", &fft_mean);
         m_ttree->Branch("fft_mean_freq", &fft_mean_freq);
         m_ttree->Branch("fft_max", &fft_max);
@@ -627,6 +633,9 @@ inline void FileWriterTreeCAEN::ResizeVectors(size_t n_channels) {
     v_median->resize(n_channels);
     v_average->resize(n_channels);
     v_signal_peak_time->resize(n_channels);
+    v_rise_time->resize(n_channels);
+    v_rise_width->resize(n_channels);
+    v_t_thresh->resize(n_channels);
     v_max_peak_time->resize(n_channels, 0);
     v_max_peak_position->resize(n_channels, 0);
 
@@ -845,6 +854,10 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
         v_signal_peak_time->at(iwf) = wf->getPeakFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
+        auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
+        v_rise_width->at(iwf) = float(erfFit->GetParameter(2));
+        v_rise_time->at(iwf) = float(erfFit->GetParameter(1));
+        v_t_thresh->at(iwf) = float(erfFit->GetX(2 * noise->at(iwf).second + noise->at(iwf).first));
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);

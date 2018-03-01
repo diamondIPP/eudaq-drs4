@@ -19,6 +19,7 @@ class TH1F;
 class TSpectrum;
 class TCanvas;
 class TMacro;
+class TF1;
 
 
 namespace eudaq {
@@ -139,6 +140,9 @@ namespace eudaq {
 
         // general waveform information
         std::vector<float> * v_signal_peak_time;
+        std::vector<float> * v_rise_width;
+        std::vector<float> * v_rise_time;
+        std::vector<float> * v_t_thresh;
         std::vector<bool> *v_is_saturated;
         std::vector<float> *v_median;
         std::vector<float> *v_average;
