@@ -118,13 +118,17 @@ float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed c
 
   std::vector<float> t = getCalibratedTimes(tcal);
   uint16_t high_bin = getIndex(bin_low, bin_high, pol);
-  t = std::vector<float>(t.begin() + high_bin - 3, t.begin() + high_bin + 3);
-  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 3, m_samples.begin() + high_bin + 3);
-  for (float &i : v) i = std::fabs(i);
+  float t_high = t.at(high_bin);
+  t = std::vector<float>(t.begin() + high_bin - 50, t.begin() + high_bin + 5);
+  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 50, m_samples.begin() + high_bin + 5);
+//  for (float &i : v) i = std::fabs(i);
   TGraph gr = TGraph(unsigned(t.size()), &t[0], &v[0]);
-  TF1 gaus("gaus", "gaus", -3., 3.);
-  auto fit = gr.Fit("gaus", "qs");
-  return fit->Parameter(1);
+  TF1 fit("fit", "[0]*TMath::Landau(x, [1], [2]) - [3]", 0, 500);
+  fit.SetParameters(pol * 1000, t_high, 5, pol * 5);
+  gr.Fit("fit", "q");
+  return float(fit.GetParameter(1));
+}
+
 }
 
 float StandardWaveform::getTriggerTime(std::vector<float> * tcal) const {
