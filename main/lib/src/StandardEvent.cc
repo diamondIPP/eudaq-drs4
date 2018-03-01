@@ -101,6 +101,7 @@ TF1 StandardWaveform::getRFFit(std::vector<float> * tcal) const{
   TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
   TF1 fit("rf_fit", "[0] * TMath::Sin((x+[2])*2*pi/[1])+[3]", 0, 1000);
   fit.SetParameters(100, 20, 3, -40);
+  fit.SetParLimits(0, 10, 500);
   fit.SetParLimits(2, -35, 35);
   gr.Fit("rf_fit", "q");
   return fit;
