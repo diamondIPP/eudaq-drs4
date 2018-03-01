@@ -853,7 +853,7 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
         auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
         v_rise_width->at(iwf) = float(erfFit.GetParameter(2));
         v_rise_time->at(iwf) = float(erfFit.GetParameter(1));
-        v_t_thresh->at(iwf) = float(erfFit.GetX(2 * noise->at(iwf).second + noise->at(iwf).first));
+        v_t_thresh->at(iwf) = float(erfFit.GetX(pol * (2 * noise->at(iwf).second + noise->at(iwf).first)));
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
