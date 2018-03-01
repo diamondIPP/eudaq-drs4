@@ -83,6 +83,7 @@ public:
 		std::vector<float> getCalibratedTimes(std::vector<float>*) const;
     float getTriggerTime(std::vector<float>*) const;
     float getPeakFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
+    TF1 * getErfFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
 
 private:
 	uint64_t m_timestamp;
