@@ -490,10 +490,10 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         }
         //rf
         if (iwf == rf_channel){
-          TF1 * fit = waveform.getRFFit(&tcal.at(0));
-          f_rf_period = float(fit->GetParameter(1));
-          f_rf_phase = float(fit->GetParameter(2));
-          f_rf_chi2 = float(fit->GetChisquare() / fit->GetNDF());
+          auto fit = waveform.getRFFit(&tcal.at(0));
+          f_rf_period = float(fit.GetParameter(1));
+          f_rf_phase = GetRFPhase(float(fit.GetParameter(2)), f_rf_period);
+          f_rf_chi2 = float(fit.GetChisquare() / fit.GetNDF());
         }
         if (iwf == trigger_channel)
           f_trigger_time = waveform.getTriggerTime(&tcal.at(0));
@@ -855,9 +855,9 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
         v_signal_peak_time->at(iwf) = wf->getPeakFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
         auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
-        v_rise_width->at(iwf) = float(erfFit->GetParameter(2));
-        v_rise_time->at(iwf) = float(erfFit->GetParameter(1));
-        v_t_thresh->at(iwf) = float(erfFit->GetX(2 * noise->at(iwf).second + noise->at(iwf).first));
+        v_rise_width->at(iwf) = float(erfFit.GetParameter(2));
+        v_rise_time->at(iwf) = float(erfFit.GetParameter(1));
+        v_t_thresh->at(iwf) = float(erfFit.GetX(2 * noise->at(iwf).second + noise->at(iwf).first));
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
@@ -976,5 +976,10 @@ void FileWriterTreeCAEN::SetBeamCurrent(StandardEvent sev) {
     f_beam_current = uint16_t(tuev.GetValid() ? tuev.GetBeamCurrent() : UINT16_MAX);
   }
 }
+float FileWriterTreeCAEN::GetRFPhase(float phase, float period) {
 
+  // shift phase always in [-pi,pi]
+  float fac = int(phase / period - .5);
+  return phase - fac * period;
+}
 #endif // ROOT_FOUND

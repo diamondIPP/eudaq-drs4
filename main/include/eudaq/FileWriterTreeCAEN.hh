@@ -64,6 +64,7 @@ namespace eudaq {
         std::string GetPolarities(std::vector<signed char> pol);
         void SetTimeStamp(StandardEvent);
         void SetBeamCurrent(StandardEvent);
+        float GetRFPhase(float, float);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;

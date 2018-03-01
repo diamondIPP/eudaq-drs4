@@ -95,13 +95,13 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
 	return integral / (max_high_length + max_low_length + 1 / sspeed);
 }
 
-TF1 * StandardWaveform::getRFFit(std::vector<float> * tcal) const{
+TF1 StandardWaveform::getRFFit(std::vector<float> * tcal) const{
 
   std::vector<float> t = getCalibratedTimes(tcal);
   TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
-  auto fit = new TF1("rf_fit", "[0] * TMath::Sin((x+[2])*2*pi/[1])+[3]", 0, 1000);
-  fit->SetParameters(100, 20, 3, -40);
-  fit->SetParLimits(2, -25, 25);
+  TF1 fit("rf_fit", "[0] * TMath::Sin((x+[2])*2*pi/[1])+[3]", 0, 1000);
+  fit.SetParameters(100, 20, 3, -40);
+  fit.SetParLimits(2, -35, 35);
   gr.Fit("rf_fit", "q");
   return fit;
 }
@@ -129,7 +129,7 @@ float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed c
   return float(fit.GetParameter(1));
 }
 
-TF1 * StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
+TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
 
   std::vector<float> t = getCalibratedTimes(tcal);
   uint16_t high_bin = getIndex(bin_low, bin_high, pol);
@@ -137,10 +137,10 @@ TF1 * StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed ch
 //  t = std::vector<float>(t.begin() + high_bin - 50, t.begin() + high_bin + 3);
 //  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 50, m_samples.begin() + high_bin + 3);
   TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
-  auto fit = new TF1("fit", "[0]*TMath::Erf((x-[1])*[2]) + [3]", 0, 500);
-  fit->SetParameters(100, t_high, pol * .5, pol * 100);
-  fit->SetParLimits(0, 10, 500);
-  fit->SetParLimits(1, t_high - 20, t_high + 2);
+  TF1 fit("fit", "[0]*TMath::Erf((x-[1])*[2]) + [3]", 0, 500);
+  fit.SetParameters(100, t_high, pol * .5, pol * 100);
+  fit.SetParLimits(0, 10, 500);
+  fit.SetParLimits(1, t_high - 20, t_high + 2);
   gr.Fit("fit", "q", "", t_high - 20, t_high + 1);
   return fit;
 }
