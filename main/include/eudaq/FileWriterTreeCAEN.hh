@@ -51,7 +51,6 @@ namespace eudaq {
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
         bool IsPulserEvent(const StandardWaveform *wf);
-        void ExtractForcTiming(std::vector<float> *);
         void FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf);
         void FillRegionVectors();
         void FillTotalRange(uint8_t iwf, const StandardWaveform *wf);
@@ -95,7 +94,7 @@ namespace eudaq {
         float getTimeDifference(uint8_t ch, uint16_t bin_low, uint16_t bin_up);
 
         /** SCALAR BRANCHES */
-        int f_nwfs;
+        uint16_t f_nwfs;
         int f_event_number;
         int f_pulser_events;
         int f_signal_events;

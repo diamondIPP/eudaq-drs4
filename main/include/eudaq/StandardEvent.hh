@@ -305,8 +305,8 @@ public:
 	virtual void Print(std::ostream &) const;
 
 	StandardWaveform & AddWaveform(const StandardWaveform &);
-	size_t NumWaveforms() const;
-	size_t GetNWaveforms() const {return NumWaveforms();}
+	uint16_t NumWaveforms() const { return uint16_t(m_waveforms.size()); }
+	uint16_t GetNWaveforms() const {return NumWaveforms();}
 	const StandardWaveform & GetWaveform(size_t i) const;
 	StandardWaveform & GetWaveform(size_t i);
 	bool hasTUEvent();

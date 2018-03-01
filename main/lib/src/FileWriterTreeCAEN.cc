@@ -4,7 +4,6 @@
 
 // eudaq imports
 #include "eudaq/FileNamer.hh"
-#include "eudaq/PluginManager.hh"
 #include "eudaq/Logger.hh"
 #include "eudaq/FileSerializer.hh"
 #include "include/SimpleStandardEvent.hh"
@@ -32,7 +31,7 @@ namespace { static RegisterFileWriter<FileWriterTreeCAEN> reg("caentree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
-: m_tfile(0), m_ttree(0), m_noe(0), chan(9), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0) {
+: m_tfile(nullptr), m_ttree(nullptr), m_noe(0), chan(9), n_pixels(90*90+60*60), histo(nullptr), spec(nullptr), fft_own(nullptr), runnumber(0) {
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
@@ -54,7 +53,7 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     f_pulser_events = 0;
     f_signal_events = 0;
     f_time = -1.;
-    f_pulser = -1;
+    f_pulser = false;
     f_rf_period = 0;
     f_rf_phase = 0;
     f_rf_chi2 = UINT16_MAX;
@@ -137,8 +136,8 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     avgWF_3_sig = new TH1F("avgWF_3_sig","avgWF_3_sig", 1024, 0, 1024);
 
     spec = new TSpectrum(25);
-    fft_own = 0;
-    if(!fft_own){
+    fft_own = nullptr;
+    if(fft_own == nullptr){
         int n = 1024;
         n_samples = n + 1;
         cout << "Creating a new VirtualFFT with " << n_samples << " Samples" << endl;
@@ -155,7 +154,7 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
 void FileWriterTreeCAEN::Configure(){
 
     // do some assertions
-    if (!this->m_config){
+    if (this->m_config == nullptr){
         EUDAQ_WARN("Configuration class instance m_config does not exist!");
         return;
     }
@@ -217,7 +216,7 @@ void FileWriterTreeCAEN::Configure(){
     macro->AddLine("Signal Windows");
     stringstream ss_ped, ss_sig, ss_pul;
     ss_ped << "  Pedestal:\n"; ss_sig << "  Signal:\n"; ss_pul << "  Pulser:\n";
-    for (auto i_key: m_config->GetKeys()){
+    for (const auto &i_key: m_config->GetKeys()){
         size_t found = i_key.find("_region");
         if (found == string::npos) continue;
         if (i_key.find("active_regions") != string::npos) continue;
@@ -283,7 +282,7 @@ void FileWriterTreeCAEN::Configure(){
 void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     this->runnumber = runnumber;
     EUDAQ_INFO("Converting the input file into a CAEN TTree " );
-    string foutput(FileNamer(m_filepattern).Set('X', ".root").Set('R', runnumber));
+    string foutput = FileNamer(m_filepattern).Set('X', ".root").Set('R', runnumber);
     EUDAQ_INFO("Preparing the output file: " + foutput);
 
     c1 = new TCanvas();
@@ -396,7 +395,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         //todo: add time stamp for the very first tu event
         return;
     }
-    else if (ev.IsEORE()) {
+    if (ev.IsEORE()) {
         cout << "loading the last event...." << endl;
         return;
     }
@@ -413,13 +412,12 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
-    unsigned int nwfs = (unsigned int) sev.NumWaveforms();
-    f_nwfs = nwfs;
+    f_nwfs = sev.GetNWaveforms();
 
-    if(f_event_number <= 10 && verbose > 0){
+    if (f_event_number <= 10 && verbose > 0){
         cout << "event number " << f_event_number << endl;
-        cout << "number of waveforms " << nwfs << endl;
-        if(nwfs ==0){
+        cout << "number of waveforms " << f_nwfs << endl;
+        if (f_nwfs == 0){
             cout << "----------------------------------------" << endl;
             cout << "WARNING!!! NO WAVEFORMS IN THIS EVENT!!!" << endl;
             cout << "----------------------------------------" << endl;
@@ -433,7 +431,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
 
     if (verbose > 3) cout << "event number " << f_event_number << endl;
-    if (verbose > 3) cout << "number of waveforms " << nwfs << endl;
+    if (verbose > 3) cout << "number of waveforms " << f_nwfs << endl;
 
     // --------------------------------------------------------------------
     // ---------- get and save all info for all waveforms -----------------
@@ -517,7 +515,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         std::vector<double> cds = plane.GetPixels<double>();
 
         for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
-            f_plane->push_back(iplane);
+            f_plane->emplace_back(iplane);
             f_col->push_back(uint16_t(plane.GetX(ipix)));
             f_row->push_back(uint16_t(plane.GetY(ipix)));
             f_adc->push_back(int16_t(plane.GetPixel(ipix)));
@@ -526,8 +524,6 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     }
     m_ttree->Fill();
     if (f_event_number + 1 % 1000 == 0) cout << "of run " << runnumber << flush;
-//        <<" "<<std::setw(7)<<f_event_number<<"\tSpectrum: "<<w_spectrum.RealTime()/w_spectrum.Counter()<<"\t" <<"LinearFitting: "
-//        <<w_linear_fitting.RealTime()/w_linear_fitting.Counter()<<"\t"<< w_spectrum.Counter()<<"/"<<w_linear_fitting.Counter()<<"\t"<<flush;
     w_total.Stop();
 } // end WriteEvent()
 
@@ -544,7 +540,7 @@ FileWriterTreeCAEN::~FileWriterTreeCAEN() {
     double t = w_total.RealTime();
     ss << "\nTotal time: " <<  setw(2) << setfill('0') << int(t / 60) << ":" << setw(2) << setfill('0') << int(t - int(t / 60) * 60);
     if (entries > 1000) ss << "\nTime/1000 events: " << int(t / entries * 1000 * 1000) << " ms";
-    if (spectrum_waveforms) ss << "\nTSpectrum: " << w_spectrum.RealTime() << " seconds";
+    if (spectrum_waveforms > 0) ss << "\nTSpectrum: " << w_spectrum.RealTime() << " seconds";
     print_banner(ss.str(), '*');
     m_ttree->Write();
     avgWF_0->Write();
@@ -555,7 +551,7 @@ FileWriterTreeCAEN::~FileWriterTreeCAEN() {
     avgWF_3->Write();
     avgWF_3_sig->Write();
     avgWF_3_pul->Write();
-    if (macro) macro->Write();
+    if (macro != nullptr) macro->Write();
     if (m_tfile->IsOpen()) m_tfile->Close();
 }
 
@@ -661,7 +657,7 @@ void FileWriterTreeCAEN::DoFFTAnalysis(uint8_t iwf){
     fft_max_freq->at(iwf) = -1;
     fft_min_freq->at(iwf) = -1;
     w_fft.Start(false);
-    uint32_t n = uint32_t(data->size());
+    auto n = uint32_t(data->size());
     float sample_rate = 2e6;
     if(fft_own->GetN()[0] != n+1){
         n_samples = n+1;
@@ -670,7 +666,7 @@ void FileWriterTreeCAEN::DoFFTAnalysis(uint8_t iwf){
         delete in;
         delete re_full;
         delete im_full;
-        fft_own = 0;
+        fft_own = nullptr;
         in = new Double_t[n];
         re_full = new Double_t[n];
         im_full = new Double_t[n];
@@ -729,11 +725,11 @@ inline void FileWriterTreeCAEN::DoSpectrumFitting(uint8_t iwf){
     if (max <= threshold) return;
     // tspec threshold is in per cent to max peak
     threshold = threshold / max * 100;
-    uint16_t size = uint16_t(data_pos.size());
+    auto size = uint16_t(data_pos.size());
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     for(uint8_t i=0; i < peaks; i++){
         cout << f_event_number << " " << iwf << " " << spec->GetPositionX()[i] << endl;
-        uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
+        auto bin = uint16_t(spec->GetPositionX()[i] + .4);
         uint16_t min_bin = bin - 5 >= 0 ? uint16_t(bin - 5) : uint16_t(0);
         uint16_t max_bin = bin + 5 < size ? uint16_t(bin + 5) : uint16_t(size - 1);
         max = *std::max_element(&data_pos.at(min_bin), &data_pos.at(max_bin));
@@ -767,9 +763,9 @@ void FileWriterTreeCAEN::calc_noise(uint8_t iwf) {
 void FileWriterTreeCAEN::FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf){
     if (regions->count(iwf) == 0) return;
     WaveformSignalRegions * this_regions = (*regions)[iwf];
-    UInt_t nRegions = UInt_t(this_regions->GetNRegions());
+    uint16_t nRegions = this_regions->GetNRegions();
     for (uint16_t i=0; i < nRegions; i++){
-        if(verbose) cout << "REGION LOOP" << endl;
+        if (verbose > 0) cout << "REGION LOOP" << endl;
         WaveformSignalRegion * region = this_regions->GetRegion(i);
         signed char polarity;
         polarity = (string(region->GetName()).find("pulser") != string::npos) ? this_regions->GetPulserPolarity() : this_regions->GetPolarity();
@@ -780,11 +776,11 @@ void FileWriterTreeCAEN::FillRegionIntegrals(uint8_t iwf, const StandardWaveform
         size_t nIntegrals = region->GetNIntegrals();
         for (UInt_t k = 0; k < nIntegrals;k++){
             WaveformIntegral* p = region->GetIntegralPointer(k);
-            if (p==0){
+            if (p == nullptr){
                 std::cout<<"Invalid Integral Pointer. Continue."<<std::endl;
                 continue;
             }
-            if (verbose) cout << "GET INTEGRAL " << k << " " << peak_pos << " " << endl;
+            if (verbose > 0) cout << "GET INTEGRAL " << k << " " << peak_pos << " " << endl;
             std::string name = p->GetName();
             std::transform(name.begin(), name.end(), name.begin(), ::tolower);
             p->SetPeakPosition(peak_pos,wf->GetNSamples());
@@ -906,21 +902,6 @@ inline bool FileWriterTreeCAEN::IsPulserEvent(const StandardWaveform *wf){
     float baseline_int = wf->getIntegral(5, uint16_t(xmax - xmin + 5), true);
     return abs(pulser_int - baseline_int) > pulser_threshold;
 } //end IsPulserEvent
-
-inline void FileWriterTreeCAEN::ExtractForcTiming(vector<float> * data) {
-    bool found_timing = false;
-    for (uint16_t j=1; j < data->size(); j++){
-        if( abs(data->at(j)) > 200 && abs(data->at(uint16_t(j - 1))) < 200) {
-            v_forc_pos->push_back(j);
-            v_forc_time->push_back(getTriggerTime(trigger_channel, j));
-            found_timing = true;
-        }
-    }
-    if (!found_timing) {
-        v_forc_pos->push_back(0);
-        v_forc_time->push_back(-999);
-    }
-} //end ExtractForcTiming()
 
 void FileWriterTreeCAEN::FillFullTime(){
     uint16_t n_waveform_samples = 1024;

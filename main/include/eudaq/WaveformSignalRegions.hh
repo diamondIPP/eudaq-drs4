@@ -26,7 +26,7 @@ class WaveformSignalRegions:public TObject{
         void Print(std::ostream& out) const;
 //        void CalculateIntegrals(const StandardWaveform* wf);
         void Reset();
-        size_t GetNRegions(){return regions.size();}
+        uint16_t GetNRegions() { return uint16_t(regions.size()); }
         signed char GetPolarity() { return polarity; }
         signed char GetPulserPolarity() { return pulserPolarity; }
         WaveformSignalRegion* GetRegion(UInt_t i);

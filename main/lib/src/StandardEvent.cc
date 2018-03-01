@@ -646,10 +646,6 @@ bool StandardEvent::hasTUEvent() {
 	return m_tuevent.size() !=0;
 }
 
-size_t StandardEvent::NumWaveforms() const {//ok
-	return m_waveforms.size();
-}
-
 StandardWaveform & StandardEvent::GetWaveform(size_t i) {//ok
 	return m_waveforms[i];
 }
