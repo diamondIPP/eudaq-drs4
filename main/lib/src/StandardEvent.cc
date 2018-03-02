@@ -132,13 +132,17 @@ float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed c
 
 TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
 
+  TF1 fit("fit", "[0]*TMath::Erf((x-[1])*[2]) + [3]", 0, 500);
+  if (getAbsMaxInRange(bin_low, bin_high) > 2000){
+    fit.SetParameters(0, 0, 0, 0);
+    return fit;
+  }
   std::vector<float> t = getCalibratedTimes(tcal);
   uint16_t high_bin = getIndex(bin_low, bin_high, pol);
   float t_high = t.at(high_bin);
 //  t = std::vector<float>(t.begin() + high_bin - 50, t.begin() + high_bin + 3);
 //  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 50, m_samples.begin() + high_bin + 3);
   TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
-  TF1 fit("fit", "[0]*TMath::Erf((x-[1])*[2]) + [3]", 0, 500);
   fit.SetParameters(100, t_high, pol * .5, pol * 100);
   fit.SetParLimits(0, 10, 500);
   fit.SetParLimits(1, t_high - 20, t_high + 2);
