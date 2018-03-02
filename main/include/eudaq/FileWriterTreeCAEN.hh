@@ -127,6 +127,7 @@ namespace eudaq {
         uint8_t pulser_channel;
         uint8_t trigger_channel;
         uint8_t rf_channel;
+        uint8_t scint_channel;
 
         /** VECTOR BRANCHES */
         // integrals

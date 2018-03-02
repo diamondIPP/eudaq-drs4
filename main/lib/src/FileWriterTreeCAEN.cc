@@ -183,6 +183,7 @@ void FileWriterTreeCAEN::Configure(){
     pulser_channel = uint8_t(m_config->Get("pulser_channel", 1));
     trigger_channel = uint8_t(m_config->Get("trigger_channel", 99));
     rf_channel = uint8_t(m_config->Get("rf_channel", 99));
+    scint_channel = uint8_t(m_config->Get("scint_channel", 99));
 
     // default ranges
     ranges["pulserDRS4"] = new pair<float, float>(m_config->Get("pulser_range_drs4", make_pair(800, 1000)));
@@ -254,8 +255,8 @@ void FileWriterTreeCAEN::Configure(){
     cout << "CHANNEL AND PULSER SETTINGS:" << endl;
     cout << append_spaces(24, "  pulser channel:") << int(pulser_channel) << endl;
     cout << append_spaces(24, "  trigger channel:") << int(trigger_channel) << endl;
-    if (rf_channel < 32)
-      cout << append_spaces(24, "  rf channel:") << int(rf_channel) << endl;
+    if (rf_channel < 32)    cout << append_spaces(24, "  rf channel:") << int(rf_channel) << endl;
+    if (scint_channel < 32) cout << append_spaces(24, "  scintilltor channel:") << int(scint_channel) << endl;
     cout << append_spaces(24, "  pulser_int threshold:") << pulser_threshold << endl;
     cout << append_spaces(24, "  save waveforms:") << save_waveforms << ":  " << GetBitMask(save_waveforms) << endl;
     cout << append_spaces(24, "  fft waveforms:") << fft_waveforms << ":  " << GetBitMask(fft_waveforms) << endl;
