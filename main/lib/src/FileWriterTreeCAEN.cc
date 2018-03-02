@@ -42,6 +42,7 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     //Polarities of signals, default is positive signals
     polarities.resize(9, 1);
     pulser_polarities.resize(9, 1);
+    dia_channels = new vector<uint16_t>;
 
     //how many events will be analyzed, 0 = all events
     max_event_number = 0;
@@ -210,6 +211,9 @@ void FileWriterTreeCAEN::Configure(){
 
     // regions todo: add default range
     active_regions = m_config->Get("active_regions", uint16_t(0));
+    for (uint8_t i(0); i < 32; i++)
+      if (UseWaveForm(active_regions, i))
+        dia_channels->emplace_back(i);
     macro->AddLine(TString::Format("active_regions: %d", active_regions));
     for (uint8_t i = 0; i < 9; i++)
         if (UseWaveForm(active_regions, i)) (*regions)[i] = new WaveformSignalRegions(i, polarities.at(i), pulser_polarities.at(i));
@@ -238,7 +242,7 @@ void FileWriterTreeCAEN::Configure(){
             }
         }
         for (uint8_t i = 0; i < 9;i++)
-            if ((active_regions & 1<<i) == 1<<i)
+            if (UseWaveForm(active_regions, i))
                 regions->at(i)->AddRegion(region);
     }
     macro->AddLine("");
@@ -866,6 +870,15 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
         for (auto i_pos:*peak_positions) peak_timings.push_back(getTriggerTime(iwf, i_pos));
         v_peak_times->at(iwf) = peak_timings;
     }
+
+  if (scint_channel == iwf) {
+    WaveformSignalRegion * reg = regions->at(dia_channels->at(0))->GetRegion("signal_b");
+    auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), -1, &tcal.at(0));
+    v_rise_width->at(iwf) = float(erfFit.GetParameter(2));
+    v_rise_time->at(iwf) = float(erfFit.GetParameter(1));
+    v_t_thresh->at(iwf) = float(erfFit.GetX((-10 * noise->at(iwf).second + noise->at(iwf).first)));
+//    cout << f_event_number << " " << int(iwf) << " " << v_rise_time->at(iwf) << " " << v_t_thresh->at(iwf) << " " << (-10 * noise->at(iwf).second + noise->at(iwf).first)<<endl;
+  }
 }
 
 void FileWriterTreeCAEN::UpdateWaveforms(uint8_t iwf){

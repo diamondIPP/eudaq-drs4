@@ -48,6 +48,7 @@ namespace eudaq {
         long max_event_number;
         uint16_t save_waveforms;
         uint16_t active_regions;
+        std::vector<uint16_t> * dia_channels;
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
         bool IsPulserEvent(const StandardWaveform *wf);
