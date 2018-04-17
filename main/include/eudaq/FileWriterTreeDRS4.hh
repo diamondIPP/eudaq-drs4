@@ -70,6 +70,7 @@ namespace eudaq {
         std::string GetPolarities(std::vector<signed char> pol);
         void SetTimeStamp(StandardEvent);
         void SetBeamCurrent(StandardEvent);
+        void SetScalers(StandardEvent);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
@@ -197,6 +198,9 @@ namespace eudaq {
         // wf check
         std::vector<bool> * f_isDa;
         std::vector<uint16_t> wf_thr;
+
+        //tu
+        std::vector<uint16_t> * v_scaler;
 
     };
 }
