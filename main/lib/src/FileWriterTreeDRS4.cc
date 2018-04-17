@@ -96,7 +96,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     f_charge = new std::vector<uint32_t>;
 
     //tu
-    v_scaler = new vector<uint16_t>;
+    v_scaler = new vector<uint32_t>;
     v_scaler->resize(10);
 
     // average waveforms of channels
@@ -914,7 +914,7 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
     if (sev.hasTUEvent()){
         StandardTUEvent tuev = sev.GetTUEvent(0);
         for (uint8_t i(0); i < 10; i++)
-            v_scaler->at(i) = uint16_t(tuev.GetValid() ? tuev.GetScalerValue(i) : UINT16_MAX);
+            v_scaler->at(i) = uint16_t(tuev.GetValid() ? tuev.GetScalerValue(i) : UINT32_MAX);
     }
 }
 #endif // ROOT_FOUND
