@@ -914,7 +914,7 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
     if (sev.hasTUEvent()){
         StandardTUEvent tuev = sev.GetTUEvent(0);
         for (uint8_t i(0); i < 10; i++)
-            v_scaler->at(i) = uint16_t(tuev.GetValid() ? tuev.GetScalerValue(i) : UINT32_MAX);
+            v_scaler->at(i) = uint32_t(tuev.GetValid() ? tuev.GetScalerValue(i) : UINT32_MAX);
     }
 }
 #endif // ROOT_FOUND
