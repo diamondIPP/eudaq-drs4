@@ -200,7 +200,8 @@ namespace eudaq {
         std::vector<uint16_t> wf_thr;
 
         //tu
-        std::vector<uint32_t> * v_scaler;
+        std::vector<uint64_t> * v_scaler;
+        std::vector<uint64_t> * old_scaler;
 
     };
 }

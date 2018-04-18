@@ -96,8 +96,10 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     f_charge = new std::vector<uint32_t>;
 
     //tu
-    v_scaler = new vector<uint32_t>;
-    v_scaler->resize(10);
+    v_scaler = new vector<uint64_t>;
+    v_scaler->resize(4);
+    old_scaler = new vector<uint64_t>;
+    old_scaler->resize(4, 0);
 
     // average waveforms of channels
     avgWF_0 = new TH1F("avgWF_0","avgWF_0", 1024, 0, 1024);
@@ -464,7 +466,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         std::vector<double> cds = plane.GetPixels<double>();
 
         for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
-            f_plane->push_back(iplane);
+            f_plane->emplace_back(iplane);
             f_col->push_back(uint16_t(plane.GetX(ipix)));
             f_row->push_back(uint16_t(plane.GetY(ipix)));
             f_adc->push_back(int16_t(plane.GetPixel(ipix)));
@@ -776,7 +778,7 @@ void FileWriterTreeDRS4::FillRegionVectors(){
                 IntegralNames->push_back(final_name);
                 IntegralValues->push_back(integral);
                 TimeIntegralValues->push_back(p->GetTimeIntegral());
-                IntegralPeaks->push_back(peak_pos);
+                IntegralPeaks->emplace_back(peak_pos);
                 IntegralPeakTime->push_back(getTriggerTime(iwf, peak_pos));
                 uint16_t bin_low = p->GetIntegralStart();
                 uint16_t bin_up = p->GetIntegralStop();
@@ -811,7 +813,7 @@ void FileWriterTreeDRS4::UpdateWaveforms(uint8_t iwf){
 
     for (uint16_t j = 0; j < data->size(); j++) {
         if (UseWaveForm(save_waveforms, iwf))
-            f_wf.at(uint8_t(iwf))->push_back(data->at(j));
+            f_wf.at(uint8_t(iwf))->emplace_back(data->at(j));
         if     (iwf == 0) {
             if (f_pulser)
                 avgWF_0_pul->SetBinContent(j+1, avgWF(float(avgWF_0_pul->GetBinContent(j+1)),data->at(j),f_pulser_events));
@@ -903,18 +905,22 @@ void FileWriterTreeDRS4::SetTimeStamp(StandardEvent sev) {
 
 void FileWriterTreeDRS4::SetBeamCurrent(StandardEvent sev) {
 
-  if (sev.hasTUEvent()){
-    StandardTUEvent tuev = sev.GetTUEvent(0);
-    f_beam_current = uint16_t(tuev.GetValid() ? tuev.GetBeamCurrent() : UINT16_MAX);
-  }
+    if (sev.hasTUEvent()){
+        StandardTUEvent tuev = sev.GetTUEvent(0);
+        f_beam_current = uint16_t(tuev.GetValid() ? tuev.GetBeamCurrent() : UINT16_MAX);
+    }
 }
 
 void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
 
-    if (sev.hasTUEvent()){
+    if (sev.hasTUEvent()) {
         StandardTUEvent tuev = sev.GetTUEvent(0);
-        for (uint8_t i(0); i < 10; i++)
-            v_scaler->at(i) = uint32_t(tuev.GetValid() ? tuev.GetScalerValue(i) : UINT32_MAX);
+            for (uint8_t i(0); i < 4; i++) {
+                v_scaler->at(i) = uint64_t(tuev.GetValid() ? tuev.GetScalerValue(i) - old_scaler->at(i) : UINT32_MAX);
+                if (tuev.GetValid())
+                    old_scaler->at(i) = tuev.GetScalerValue(i);
+            }
+        }
     }
-}
+
 #endif // ROOT_FOUND
