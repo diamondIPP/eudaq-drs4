@@ -33,6 +33,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     f_pulser_events = 0;
     f_signal_events = 0;
     f_time = -1.;
+    old_time = 0;
     f_pulser = -1;
     f_beam_current = UINT16_MAX;
     v_forc_pos = new vector<uint16_t>;
@@ -97,9 +98,9 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
 
     //tu
     v_scaler = new vector<uint64_t>;
-    v_scaler->resize(4);
+    v_scaler->resize(5);
     old_scaler = new vector<uint64_t>;
-    old_scaler->resize(4, 0);
+    old_scaler->resize(5, 0);
 
     // average waveforms of channels
     avgWF_0 = new TH1F("avgWF_0","avgWF_0", 1024, 0, 1024);
@@ -270,7 +271,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("pulser",& f_pulser, "pulser/I");
     m_ttree->Branch("nwfs", &f_nwfs, "n_waveforms/I");
     m_ttree->Branch("beam_current", &f_beam_current, "beam_current/s");
-    m_ttree->Branch("scaler", &v_scaler);
+    m_ttree->Branch("rate", &v_scaler);
     m_ttree->Branch("forc_pos", &v_forc_pos);
     m_ttree->Branch("forc_time", &v_forc_time);
 
@@ -915,11 +916,14 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
 
     if (sev.hasTUEvent()) {
         StandardTUEvent tuev = sev.GetTUEvent(0);
-            for (uint8_t i(0); i < 4; i++) {
-                v_scaler->at(i) = uint64_t(tuev.GetValid() ? tuev.GetScalerValue(i) - old_scaler->at(i) : UINT32_MAX);
-                if (tuev.GetValid())
+        bool valid = tuev.GetValid();
+        for (uint8_t i(0); i < 5; i++) {
+                v_scaler->at(i) = uint64_t(valid ? (tuev.GetScalerValue(i) - old_scaler->at(i)) * 1000 / (f_time - old_time) : UINT32_MAX);
+                if (valid)
                     old_scaler->at(i) = tuev.GetScalerValue(i);
             }
+        if (valid)
+            old_time = f_time;
         }
     }
 
