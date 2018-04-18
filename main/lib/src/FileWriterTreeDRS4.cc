@@ -917,6 +917,8 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
     if (sev.hasTUEvent()) {
         StandardTUEvent tuev = sev.GetTUEvent(0);
         bool valid = tuev.GetValid();
+        /** scaler continuously count upwards: subtract old scaler value and divide by time interval to get rate
+         *  first scaler value is the scintillator and then the planes */
         for (uint8_t i(0); i < 5; i++) {
                 v_scaler->at(i) = uint64_t(valid ? (tuev.GetScalerValue(i) - old_scaler->at(i)) * 1000 / (f_time - old_time) : UINT32_MAX);
                 if (valid)
