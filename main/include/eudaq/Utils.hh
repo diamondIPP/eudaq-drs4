@@ -374,6 +374,20 @@ namespace eudaq {
     float stdev = std::sqrt(sq_sum / deq.size() - mean * mean);
     return std::make_pair(mean, stdev);
   }
+
+  template<typename T>
+  bool in(T num, std::vector<T> ids){ return find(ids.begin(), ids.end(), num ) != ids.end(); }
+
+  template<typename Q>
+  std::vector<Q> stovec(std::string name, Q def){
+    std::vector<Q> tmp;
+    for (const auto &str: split(trim(name, " []"), ","))
+      tmp.push_back(stoi(str));
+    return tmp;
+  }
+
+  std::vector<ssize_t > range(ssize_t begin, ssize_t end=SIZE_MAX, int32_t step=1);
+
     class ProgressBar {
 
     private:

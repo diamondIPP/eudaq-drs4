@@ -282,4 +282,13 @@ namespace eudaq {
 
       return s1 + '/' + s2;
     }
+    std::vector<ssize_t> range(ssize_t begin, ssize_t end, int32_t step){
+
+      end = end == SIZE_MAX ? begin : end;
+      begin = end != begin ? begin : 0;
+      std::vector<ssize_t> tmp;
+      for (ssize_t i(begin); i < end; i+=step)
+        tmp.push_back(i);
+      return tmp;
+    }
 }
