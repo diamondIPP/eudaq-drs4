@@ -24,14 +24,19 @@ public:
   bool IsKilled;
   bool IsBusy;
   bool HotStart;
+  uint16_t UpdateInterval;
+  uint16_t MaxWaitTime;
   HVInterface * Interface;
   /** VALUES */
-  std::vector<float> Bias;
-  std::vector<float> Current;
+  std::vector<std::pair<float, float>> CurrentIV;
+  std::vector<std::pair<float, float>> LastIV;
 
   std::vector<std::pair<float, float>> readIV();
   std::vector<uint16_t> getActiveChannels() { return ActiveChannels; }
   std::vector<float> getTargetBias() { return TargetBias; }
+
+  void run();
+  void updateIV();
 
 private:
   /** CHANNELS */
@@ -43,7 +48,7 @@ private:
   std::vector<float> TargetBias;
   std::vector<float> MaxBias;
 
-
+  void waitForDevice();
   bool initInterface(const uint16_t, const bool, const eudaq::Configuration &);
   void hotStart();
 
