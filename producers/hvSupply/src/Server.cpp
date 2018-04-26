@@ -1,13 +1,8 @@
 // Created by micha on 26.04.18.
 
 #include "Server.h"
-
-#include <cstdlib>
 #include <unistd.h>
 #include "cstring"
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <cstdio>
 
 using namespace std;
 
@@ -28,6 +23,7 @@ Server::Server(uint32_t port_number): PortNumber(port_number) {
   if (NewSockFD < 0)
     error("ERROR on accept");
 }
+
 Server::~Server() {
 
   close(NewSockFD);
