@@ -19,8 +19,8 @@
 static const std::string EVENT_TYPE = "HV";
 using namespace std;
 
-HVProducer::HVProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity):eudaq::Producer(name, runcontrol), event_type(EVENT_TYPE),
-                                                                                                             Done(false), HVStarted(false) {
+HVProducer::HVProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity): eudaq::Producer(name, runcontrol),
+                       m_event_type(EVENT_TYPE), Done(false), HVStarted(false), m_ev(0), m_run(0) {
 
 }
 
@@ -179,7 +179,9 @@ void HVProducer::OnStartRun(unsigned run_nr) {
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
 		std::cout << "--> Starting HV Run " << run_nr << std::endl;
 
-		eudaq::RawDataEvent ev(eudaq::RawDataEvent::BORE(event_type, run_nr));
+    m_run = run_nr;
+    m_ev = 0;
+		eudaq::RawDataEvent ev(eudaq::RawDataEvent::BORE(m_event_type, m_run));
 		ev.SetTag("Names", eudaq::to_string(getNames()));
 		ev.SetTag("Biases", eudaq::to_string(getBiases()));
 		SendEvent(ev);
@@ -257,6 +259,7 @@ void HVProducer::OnConfigure(const eudaq::Configuration& conf) {
     vector<uint16_t> device_numbers = eudaq::stovec(conf.Get("devices", "1"), uint16_t(1));
     for (auto nr: device_numbers)
       Clients.push_back(new HVClient(nr, true, conf));
+    NClients = Clients.size();
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 	} catch (...){
 		std::cout << BOLDRED << "HVProducer::OnConfigure: Could not connect to HV Clients, try again." << CLEAR;
@@ -282,6 +285,24 @@ std::vector<float> HVProducer::getBiases() {
       tmp.push_back(bias);
   return tmp;
 }
+
+void HVProducer::sendRawEvent() {
+
+  eudaq::RawDataEvent event(m_event_type, m_run, m_ev);
+  event.SetTag("valid", true);
+  uint32_t block_nr = 0;
+//  event.AddBlock(block_nr, static_cast<const uint64_t*>(&), sizeof( trigger_cell));
+
+}
+
+void HVProducer::sendFakeEvent() {
+
+  /**send fake events for events we are missing out between readout cycles */
+  eudaq::RawDataEvent fake_event(m_event_type, m_run, m_ev);
+  fake_event.SetTag("valid", false);
+  SendEvent(fake_event);
+}
+
 
 
 

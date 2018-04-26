@@ -31,11 +31,15 @@ public:
 	virtual void OnReset();
 	virtual void OnStatus();
   bool Done;
+  void sendRawEvent();
+  void sendFakeEvent();
 
 private:
   bool HVStarted;
-	std::string event_type;
+  uint32_t m_ev, m_run;
+	std::string m_event_type;
   std::vector<HVClient *> Clients;
+  size_t NClients;
   std::vector<std::string> getNames();
   std::vector<float> getBiases();
 };
