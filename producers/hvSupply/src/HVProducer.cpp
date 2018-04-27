@@ -258,7 +258,7 @@ void HVProducer::OnConfigure(const eudaq::Configuration& conf) {
     DataClient->setHostName(conf.Get("host_name", "daq"));
     DataClient->init();
   }
-
+  std::cout << BOLDGREEN << "HVProducer::OnConfigure" << CLEAR;
   Clients.clear();
 	try {
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
@@ -267,6 +267,7 @@ void HVProducer::OnConfigure(const eudaq::Configuration& conf) {
       Clients.push_back(new HVClient(nr, true, conf));
     NClients = Clients.size();
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
+    cout << BOLDGREEN <<  "Configuring HV devices with settings file (" << conf.Name() << ") done." << CLEAR;
 	} catch (...){
 		std::cout << BOLDRED << "HVProducer::OnConfigure: Could not connect to HV Clients, try again." << CLEAR;
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");

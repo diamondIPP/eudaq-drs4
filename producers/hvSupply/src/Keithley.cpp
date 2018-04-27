@@ -27,7 +27,6 @@ Keithley::Keithley(const uint16_t device_nr, const bool hot_start, const Configu
   setModelName();
   setMaxVoltage();
   clearErrorQueue();
-
 }
 
 void Keithley::setOutput(const string &status) {
@@ -110,6 +109,8 @@ void Keithley::setModelName() {
 
 vector<pair<float, float>> Keithley::readIV() {
 
+  if (Status.at(0) == OFF)
+    return {make_pair(0, Config.Get("bias", 0))};
   try{
     vector<float> tmp;
     for (const auto &str: eudaq::split(query(":READ?"), ","))

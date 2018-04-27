@@ -30,7 +30,7 @@ Keithley24XX::Keithley24XX(const uint16_t device_nr, const bool hot_start, const
   }
   setBeeper(ON);
   clearErrorQueue();
-  setBias(150);
+  setBias(10);
 }
 
 void Keithley24XX::setComplianceAbort(std::string level) {
