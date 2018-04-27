@@ -14,6 +14,7 @@
 #include <deque>
 #include <vector>
 #include "HVClient.h"
+#include "Client.h"
 
 class Configuration;
 class trigger_controll;
@@ -42,6 +43,9 @@ private:
   size_t NClients;
   std::vector<std::string> getNames();
   std::vector<float> getBiases();
+
+protected:
+  Client * DataClient;
 };
 
 int main(int /*argc*/, const char ** argv);

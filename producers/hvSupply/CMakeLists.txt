@@ -29,7 +29,7 @@ ELSE(CONFIG++_FOUND)
 ENDIF (CONFIG++_FOUND)
 
 
-add_executable(HVProducer.exe src/HVProducer.cpp src/HVInterface.cpp src/Keithley.cpp src/HVClient.cpp src/Keithley24XX.cpp src/Server.cpp)
+add_executable(HVProducer.exe src/HVProducer.cpp src/HVInterface.cpp src/Keithley.cpp src/HVClient.cpp src/Keithley24XX.cpp src/Client.cpp)
 include_directories(include ${CONFIG++_INCLUDE_DIR})
 target_link_libraries(HVProducer.exe EUDAQ ${EUDAQ_THREADS_LIB} ${CONFIG++_LIBRARY})
 

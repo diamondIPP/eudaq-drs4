@@ -22,6 +22,7 @@ using namespace std;
 HVProducer::HVProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity): eudaq::Producer(name, runcontrol),
                        m_event_type(EVENT_TYPE), Done(false), HVStarted(false), m_ev(0), m_run(0) {
 
+  DataClient = new Client(44444, "None");
 }
 
 
@@ -252,6 +253,11 @@ void HVProducer::OnStatus(){
 
 
 void HVProducer::OnConfigure(const eudaq::Configuration& conf) {
+
+  if (DataClient->getHostName() == "None"){
+    DataClient->setHostName(conf.Get("host_name", "daq"));
+    DataClient->init();
+  }
 
   Clients.clear();
 	try {

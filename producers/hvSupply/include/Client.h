@@ -12,17 +12,22 @@
 #include <netinet/in.h>
 #include <string>
 
-class Server{
+class Client{
 
 public:
-  Server(uint32_t port_number);
-  ~Server();
+  Client(uint32_t port_number, std::string host_name);
+  ~Client();
   void writex(std::string);
   std::string readx();
+  void init();
+  void setHostName(std::string host_name) { HostName = host_name; }
+  std::string getHostName() { return HostName; }
 
 private:
-  int32_t SockFD, NewSockFD, PortNumber;
+  std::string HostName;
+  int32_t SockFD, PortNumber;
   ssize_t n;
+  struct hostent * Server;
   socklen_t CliLen;
   void error(std::string);
   struct sockaddr_in ServerAddress, ClientAddress;
