@@ -60,7 +60,12 @@ eudaq::multiFileReader::multiFileReader(bool sync) :m_sync(sync), m_eventsToSync
 	
 }
 
-unsigned eudaq::multiFileReader::RunNumber() const
-{ 
-	return m_ev->GetRunNumber();
+unsigned eudaq::multiFileReader::RunNumber() const { return m_ev->GetRunNumber(); }
+
+bool eudaq::multiFileReader::hasTUEvent() {
+
+	for (size_t i=0; i < m_ev->NumEvents(); ++i)
+		if (m_ev->GetEvent(i)->GetSubType() == "TU")
+			return true;
+	return false;
 }

@@ -28,6 +28,7 @@ namespace eudaq{
 	
 		void addFileReader(const std::string & filename, const std::string & filepattern = "");
 		void Interrupt() ;
+		bool hasTUEvent();
 	private:
 		std::string m_filename;
 		std::shared_ptr<eudaq::DetectorEvent> m_ev;

@@ -11,7 +11,7 @@ namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
-: m_tfile(0), m_ttree(0), m_noe(0), chan(4), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0) {
+: m_tfile(0), m_ttree(0), m_noe(0), chan(4), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false) {
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
@@ -271,7 +271,8 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("pulser",& f_pulser, "pulser/I");
     m_ttree->Branch("nwfs", &f_nwfs, "n_waveforms/I");
     m_ttree->Branch("beam_current", &f_beam_current, "beam_current/s");
-    m_ttree->Branch("rate", &v_scaler);
+    if (hasTU)
+        m_ttree->Branch("rate", &v_scaler);
     m_ttree->Branch("forc_pos", &v_forc_pos);
     m_ttree->Branch("forc_time", &v_forc_time);
 

@@ -47,6 +47,7 @@ namespace eudaq {
         virtual ~FileWriterTreeDRS4();
         virtual long GetMaxEventNumber() { return max_event_number; }
         virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
+        virtual void setTU(bool tu) { hasTU = tu; }
 
     private:
         unsigned runnumber;
@@ -71,6 +72,7 @@ namespace eudaq {
         void SetTimeStamp(StandardEvent);
         void SetBeamCurrent(StandardEvent);
         void SetScalers(StandardEvent);
+        bool hasTU;
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
