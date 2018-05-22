@@ -3,6 +3,7 @@
 #include "datasource_evt.h"
 #include "Utils.hh"
 #include <exception>
+#include <fstream>
 
 #if USE_LCIO
 #  include "IMPL/LCEventImpl.h"
@@ -238,9 +239,14 @@ namespace eudaq {
           decoding_stats += decoder.getStatistics();
       }
       catch (std::exception& e){
-          EUDAQ_WARN("Decoding crashed:");
-          std::cout<<e.what()<<std::endl;
-//cout << e.what() << '\n';
+          EUDAQ_WARN("Decoding crashed at event " + to_string(in.GetEventNumber()) + ":");
+          std::ofstream f;
+          std::string runNumber = to_string(in.GetRunNumber());
+          std::string filename = "Errors" + std::string(3 - runNumber.length(), '0') + runNumber + ".txt";
+          f.open(filename, std::ios::out | std::ios::app);
+          f << in.GetEventNumber() << "\n";
+          f.close();
+          std::cout << e.what() << std::endl;
           return false;
       }
 
