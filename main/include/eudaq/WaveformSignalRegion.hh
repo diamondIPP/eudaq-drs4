@@ -20,6 +20,7 @@ class WaveformSignalRegion:public TObject {
         void SetPeakPostion(Int_t peak_position);
         void SetPeakTime(float t_peak) { peak_time = t_peak; }
         size_t GetNIntegrals(){return integrals.size();}
+        std::vector<WaveformIntegral *> GetIntegrals();
         WaveformIntegral* GetIntegralPointer(UInt_t i);
         WaveformIntegral* GetIntegralPointer(std::string s);
         void ResetIntegrals();
@@ -32,10 +33,11 @@ class WaveformSignalRegion:public TObject {
         uint16_t GetHighBoarder() {return high_border;}
         uint16_t GetPeakPosition(){return peak_pos;}
         float GetPeakTime() { return peak_time; }
-        void SetName(std::string name){this->name = name;}
-        const char *GetName(){return name.c_str();}
+        void SetName(std::string name) { this->name = name; }
+        const char *GetName() { return name.c_str(); }
         float operator [](int i){return integrals[integral_names[i]].GetIntegral();}
         float operator [](std::string s){return integrals[s].GetIntegral();}
+        std::pair<int, int> GetRegion() { return std::make_pair(low_border, high_border) ;}
     private:
         std::string name;
         signed char polarity;

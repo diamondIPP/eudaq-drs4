@@ -6,6 +6,7 @@
  */
 
 #include <eudaq/WaveformSignalRegions.hh>
+using namespace std;
 
 WaveformSignalRegions::WaveformSignalRegions(int channel, signed char pol, signed char pul_pol) {
     this->channel=channel;
@@ -45,4 +46,11 @@ WaveformSignalRegion* WaveformSignalRegions::GetRegion(std::string name) {
         if (names.at(i) == name)
             return &regions.at(i);
     return nullptr;
+}
+
+std::vector<WaveformSignalRegion*> WaveformSignalRegions::GetRegions() {
+
+    vector<WaveformSignalRegion*> tmp;
+    for (auto && region: regions) tmp.push_back(&region);
+    return tmp;
 }
