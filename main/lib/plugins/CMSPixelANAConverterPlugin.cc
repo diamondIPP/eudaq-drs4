@@ -6,7 +6,6 @@
 
 #include "eudaq/CMSPixelHelper.hh"
 
-#include "iostream"
 #include "bitset"
 
 namespace eudaq {

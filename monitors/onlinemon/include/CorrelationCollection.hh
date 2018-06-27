@@ -86,7 +86,7 @@ class CorrelationCollection : public BaseCollection {
     CorrelationHistos * getCorrelationHistos(const SimpleStandardPlane &p1, const SimpleStandardPlane &p2);
 
     void registerPlaneCorrelations(const SimpleStandardPlane &p1, const SimpleStandardPlane &p2);
-    void registerEventAlignment();
+    void registerEventAlignment(const SimpleStandardEvent &simpev);
 
     virtual void Write(TFile *file);
     bool getCorrelateAllPlanes() const;

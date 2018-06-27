@@ -49,6 +49,12 @@ WaveformIntegral* WaveformSignalRegion::GetIntegralPointer(std::string s) {
     return 0;
 }
 
+std::vector<WaveformIntegral *> WaveformSignalRegion::GetIntegrals() {
+    std::vector<WaveformIntegral*> tmp;
+    for (auto && integral: integrals) tmp.push_back(&integral.second);
+    return tmp;
+}
+
 void WaveformSignalRegion::SetPeakPostion(Int_t peak_position) {
 //    std::cout<<name<<": Setting peakPosition: "<<peak_pos<<std::endl;
     peak_pos = peak_position;

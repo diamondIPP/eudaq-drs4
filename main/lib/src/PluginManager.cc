@@ -93,12 +93,21 @@ namespace eudaq {
   }
 
 
-  void PluginManager::Initialize(const DetectorEvent & dev) {
+  void PluginManager::Initialize(const DetectorEvent & dev, string config) {
+    string conf_string;
+    if (config.size() > 1){
+      ifstream cfile(config.c_str());
+      stringstream buffer;
+      buffer << cfile.rdbuf();
+      conf_string = buffer.str();
+    }
+    auto conv_config = new eudaq::Configuration(conf_string);
     eudaq::Configuration conf(dev.GetTag("CONFIG"));
-    conf.Set("timeDelay",dev.GetTag("longTimeDelay", "0"));
-    cout << "Initiliasing!" << endl;
+    conf.Set("timeDelay", dev.GetTag("longTimeDelay", "0"));
     for (size_t i = 0; i < dev.NumEvents(); ++i) {
       const eudaq::Event & subev = *dev.GetEvent(i);
+      if (subev.GetSubType().find("CMS") != string::npos and not conf_string.empty())
+        GetInstance().GetPlugin(subev).SetConfig(conv_config);
       GetInstance().GetPlugin(subev).Initialize(subev, conf);
     }
   }

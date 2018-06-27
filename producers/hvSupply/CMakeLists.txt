@@ -1,7 +1,7 @@
 #written by dorfer@phys.ethz.ch
 
 cmake_minimum_required(VERSION 2.8.12)
-project(TUProducer)
+project(HVProducer)
 
 add_definitions(-std=c++11)
 
@@ -29,11 +29,11 @@ ELSE(CONFIG++_FOUND)
 ENDIF (CONFIG++_FOUND)
 
 
-add_executable(TUProducer.exe src/TUProducer.cpp src/trigger_controll.cpp src/trigger_logic_tpc_stream.cpp src/http_responce_pars.cpp src/Server.cpp)
+add_executable(HVProducer.exe src/HVProducer.cpp src/HVInterface.cpp src/Keithley.cpp src/HVClient.cpp src/Keithley24XX.cpp src/Client.cpp)
 include_directories(include ${CONFIG++_INCLUDE_DIR})
-target_link_libraries(TUProducer.exe EUDAQ ${EUDAQ_THREADS_LIB} ${CONFIG++_LIBRARY})
+target_link_libraries(HVProducer.exe EUDAQ ${EUDAQ_THREADS_LIB} ${CONFIG++_LIBRARY})
 
-install(TARGETS TUProducer.exe
+install(TARGETS HVProducer.exe
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

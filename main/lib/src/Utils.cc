@@ -278,4 +278,18 @@ namespace eudaq {
       nCycles++;
     }
 
+    string join(string s1, string s2) {
+
+      return s1 + '/' + s2;
+    }
+
+    std::vector<size_t> range(size_t begin, size_t end, int32_t step){
+
+      end = end == SIZE_MAX ? begin : end;
+      begin = end != begin ? begin : 0;
+      std::vector<size_t> tmp;
+      for (size_t i(begin); i < end; i+=step)
+        tmp.push_back(i);
+      return tmp;
+    }
 }

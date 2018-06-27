@@ -46,6 +46,8 @@ namespace eudaq {
         float avgWF(float, float, int);
         virtual ~FileWriterTreeDRS4();
         virtual long GetMaxEventNumber() { return max_event_number; }
+        virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
+        virtual void setTU(bool tu) { hasTU = tu; }
 
     private:
         unsigned runnumber;
@@ -53,11 +55,12 @@ namespace eudaq {
         long max_event_number;
         uint16_t save_waveforms;
         uint16_t active_regions;
+        uint16_t n_active_channels;
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
         int IsPulserEvent(const StandardWaveform *wf);
         void ExtractForcTiming(std::vector<float> *);
-        void FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf);
+        void FillRegionIntegrals(const StandardEvent sev);
         void FillRegionVectors();
         void FillTotalRange(uint8_t iwf, const StandardWaveform *wf);
         void UpdateWaveforms(uint8_t iwf);
@@ -68,6 +71,11 @@ namespace eudaq {
         std::string GetBitMask(uint16_t bitmask);
         std::string GetPolarities(std::vector<signed char> pol);
         void SetTimeStamp(StandardEvent);
+        void SetBeamCurrent(StandardEvent);
+        void SetScalers(StandardEvent);
+        void ReadIntegralRanges();
+        void ReadIntegralRegions();
+        bool hasTU;
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
@@ -80,9 +88,8 @@ namespace eudaq {
         std::vector<std::string> sensor_name;
         // Book variables for the Event_to_TTree conversion
         unsigned m_noe;
-        short chan;
+        uint16_t n_channels;
         int n_pixels;
-        std::map<std::string, std::pair<float, float> *> ranges;
         std::vector<signed char> polarities;
         std::vector<signed char> pulser_polarities;
 
@@ -103,6 +110,8 @@ namespace eudaq {
         int f_pulser_events;
         int f_signal_events;
         double f_time;
+        double old_time;
+        uint16_t f_beam_current;
 
         //drs4
         uint16_t f_trigger_cell;
@@ -120,14 +129,15 @@ namespace eudaq {
 
         uint16_t spectrum_waveforms;
         uint16_t fft_waveforms;
+        std::pair<uint16_t, uint16_t> pulser_range;
         int pulser_threshold;
         uint8_t pulser_channel;
         uint8_t trigger_channel;
 
         /** VECTOR BRANCHES */
         // integrals
-        std::map<int, WaveformSignalRegions *> *regions;
-        std::vector<std::string> *IntegralNames;
+        std::map<uint8_t, std::map<std::string, std::pair<float, float> *> > ranges;
+        std::map<uint8_t, WaveformSignalRegions *> * regions;
         std::vector<float> *IntegralValues;
         std::vector<float> *TimeIntegralValues;
         std::vector<Int_t> *IntegralPeaks;
@@ -138,8 +148,11 @@ namespace eudaq {
         std::vector<bool> *v_is_saturated;
         std::vector<float> *v_median;
         std::vector<float> *v_average;
-        std::vector<std::vector<uint16_t> *> v_peak_positions;
-        std::vector<std::vector<float> *> v_peak_timings;
+        std::vector<uint16_t> * v_max_peak_position;
+        std::vector<float> * v_max_peak_time;
+        std::vector<std::vector<uint16_t> > * v_peak_positions;
+        std::vector<std::vector<float> > * v_peak_times;
+        std::vector<uint8_t> * v_npeaks;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;
@@ -169,6 +182,10 @@ namespace eudaq {
         TMacro *macro;
 
         // spectrum
+        unsigned peak_noise_pos;
+        std::vector<std::pair<float, float> >* noise;
+        std::map<uint8_t, std::deque<float> *> noise_vectors;
+        void calc_noise(uint8_t);
         std::vector<float> data_pos;
         std::vector<float> decon;
         std::vector<std::vector<uint16_t> *> peaks_x;
@@ -187,6 +204,10 @@ namespace eudaq {
         // wf check
         std::vector<bool> * f_isDa;
         std::vector<uint16_t> wf_thr;
+
+        //tu
+        std::vector<uint64_t> * v_scaler;
+        std::vector<uint64_t> * old_scaler;
 
     };
 }

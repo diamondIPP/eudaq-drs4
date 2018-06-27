@@ -1,6 +1,11 @@
 #include "eudaq/StandardEvent.hh"
-#include "eudaq/Exception.hh"
 #include <TMath.h>
+
+#include <cmath>
+#include "TF1.h"
+#include "TGraph.h"
+#include "TCanvas.h"
+#include "TFitResult.h"
 namespace eudaq {
 
 EUDAQ_DEFINE_EVENT(StandardEvent, str2id("_STD"));
@@ -56,7 +61,7 @@ float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const
         if(!_abs)
             integral += m_samples.at(i);
         else
-            integral += abs(m_samples.at(i));
+            integral += std::abs(m_samples.at(i));
     }
     return integral/(float)(max-(int)min);
 }
@@ -90,6 +95,79 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
 	return integral / (max_high_length + max_low_length + 1 / sspeed);
 }
 
+TF1 StandardWaveform::getRFFit(std::vector<float> * tcal) const{
+
+  std::vector<float> t = getCalibratedTimes(tcal);
+  TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
+  TF1 fit("rf_fit", "[0] * TMath::Sin((x+[2])*2*pi/[1])+[3]", 0, 1000);
+  fit.SetParameters(100, 20, 3, -40);
+  fit.SetParLimits(0, 10, 500);
+  fit.SetParLimits(2, -35, 35);
+  gr.Fit("rf_fit", "q");
+  return fit;
+}
+
+std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> * tcal) const {
+
+  std::vector<float> t = {tcal->at(m_trigger_cell)};
+  for (uint16_t i(1); i < m_n_samples; i++)
+    t.push_back(tcal->at(unsigned((m_trigger_cell + i) % m_n_samples)) + t.back());
+  return t;
+}
+
+float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
+
+  std::vector<float> t = getCalibratedTimes(tcal);
+  uint16_t high_bin = getIndex(bin_low, bin_high, pol);
+  float t_high = t.at(high_bin);
+  t = std::vector<float>(t.begin() + high_bin - 50, t.begin() + high_bin + 5);
+  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 50, m_samples.begin() + high_bin + 5);
+//  for (float &i : v) i = std::fabs(i);
+  TGraph gr = TGraph(unsigned(t.size()), &t[0], &v[0]);
+  TF1 fit("fit", "[0]*TMath::Landau(x, [1], [2]) - [3]", 0, 500);
+  fit.SetParameters(pol * 1000, t_high, 5, pol * 5);
+  gr.Fit("fit", "q");
+  return float(fit.GetParameter(1));
+}
+
+TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
+
+  TF1 fit("fit", "[0]*TMath::Erf((x-[1])*[2]) + [3]", 0, 500);
+  if (getAbsMaxInRange(bin_low, bin_high) > 2000){
+    fit.SetParameters(0, 0, 0, 0);
+    return fit;
+  }
+  std::vector<float> t = getCalibratedTimes(tcal);
+  uint16_t high_bin = getIndex(bin_low, bin_high, pol);
+  float t_high = t.at(high_bin);
+//  t = std::vector<float>(t.begin() + high_bin - 50, t.begin() + high_bin + 3);
+//  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 50, m_samples.begin() + high_bin + 3);
+  TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
+  fit.SetParameters(100, t_high, pol * .5, pol * 100);
+  fit.SetParLimits(0, 10, 500);
+  fit.SetParLimits(1, t_high - 20, t_high + 2);
+  gr.Fit("fit", "q", "", t_high - 20, t_high + 1);
+  return fit;
+}
+
+float StandardWaveform::getTriggerTime(std::vector<float> * tcal) const {
+
+  float min = calc_mean(std::vector<float>(m_samples.begin() + 5, m_samples.begin() + 15)).first;
+  float max = calc_mean(std::vector<float>(m_samples.end() - 15, m_samples.end() - 5)).first;
+  float half = (max + min) / 2;
+  std::pair<float, float> p1, p2;
+  for (uint16_t i(5); i < m_n_samples; i++){
+    if (m_samples.at(i) > half){
+      p1 = std::make_pair(getCalibratedTimes(tcal).at(uint16_t(i - 1)), m_samples.at(uint16_t(i - 1)));
+      p2 = std::make_pair(getCalibratedTimes(tcal).at(i), m_samples.at(i));
+      break;
+    }
+  }
+  // take a straight line y = mx + a through the two points and calculate at which time it's a the half point
+  float m = (p2.second - p1.second) / (p2.first - p1.first);
+  float a = p1.second - m * p1.first;
+  return (half - a) / m;
+}
 
 std::pair<uint16_t, float> StandardWaveform::getMaxPeak() const {
     auto max = std::max_element(m_samples.begin(), m_samples.end());
@@ -99,12 +177,32 @@ std::pair<uint16_t, float> StandardWaveform::getMaxPeak() const {
 }
 
 std::vector<uint16_t> * StandardWaveform::getAllPeaksAbove(uint16_t min, uint16_t max, float threshold) const {
+
 	std::vector<uint16_t> * peak_positions = new std::vector<uint16_t>;
-	// make sure min does not start at zero
-	if (!min) min++;
-	for (uint16_t j = uint16_t(min + 1); j <= max; j++)
-		if (abs(m_samples.at(j)) > threshold && abs(m_samples.at(uint16_t(j - 1))) < threshold)
-			peak_positions->push_back(j);
+  uint16_t low(0), high;
+
+	for (uint16_t j = uint16_t(min + 1); j <= max - 1; j++){
+    float val = std::abs(m_samples.at(j));
+    //find point when waveform gets above threshold
+    if (val > threshold and std::abs(m_samples.at(uint16_t(j - 1))) < threshold)
+      low = j;
+    //find point when waveform gets below threshold and find max in between
+    if (val > threshold and std::abs(m_samples.at(uint16_t(j + 1))) < threshold){
+      high = j;
+      // the peak has to have a certain width -> avoid spikes
+      if (high > low + 5){
+        auto min = std::min_element(m_samples.begin() + low, m_samples.begin() + high);
+        auto max = std::max_element(m_samples.begin() + low, m_samples.begin() + high);
+        auto peak = (std::abs((*max)) > std::abs(*min)) ? max : min;
+        uint16_t pos = uint16_t(std::distance(m_samples.begin(), peak));
+        if (not peak_positions->size())
+          peak_positions->push_back(pos);
+          // value has to be at least in the next bunch
+        else if (pos > peak_positions->back() + 35)
+          peak_positions->push_back(pos);
+      }
+    }
+  }
 	return peak_positions;
 }
 
@@ -551,10 +649,6 @@ StandardTUEvent & StandardEvent::AddTUEvent(const StandardTUEvent & tuev){
 
 bool StandardEvent::hasTUEvent() {
 	return m_tuevent.size() !=0;
-}
-
-size_t StandardEvent::NumWaveforms() const {//ok
-	return m_waveforms.size();
 }
 
 StandardWaveform & StandardEvent::GetWaveform(size_t i) {//ok

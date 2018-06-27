@@ -86,21 +86,20 @@ std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16
       if(name == "vd" || name == "va") { continue; }
 
       // Check if this DAC is overwritten by directly specifying it in the config file:
+      int old_value = value;
       if(m_config.Get(name, -1) != -1) {
-	std::cout << "Overwriting DAC " << name << " from file: " << value;
-	// value = m_config.Get(name, -1);
-	std::vector<int32_t> values = split(m_config.Get(name, "-1"),' ');
-  for (int i = 0; i < values.size(); i++)
-    std::cout << values[i] << ", ";
-  std::cout << std::endl;
-	std::cout << values.size() << std::endl;
-	if (values.size() > 1)
-	    value = values[i2c];
-	else 
-	    value = values[0];
-	std::cout << " -> " << value << std::endl;
-	overwritten_dacs++;
-      }
+        // value = m_config.Get(name, -1);
+        std::vector<int32_t> values = split(m_config.Get(name, "-1"),' ');
+        //  for (int i = 0; i < values.size(); i++)
+        //    std::cout << values[i] << ", ";
+        std::cout << std::endl;
+        std::cout << values.size() << std::endl;
+        if (values.size() > 1) value = values[i2c];
+        else value = values[0];
+        std::cout << "Overwriting DAC " << name << " from file value: " << old_value << " -> " << value << std::endl;
+        EUDAQ_INFO("Overwriting DAC " + name + " from file value: " + std::to_string(old_value) + " -> " + std::to_string(value));
+        overwritten_dacs++;
+            }
 
       dacs.push_back(make_pair(name, value));
       m_alldacs.append(name + " " + std::to_string(value) + "; ");

@@ -2,12 +2,11 @@
 #define EUDAQ_INCLUDED_StandardEvent
 
 #include "eudaq/Event.hh"
-//#include "eudaq/StandardWaveform.hh"
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <cmath>
-//#include <TString.h>
+class TF1;
 
 namespace eudaq {
 
@@ -80,6 +79,11 @@ public:
     float getPeakToPeak(int min, int max) const{return getSpreadInRange(min,max);}
     float getIntegral(uint16_t min, uint16_t max, bool _abs=false) const;
     float getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> * tcal, float sspeed) const;
+		std::vector<float> getCalibratedTimes(std::vector<float>*) const;
+    float getTriggerTime(std::vector<float>*) const;
+    float getPeakFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
+    TF1 getRFFit(std::vector<float>*) const;
+    TF1 getErfFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
 
 private:
 	uint64_t m_timestamp;
@@ -301,8 +305,8 @@ public:
 	virtual void Print(std::ostream &) const;
 
 	StandardWaveform & AddWaveform(const StandardWaveform &);
-	size_t NumWaveforms() const;
-	size_t GetNWaveforms() const {return NumWaveforms();}
+	uint16_t NumWaveforms() const { return uint16_t(m_waveforms.size()); }
+	uint16_t GetNWaveforms() const {return NumWaveforms();}
 	const StandardWaveform & GetWaveform(size_t i) const;
 	StandardWaveform & GetWaveform(size_t i);
 	bool hasTUEvent();

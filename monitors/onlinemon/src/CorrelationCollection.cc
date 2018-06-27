@@ -382,7 +382,7 @@ void CorrelationCollection::fillHistograms(std::vector < vector<
 void CorrelationCollection::fillAlignHistos(const SimpleStandardEvent & sev) {
 
   if (!alignIsRegistered){
-    registerEventAlignment();
+    registerEventAlignment(sev);
     alignIsRegistered = true;
   }
   _evAlign->Fill(sev);
@@ -466,28 +466,41 @@ void CorrelationCollection::registerPlaneCorrelations(const SimpleStandardPlane&
   }
 }
 
-void CorrelationCollection::registerEventAlignment() {
+void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &simpev) {
 
   if (_mon == NULL)
     return;
-  string tree = "Correlations/HitFraction at Pulser Events";
-  _mon->getOnlineMon()->registerTreeItem(tree);
-  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentHisto(), "", 0);
-  tree = "Correlations/HitFraction at Pulser Events +1";
-  _mon->getOnlineMon()->registerTreeItem(tree);
-  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentPlus1Histo(), "", 0);
-  tree = "Correlations/Is Aligned";
-  _mon->getOnlineMon()->registerTreeItem(tree);
-  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedHisto(), "COL", 0);
-  tree = "Correlations/Plus 1 Is Aligned";
-  _mon->getOnlineMon()->registerTreeItem(tree);
-  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedPlus1Histo(), "COL", 0);
+  string tree;
+  if (simpev.getNWaveforms()) {
+    tree = "Correlations/PadCorrelation/Is Aligned";
+    _mon->getOnlineMon()->registerTreeItem(tree);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedHisto(), "COL", 0);
+
+    tree = "Correlations/PadCorrelation/Pulser Rate";
+    _mon->getOnlineMon()->registerTreeItem(tree);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPulserRate(), "hist", 0);
+
+    _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PadCorrelation"); //make summary page
+
+    tree = "Correlations/PadCorrelation/HitFraction at Pulser Events";
+    _mon->getOnlineMon()->registerTreeItem(tree);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentHisto(), "histe", 0);
+  }
+  else{
+    for (uint8_t idig(0); idig < simpev.getNPlanes() - _evAlign->getNAnaPlanes(); idig++){
+      tree = string(TString::Format("Correlations/PixelCorrelation/REF %d", idig + 7));
+      _mon->getOnlineMon()->registerTreeItem(tree);
+      _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelCorrelation(idig ), "hist", 0);
+    }
+
+    tree = "Correlations/PixelCorrelation/Pixel Alignment";
+    _mon->getOnlineMon()->registerTreeItem(tree);
+    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPixelIsAlignedHisto(simpev), "COL", 0);
+
+    _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PixelCorrelation"); //make summary page
+  }
 
   _mon->getOnlineMon()->makeTreeItemSummary("Correlations"); //make summary page
-
-  tree = "Correlations/Pulser Rate";
-  _mon->getOnlineMon()->registerTreeItem(tree);
-  _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPulserRate(), "hist", 0);
 }
 
 bool CorrelationCollection::getCorrelateAllPlanes() const

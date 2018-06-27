@@ -10,57 +10,24 @@
 
 #include "TUHistos.hh"
 #include "SimpleStandardEvent.hh"
-#include "SimpleStandardTUEvent.hh"
 
-#include <iostream>
 #include <TH1I.h>
-#include <TH1F.h>
 #include <TFile.h>
-#include <cstdint>
 
 
-TUHistos::TUHistos(){
+TUHistos::TUHistos(): n_scaler(4){
 
-  _CoincidenceCount = new TH1I("Concidence Rate", "Coincidence Rate [Hz]; Run Time [s]",60000, 0, 60000);
-  _CoincidenceCount->SetMarkerStyle(34);
-  _CoincidenceCount->SetMarkerSize(1);
-  _CoincidenceCount->SetMarkerColor(4);
-  _CoincidenceCountNoScint = new TH1I("Coincidence Rate No Scintillator", "Coincidence Rate No Scintillator [Hz]; Run Time [s]",60000, 0, 60000);
-  _CoincidenceCountNoScint->SetMarkerStyle(34);
-  _CoincidenceCountNoScint->SetMarkerSize(1);
-  _CoincidenceCountNoScint->SetMarkerColor(4);  
-  _PrescalerCount = new TH1I("Prescaler Rate", "Prescaler Rate [Hz]; Run Time [s]",60000, 0, 60000);
-  _PrescalerCount->SetMarkerStyle(34);
-  _PrescalerCount->SetMarkerSize(1);
-  _PrescalerCount->SetMarkerColor(4);
-  _PrescalerXPulser = new TH1I("Prescaler Xor Pulser Rate", "Prescaler Xor Pulser Rate [Hz]; Run Time [s]",60000, 0, 60000);
-  _PrescalerXPulser->SetMarkerStyle(34);
-  _PrescalerXPulser->SetMarkerSize(1);
-  _PrescalerXPulser->SetMarkerColor(4);
-  _AcceptedPrescaledEvents = new TH1I("Accepted Prescaled Event Rate", "Accepted Prescaled Rate [Hz]; Run Time [s]",60000, 0, 60000);
-  _AcceptedPrescaledEvents->SetMarkerStyle(34);
-  _AcceptedPrescaledEvents->SetMarkerSize(1);
-  _AcceptedPrescaledEvents->SetMarkerColor(4);
-  _AcceptedPulserEvents = new TH1I("Accepted Pulser Event Rate", "Accepted Pulser Event Rate [Hz]; Run Time [s]",60000, 0, 60000);
-  _AcceptedPulserEvents->SetMarkerStyle(34);
-  _AcceptedPulserEvents->SetMarkerSize(1);
-  _AcceptedPulserEvents->SetMarkerColor(4);
-  _EventCount = new TH1I("Event Rate", "Event Rate [Hz]; Run Time [s]",60000, 0, 60000);
-  _EventCount->SetMarkerStyle(34);
-  _EventCount->SetMarkerSize(1);
-  _EventCount->SetMarkerColor(4);
-  _AvgBeamCurrent = new TH1I("Average Beam Current", "Average Beam Current [uA]; Run Time [s]",60000, 0, 60000);
-  _AvgBeamCurrent->SetMarkerStyle(34);
-  _AvgBeamCurrent->SetMarkerSize(1);
-  _AvgBeamCurrent->SetMarkerColor(2);
-  _Scaler1 = new TH1I("Rate Plane Scaler 1", "Rate Plane Scaler 1 [Hz]; Run Time [s]",60000, 0, 60000);
-  _Scaler1->SetMarkerStyle(34);
-  _Scaler1->SetMarkerSize(1);
-  _Scaler1->SetMarkerColor(4);
-  _Scaler2 = new TH1I("Rate Plane Scaler 2", "Rate Plane Scaler 2 [Hz]; Run Time [s]",60000, 0, 60000);
-  _Scaler2->SetMarkerStyle(34);
-  _Scaler2->SetMarkerSize(1);
-  _Scaler2->SetMarkerColor(4);
+  _CoincidenceCount = create_th1i("Concidence Rate", "Coincidence Rate [Hz]; Run Time [s]");
+  _CoincidenceCountNoScint = create_th1i("Coincidence Rate No Scintillator", "Coincidence Rate No Scintillator [Hz]; Run Time [s]");
+  _PrescalerCount = create_th1i("Prescaler Rate", "Prescaler Rate [Hz]; Run Time [s]");
+  _PrescalerXPulser = create_th1i("Prescaler Xor Pulser Rate", "Prescaler Xor Pulser Rate [Hz]; Run Time [s]");
+  _AcceptedPrescaledEvents = create_th1i("Accepted Prescaled Event Rate", "Accepted Prescaled Rate [Hz]; Run Time [s]");
+  _AcceptedPulserEvents = create_th1i("Accepted Pulser Event Rate", "Accepted Pulser Event Rate [Hz]; Run Time [s]");
+  _EventCount = create_th1i("Event Rate", "Event Rate [Hz]; Run Time [s]");
+  _AvgBeamCurrent = create_th1i("Average Beam Current", "Average Beam Current [uA]; Run Time [s]");
+  _Scaler.push_back(create_th1i("Scintillator", "Scintillator Scaler [Hz]; Run Time [s]"));
+  for (unsigned i(0); i < n_scaler; i++)
+    _Scaler.push_back(create_th1i(TString::Format("Plane %d", i + 1), TString::Format("Rate Plane Scaler %d [Hz]; Run Time [s]", i + 1)));
 
 
   called = false;
@@ -72,8 +39,7 @@ TUHistos::TUHistos(){
   old_accepted_prescaled_events = 0;
   old_accepted_pulser_events = 0;
   old_handshake_count = 0;
-  old_scaler1 = 0;
-  old_scaler2 = 0;
+  old_scaler.resize(n_scaler + 1, 0);
   old_xaxis =0;
 
 
@@ -97,8 +63,8 @@ void TUHistos::Write(){
   _AcceptedPulserEvents->Write();
   _EventCount->Write();
   _AvgBeamCurrent->Write();
-  _Scaler1->Write();
-  _Scaler2->Write();
+  for (unsigned i(0); i <= n_scaler; i++)
+    _Scaler.at(i)->Write();
 
 }
 
@@ -127,8 +93,10 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       uint32_t accepted_pulser_events = ev.GetAcceptedPulserCount();
       uint32_t handshake_count = ev.GetHandshakeCount();
       uint32_t cal_beam_current = ev.GetBeamCurrent();
-      uint64_t scaler1 = ev.GetScalerValue(1);
-      uint64_t scaler2 = ev.GetScalerValue(2);
+
+      std::vector<uint32_t> scaler;
+      for (unsigned i(0); i <= n_scaler; i++)
+        scaler.push_back(unsigned(ev.GetScalerValue(i)));
 
       uint32_t readout_interval = 500;
       uint32_t t_diff = (uint32_t) (new_timestamp - old_timestamp);
@@ -148,8 +116,8 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       _AcceptedPulserEvents->GetXaxis()->SetRangeUser(0, x_axis+10);
       _EventCount->GetXaxis()->SetRangeUser(0, x_axis+10);
       _AvgBeamCurrent->GetXaxis()->SetRangeUser(0, x_axis+10);
-      _Scaler1->GetXaxis()->SetRangeUser(0, x_axis+10);
-      _Scaler2->GetXaxis()->SetRangeUser(0, x_axis+10);
+      for (unsigned i(0); i <= n_scaler; i++)
+        _Scaler.at(i)->GetXaxis()->SetRangeUser(0, x_axis+10);
 
 
       _CoincidenceCount->Fill(x_axis, 1000*(coincidence_count - old_coincidence_count)/t_diff);
@@ -160,8 +128,8 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       _AcceptedPulserEvents->Fill(x_axis, 1000*(accepted_pulser_events - old_accepted_pulser_events)/t_diff);
       _EventCount->Fill(x_axis, 1000*(handshake_count - old_handshake_count)/t_diff);
       _AvgBeamCurrent->Fill(x_axis, cal_beam_current);
-      _Scaler1->Fill(x_axis, 1000*(scaler1 - old_scaler1)/t_diff);
-      _Scaler2->Fill(x_axis, 1000*(scaler2 - old_scaler2)/t_diff);
+      for (unsigned i(0); i <= n_scaler; i++)
+        _Scaler.at(i)->Fill(x_axis, 1000 * (scaler.at(i) - old_scaler.at(i))/t_diff);
       }
       old_xaxis = x_axis;
     }
@@ -174,8 +142,8 @@ void TUHistos::Fill(SimpleStandardTUEvent ev, unsigned int event_nr){
       old_accepted_prescaled_events = ev.GetAcceptedPrescaledEvents();
       old_accepted_pulser_events = ev.GetAcceptedPulserCount();
       old_handshake_count = ev.GetHandshakeCount();
-      old_scaler1 = ev.GetScalerValue(1);
-      old_scaler2 = ev.GetScalerValue(2);
+      for (unsigned i(0); i <= n_scaler; i++)
+        old_scaler.at(i) = ev.GetScalerValue(i);
   }
 
 }
@@ -190,7 +158,17 @@ void TUHistos::Reset(){
   _AcceptedPulserEvents->Reset();
   _EventCount->Reset();
   _AvgBeamCurrent->Reset();
-  _Scaler1->Reset();
-  _Scaler2->Reset();
+  for (unsigned i(0); i <= n_scaler; i++)
+    _Scaler.at(i)->Reset();
+}
+
+TH1I * TUHistos::create_th1i(TString name, TString title, int nbins, int xmin, int xmax, int markerstyle, int markersize, int markercolor) {
+  
+  TH1I * h = new TH1I(name, title, nbins, xmin, xmax);
+  h->SetMarkerStyle(markerstyle);
+  h->SetMarkerSize(markersize);
+  h->SetMarkerColor(markercolor);
+  return h
+;
 }
 

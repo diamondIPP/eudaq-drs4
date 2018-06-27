@@ -9,6 +9,7 @@
 
 #include "eudaq/FileWriter.hh"
 #include "eudaq/WaveformSignalRegions.hh"
+#include "PluginManager.hh"
 
 #include "TStopwatch.h"
 #include "TVirtualFFT.h"
@@ -18,6 +19,7 @@ class TH1F;
 class TSpectrum;
 class TCanvas;
 class TMacro;
+class TF1;
 
 
 namespace eudaq {
@@ -37,6 +39,7 @@ namespace eudaq {
         float avgWF(float, float, int);
         virtual ~FileWriterTreeCAEN();
         virtual long GetMaxEventNumber() { return max_event_number; }
+        virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
 
     private:
         unsigned runnumber;
@@ -45,10 +48,10 @@ namespace eudaq {
         long max_event_number;
         uint16_t save_waveforms;
         uint16_t active_regions;
+        std::vector<uint16_t> * dia_channels;
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
-        int IsPulserEvent(const StandardWaveform *wf);
-        void ExtractForcTiming(std::vector<float> *);
+        bool IsPulserEvent(const StandardWaveform *wf);
         void FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf);
         void FillRegionVectors();
         void FillTotalRange(uint8_t iwf, const StandardWaveform *wf);
@@ -59,6 +62,9 @@ namespace eudaq {
         bool UseWaveForm(uint16_t bitmask, uint8_t iwf) { return ((bitmask & 1 << iwf) == 1 << iwf); }
         std::string GetBitMask(uint16_t bitmask);
         std::string GetPolarities(std::vector<signed char> pol);
+        void SetTimeStamp(StandardEvent);
+        void SetBeamCurrent(StandardEvent);
+        float GetRFPhase(float, float);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
@@ -89,16 +95,23 @@ namespace eudaq {
         float getTimeDifference(uint8_t ch, uint16_t bin_low, uint16_t bin_up);
 
         /** SCALAR BRANCHES */
-        int f_nwfs;
+        uint16_t f_nwfs;
         int f_event_number;
         int f_pulser_events;
         int f_signal_events;
         double f_time;
+        uint16_t f_beam_current;
 
         //drs4
         uint16_t f_trigger_cell;
+        float f_trigger_time;
 
-        int f_pulser;
+        //rf
+        float f_rf_phase;
+        float f_rf_period;
+        float f_rf_chi2;
+
+        bool f_pulser;
         std::vector<uint16_t> *v_forc_pos;
         std::vector<float> *v_forc_time;
 
@@ -114,6 +127,8 @@ namespace eudaq {
         int pulser_threshold;
         uint8_t pulser_channel;
         uint8_t trigger_channel;
+        uint8_t rf_channel;
+        uint8_t scint_channel;
 
         /** VECTOR BRANCHES */
         // integrals
@@ -126,11 +141,18 @@ namespace eudaq {
         std::vector<float> *IntegralLength;
 
         // general waveform information
+        std::vector<float> * v_signal_peak_time;
+        std::vector<float> * v_rise_width;
+        std::vector<float> * v_rise_time;
+        std::vector<float> * v_t_thresh;
         std::vector<bool> *v_is_saturated;
         std::vector<float> *v_median;
         std::vector<float> *v_average;
-        std::vector<std::vector<uint16_t> *> v_peak_positions;
-        std::vector<std::vector<float> *> v_peak_timings;
+        std::vector<uint16_t> * v_max_peak_position;
+        std::vector<float> * v_max_peak_time;
+        std::vector<std::vector<uint16_t> > * v_peak_positions;
+        std::vector<std::vector<float> > * v_peak_times;
+        std::vector<uint8_t> * v_npeaks;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;
@@ -160,6 +182,10 @@ namespace eudaq {
         TMacro *macro;
 
         // spectrum
+        unsigned peak_noise_pos;
+        std::vector<std::pair<float, float> >* noise;
+        std::map<uint8_t, std::deque<float> *> noise_vectors;
+        void calc_noise(uint8_t);
         std::vector<float> data_pos;
         std::vector<float> decon;
         std::vector<std::vector<uint16_t> *> peaks_x;

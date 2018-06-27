@@ -38,31 +38,32 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
 	done(false), TUStarted(false), TUJustStopped(false),
 	tc(NULL), stream(NULL){
 
-    try{
-    	std::fill_n(trigger_counts, 10, 0);
-    	std::fill_n(prev_trigger_counts, 10, 0);
+  try{
+    std::fill_n(trigger_counts, 10, 0);
+    std::fill_n(prev_trigger_counts, 10, 0);
 		std::fill_n(input_frequencies, 10, 0);
 		std::fill_n(avg_input_frequencies, 10, 0);
-    	std::fill_n(trigger_counts_multiplicity, 10, 0);
-    	std::fill_n(time_stamps, 2, 0);
-    	std::fill_n(beam_current, 2, 0);
-    	avg.assign(20,0); //allow the average for the beam current to hold 20 values
-    	error_code = 0;
+    std::fill_n(trigger_counts_multiplicity, 10, 0);
+    std::fill_n(time_stamps, 2, 0);
+    std::fill_n(beam_current, 2, 0);
+    avg.assign(20,0); //allow the average for the beam current to hold 20 values
+    error_code = 0;
 
-    	//average for the scaler inputs - 10 values here
-    	scaler_deques.resize(10);
-    	for (std::vector<std::deque<unsigned>>::iterator i = scaler_deques.begin(); i != scaler_deques.end(); i++){
-      		i->assign(20,0);
-		}
+    //average for the scaler inputs - 10 values here
+    scaler_deques.resize(10);
+    for (auto i = scaler_deques.begin(); i != scaler_deques.end(); i++)
+        i->assign(20,0);
 
-    	tc = new trigger_controll(); //does not talk to the box
-    	stream = new Trigger_logic_tpc_Stream(); //neither this
-    	if (tc->enable(false) != 0){throw(-1);}
+    tc = new trigger_controll(); //does not talk to the box
+    stream = new Trigger_logic_tpc_Stream(); //neither this
+    if (tc->enable(false) != 0){throw(-1);}
 
-    }catch (...){
+    TUServer = new Server(44444);
+  }catch (...){
     std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU!" << CLEAR;
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
-    SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");}
+    SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");
+  }
 }
 
 

@@ -45,9 +45,11 @@ public:
 	virtual ~WaveformCollection() {};
 	void registerWaveform(const SimpleStandardWaveform &p);
 	void registerGlobalWaveforms(const SimpleStandardWaveform &p,int wf_type=0);
-	void registerDataWaveforms(const SimpleStandardWaveform &p,std::string prefix,std::string desc);
+	void registerDataWaveforms(const SimpleStandardWaveform &p, std::string prefix, std::string desc);
 	void registerSignalWaveforms(const SimpleStandardWaveform &p);
 	void registerPulserWaveforms(const SimpleStandardWaveform &p);
+    void registerHistoItem(std::string, TH1 *, const std::string = "", const unsigned = 0);
+    void registerHistoStackItem(std::string, THStack *, const std::string, const unsigned = 0);
 	void bookHistograms(const SimpleStandardEvent &simpev);
 	void setRootMonitor(RootMonitor *mon)  {_mon = mon; }
 	void Fill(const SimpleStandardEvent &simpev);
@@ -56,6 +58,7 @@ public:
 	void Reset();
 	virtual void Write(TFile *file);
 	virtual void Calculate(const unsigned int currentEventNumber);
+    uint8_t getWaveFormType(const SimpleStandardWaveform &p);
 };
 
 #ifdef __CINT__

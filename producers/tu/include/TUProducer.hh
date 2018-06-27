@@ -15,6 +15,7 @@
 //Readout_Data struct defined here:
 #include "eudaq/Producer.hh"
 #include "trigger_logic_tpc_stream.h"
+#include "Server.h"
 #include <deque>
 #include <vector>
 
@@ -65,6 +66,9 @@ private:
 	unsigned int accepted_prescaled_events;
 	unsigned int handshake_count;
 	unsigned long time_stamps[2]; //first entry = old, second entry = new timestamp
+
+protected:
+	Server * TUServer;
 
 };
 

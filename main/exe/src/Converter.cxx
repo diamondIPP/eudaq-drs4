@@ -50,6 +50,7 @@ int main(int, char ** argv) {
         }
     }
       std::shared_ptr<eudaq::FileWriter> writer(FileWriterFactory::Create(type.Value(),&config));
+      writer->setTU(reader.hasTUEvent());
       writer->SetConfig(&config);
       writer->SetFilePattern(opat.Value());
       writer->StartRun(reader.RunNumber());

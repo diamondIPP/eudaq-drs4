@@ -68,20 +68,21 @@ using namespace std;
 
 RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & datafile, int /*x*/, int /*y*/, int /*w*/,
        int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
-       const std::string & conffile):eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile), _offline(offline), _planesInitialized(false){
+       const std::string & conffile): eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile, conffile), _offline(offline), _planesInitialized(false){
 
   if (_offline <= 0){
     onlinemon = new OnlineMonWindow(gClient->GetRoot(),800,600);
-    if (onlinemon==NULL){
-      cerr<< "Error Allocationg OnlineMonWindow"<<endl;
-      exit(-1);}
+    if (onlinemon == nullptr){
+      cerr << "Error Allocationg OnlineMonWindow" << endl;
+      exit(-1);
+    }
   }
 
   hmCollection = new HitmapCollection();
   corrCollection = new CorrelationCollection();
   wfCollection = new WaveformCollection();
   tuCollection = new TUCollection();
-  MonitorPerformanceCollection *monCollection = new MonitorPerformanceCollection();
+  auto * monCollection = new MonitorPerformanceCollection();
   eudaqCollection = new EUDAQMonitorCollection();
 
 
@@ -92,6 +93,7 @@ RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & dat
   _colls.push_back(tuCollection);
   _colls.push_back(monCollection);
   _colls.push_back(eudaqCollection);
+
   // set the root Monitor
 
   if (_offline <= 0) {
@@ -280,43 +282,45 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
     simpEv.setEvent_number(ev.GetEventNumber());
     simpEv.setEvent_timestamp(ev.GetTimestamp());
 
-    // Get Information wheater this event is an Pulser event
+    // Get Information whether this event is an Pulser event
     // this is a hardcoded fix for setup at psi, think about a different option
     bool isPulserEvent = false;
     for (unsigned int i = 0; i < nwf;i++){
       const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
-      if (waveform.GetChannelName() == "PULSER" || waveform.GetChannelName() == "Pulser"){
+      TString ch_name = waveform.GetChannelName();
+      ch_name.ToUpper();
+      if (ch_name == "PULSER"){
         SimpleStandardWaveform simpWaveform(waveform.GetType(),waveform.ID(),waveform.GetNSamples(),&mon_configdata);
         simpWaveform.addData(&(*waveform.GetData())[0]);
         simpWaveform.Calculate();
-        float integral = simpWaveform.getIntegral(700,900);
-        float pulserMin = simpWaveform.getMinimum(700, 900);
-        if( abs(integral) > 100.)
+        float pulser_int = abs(simpWaveform.getIntegral(5, simpWaveform.getNSamples() / 2));
+        float base_line = abs(simpWaveform.getIntegral(simpWaveform.getNSamples() / 2, simpWaveform.getNSamples() - 5));
+        if( abs(pulser_int - base_line) > 50.)
           isPulserEvent = true;
         }
     }//end for
 
-    for (unsigned int i = 0; i < nwf;i++){
-      const eudaq::StandardWaveform & waveform = ev.GetWaveform(i);
+    for (unsigned int i = 0; i < nwf;i++) {
+      const eudaq::StandardWaveform &waveform = ev.GetWaveform(i);
 
 
       #ifdef DEBUG
-       cout << "Waveform ID          " << waveform.ID()<<endl;
-       cout << "Waveform Size        " << sizeof(waveform) <<endl;
-       //cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
-       cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
-       cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
-       cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
-       cout << "Waveform Type        " << waveform.GetType() << endl;
-       cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
+      cout << "Waveform ID          " << waveform.ID()<<endl;
+      cout << "Waveform Size        " << sizeof(waveform) <<endl;
+      //cout << "Waveform Frames      " << waveform.NumFrames() <<endl;
+      cout << "Waveform Channel no. " << waveform.GetChannelNumber()<<endl;
+      cout << "Waveform Channelname " << waveform.GetChannelName()<<endl;
+      cout << "Waveform Sensor      " << waveform.GetSensor()<<endl;
+      cout << "Waveform Type        " << waveform.GetType() << endl;
+      cout << "Waveform NSamples    " << waveform.GetNSamples() <<endl; // gives 2560 for V1730
       #endif
 
       std::string sensorname;
       sensorname = waveform.GetType();
-      SimpleStandardWaveform simpWaveform(sensorname,waveform.ID(),waveform.GetNSamples(),&mon_configdata);
+      SimpleStandardWaveform simpWaveform(sensorname, waveform.ID(), waveform.GetNSamples(), &mon_configdata);
       simpWaveform.setSign(mon_configdata.getSignalSign(waveform.GetChannelNumber()));
       simpWaveform.setNSamples(waveform.GetNSamples());
-      simpWaveform.addData(&(*waveform.GetData())[0]);      
+      simpWaveform.addData(&(*waveform.GetData())[0]);
       simpWaveform.Calculate();
       simpWaveform.setTimestamp(waveform.GetTimeStamp());
       simpWaveform.setEvent(ev.GetEventNumber());
@@ -324,23 +328,20 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       simpWaveform.setChannelNumber(waveform.GetChannelNumber());
       simpWaveform.setPulserEvent(isPulserEvent);
       simpEv.addWaveform(simpWaveform);
-
-
+    }
 
 /************************************** Start TU Event Stuff **************************************/
 //don't blame me for this code ..
 
-      unsigned int ntu = (unsigned int) ev.NumTUEvents();
+      if (ntu > 0) {
 
-      if(ntu > 0){
-
-        if(ntu > 1){std::cout << "There is more than 1 TUEvent in the vector. Not good.." << std::endl;}
+        if (ntu > 1) std::cout << "There is more than 1 TUEvent in the vector. Not good.." << std::endl;
         const eudaq::StandardTUEvent &tuev = ev.GetTUEvent(0);
         SimpleStandardTUEvent simpleTUEvent(tuev.GetType());
- 
+
         //just transfer data to SimpleStandardTUEvent for processing:
         bool valid = tuev.GetValid();
-        if(valid){
+        if (valid) {
           simpleTUEvent.SetValid(1);
           simpleTUEvent.SetTimeStamp(tuev.GetTimeStamp());
           simpleTUEvent.SetCoincCount(tuev.GetCoincCount());
@@ -351,10 +352,10 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
           simpleTUEvent.SetAcceptedPulserCount(tuev.GetAcceptedPulserCount());
           simpleTUEvent.SetHandshakeCount(tuev.GetHandshakeCount());
           simpleTUEvent.SetBeamCurrent(tuev.GetBeamCurrent());
-          for(int idx=0; idx<10; idx++){ //hard coded beause..., that's why
+          for (int idx = 0; idx < 10; idx++) { //hard coded beause..., that's why
             simpleTUEvent.SetScalerValue(idx, tuev.GetScalerValue(idx));
           }
-        }else{
+        } else {
           simpleTUEvent.SetValid(0);
         }
 
@@ -363,9 +364,6 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
       }//if ntu > 0
 
 /************************************** End TU Event Stuff **************************************/
-
-
-    }
 
 
     if (skip_dodgy_event){
@@ -572,6 +570,7 @@ string RootMonitor::GetSnapShotDir(){
 }
 
 int main(int argc, const char ** argv) {
+
   eudaq::OptionParser op("EUDAQ Root Monitor", "1.0", "A Monitor using root for gui and graphics");
   eudaq::Option<std::string> rctrl(op, "r", "runcontrol", "tcp://localhost:44000", "address",
       "The address of the RunControl application");
@@ -624,7 +623,7 @@ int main(int argc, const char ** argv) {
 
 
     // start the GUI
-    TApplication theApp("App", &argc, const_cast<char**>(argv),0,0);
+    TApplication theApp("App", &argc, const_cast<char**>(argv));
     RootMonitor mon(rctrl.Value(), file.Value(), x.Value(), y.Value(),
         w.Value(), h.Value(), argc, offline.Value(), limit.Value(),
         skipping.Value(), skip_counter.Value(), configfile.Value());
