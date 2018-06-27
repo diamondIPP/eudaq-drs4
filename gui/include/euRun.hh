@@ -125,6 +125,8 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
       if (!m_stopping) {
         if (m_event_number >= m_max_event and m_event_number){
           EUDAQ_INFO("Max event number reached! Stopping run!");
+          std::cout << '\a';
+          std::cout << '\a';
           on_btnStop_clicked();
         }
         if (m_runsizelimit >= 1024 && m_filebytes >= m_runsizelimit) {
