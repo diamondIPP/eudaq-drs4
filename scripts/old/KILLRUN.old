@@ -1,30 +1,38 @@
 #!/bin/bash
-RED='\033[00;31m'
-GREEN='\033[00;32m'
-RESTORE='\033[0m'
+RED='\033[1m\033[91m'
+GREEN='\033[1m\033[92m'
+ENDC='\033[0m'
+
+a='bla\r'
+echo $a
+exit
 
 # cleanup of DAQ computer
+echo -e "$RED \nCLEANING UP DAQ COMPUTER ... $ENDC"
 PROCESSES="TUProducer.exe  euLog.exe euRun.exe TestDataCollector.exe"
-for thisprocess in $PROCESSES
-do
-    echo "Checking if $thisprocess is running... "
+for thisprocess in $PROCESSES; do
     pid=`pgrep -f $thisprocess`
-    for i in $pid
-    do 
-     if [ $i ]
-     then
-	echo -e "${RED}Killing $thisprocess with pid: $pid ${RESTORE}"
+    for i in $pid; do
+	    echo -e "Killing $thisprocess with pid: $pid"
         killall  $thisprocess 
-	kill -9 $pid
-     fi
+	    kill -9 $pid
     done
 done
-
 # exit with status message if any process has been killed
-printf '${RED}KILLING EUDAQ ON DAQ COMPLETE, MOVING ON TO RAPIDSHARE AND PIM1.${RESTORE}\n'
+echo -e "${GREEN}KILLING EUDAQ ON DAQ COMPLETE\n $ENDC"
 
-
-#continue here for rapidshare, pim1, etc -Christian
+# PIM1
+echo -e "${RED}CLEANING UP PIM1 ... $ENDC"
+screens=`ssh -tY analysis screen -list 2>/dev/null`
+for screen in DRS4Screen CMSPixelScreen CAENScreen TUScreen vpnScreen; do
+    pid=`ssh -tY analysis pgrep -f $screen 2>/dev/null`
+    pid=${pid%\r}
+    echo $pid
+    if $pid; then
+        echo $pid
+    fi
+done
+exit
 echo -e "${RED}Killing       DRS4 @ PiM1 ${RESTORE}"
 ssh -tY pim1 'screen -X -S  "DRS4Screen" kill'
 

@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+# --------------------------------------------------------
+#       PYTHON SCRIPT TO KILL ALL RUNNING EUDAQ PROCESSES
+# -------------------------------------------------------
+
+from commands import getstatusoutput
+from os import kill, system
+from signal import SIGTERM
+
+RED='\033[1m\033[91m'
+GREEN='\033[1m\033[92m'
+ENDC='\033[0m'
+
+def warning(txt):
+    print '{}{}{}'.format(RED, txt, ENDC)
+
+def finished(txt):
+    print '{}{}{}'.format(GREEN, txt, ENDC)
+
+def get_output(command, process=''):
+    return [word.strip('\r\t') for word in getstatusoutput('{} {}'.format(command, process))[-1].split('\n')]
+
+def get_pids(process):
+    pids = [int(word) for word in get_output('pgrep -f', process)]
+    return pids[:-1]
+
+def get_screens(host):
+    screens = dict([tuple(word.split('\t')[0].split('.')) for word in get_output('ssh -tY {} screen -ls 2>/dev/null'.format(host))[1:-1]])
+    return screens
+
+
+# first kill all processes on the DAQ computer
+warning('\nCleaning up DAQ computer ...')
+daq_processes = ['TUProducer', 'euLog.exe', 'euRun.exe', 'TestDataCollector.exe']
+for process in daq_processes:
+    for pid in get_pids(process):
+        print '  killing {} with pid {}'.format(process, pid)
+        kill(pid, SIGTERM)
+finished('Killing EUDAQ on DAQ complete')
+
+# kill all processes on computer in the beam area
+beam_pc = 'pim1'
+warning('\nCleaning up the beam computer "{}"'.format(beam_pc))
+eudaq_screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen']
+for pid, screen in get_screens(beam_pc).iteritems():
+    if screen in eudaq_screens:
+        print '  killing {} with pid {}'.format(screen, pid)
+        system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(beam_pc, pid))
+finished('Killing screens on beam computer complete')
+
+# kill the data collector
+data_pc = 'rapidshare'
+warning('\nCleaning up the data computer "{}"'.format(data_pc))
+for pid, screen in get_screens(data_pc).iteritems():
+    if screen == 'DataCollectorScreen':
+        print '  killing {} with pid {}'.format(screen, pid)
+        system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(data_pc, pid))
+finished('Killing the data collector on the data pc complete')
+
+# kill all xterm windows
+if get_pids('xterm'):
+    system('killall xterm')
+finished('\nKILLRUN complete')
