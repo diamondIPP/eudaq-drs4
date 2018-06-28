@@ -13,7 +13,7 @@ from argparse import ArgumentParser
 
 
 RCPORT = 44000
-MonitorNumber = 1
+MonitorNumber = 0
 Location = 'psi'
 DataPC = 'rapidshare'
 BeamPC = 'analysis'
@@ -39,13 +39,14 @@ def get_width(name):
 
 
 class EudaqStart:
-    def __init__(self, cms_tel, cms_dut, clk, caen, drs):
+    def __init__(self, cms_tel, cms_dut, clk, caen, drs, drsgui):
         self.CMSTel = cms_tel
         self.CMSDUT = cms_dut
         self.CAEN = caen
         self.CLK = clk
         self.DRS = drs
-        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs]) + 2
+        self.DRSGUI = drsgui
+        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui]) + 2
         self.Hostname = self.get_ip()
         self.Port = 'tcp://{}:{}'.format(self.Hostname, RCPORT)
         self.Dir = dirname(dirname(realpath(__file__)))
@@ -92,19 +93,21 @@ class EudaqStart:
 
     def start_drs4(self):
         if self.DRS:
-            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} scripts/StartDRS4'.format(BeamPC))
+            self.start_xterm('DRS4Producer', 'ssh -tY {} scripts/StartDRS4'.format(BeamPC))
+        elif self.DRSGUI:
+            self.start_xterm('DRS4Producer', 'ssh -tY {} software/DRS4/drsosc'.format(BeamPC))
 
     def start_clockgen(self):
         if self.CLK:
-            self.start_xterm('CMS Pixel DUT', '/home/testbeam/scripts/clockgen.sh')
+            self.start_xterm('Clock Generator', '/home/testbeam/scripts/clockgen.sh')
 
     def start_caen(self):
         if self.CAEN:
-            self.start_xterm('CAEN', 'ssh -tY vme scripts/StartVME.sh')
+            self.start_xterm('CAENProducer', 'ssh -tY vme scripts/StartVME.sh')
 
     def start_xterm(self, tit, cmd):
         print_red('  Starting {}'.format(tit))
-        system('xterm -xrm "XTerm.vt100.allowTitleOps: false" -geom {w}x{h}+{x}+{y} -hold -T {t} -e {c} &'.format(w=self.XWidth, h=YMax, x=self.XPos, y=int(self.H * 3. / 4), t=tit, c=cmd))
+        system('xterm -xrm "XTerm.vt100.allowTitleOps: false" -geom {w}x{h}+{x}+{y} -hold -T "{t}" -e {c} &'.format(w=self.XWidth, h=YMax, x=self.XPos, y=int(self.H * 3. / 4), t=tit, c=cmd))
         sleep(2)
         self.XPos += int(get_width(tit) + Space + (get_x('DataCollector') if not self.XPos else 0))
 
@@ -128,9 +131,10 @@ if __name__ == '__main__':
     p.add_argument('-cmstel', action='store_true')
     p.add_argument('-cmsdut', action='store_true')
     p.add_argument('-drs', action='store_true')
+    p.add_argument('-drsgui', action='store_true')
     p.add_argument('-caen', action='store_true')
     p.add_argument('-clk', action='store_true')
     
     args = p.parse_args()
-    z = EudaqStart(args.cmstel, args.cmsdut, args.clk, args.caen, args.drs)
+    z = EudaqStart(args.cmstel, args.cmsdut, args.clk, args.caen, args.drs, args.drsgui)
     z.run()
