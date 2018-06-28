@@ -1,70 +1,113 @@
-#!/bin/sh
+#!/bin/bash
+#dorfer@phys.ethz.ch
 
-if [ -z "$DRS" ]; then export DRS=true; fi;
-if [ -z "$CMS" ]; then export CMS=true; fi;
-if [ -z "$TLU" ]; then export TLU=true; fi;
-
+#Activate/Deactivate Stuff
+export CMS=false
+export CAEN=false
+export CLK=false
+export CMS_DIG=false
+export DRS=true
 
 export HOSTNAME=192.168.1.102
 export ROOTSYS=/home/testbeam/sdvlp/root/build-new
 export RCPORT=44000
+export QT_GRAPHICSSYSTEM=native
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/eudaq-drs4/bin:/usr/local/lib/root
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/sdvlp/eudaq-drs4/bin:/usr/local/lib/root
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+BLUE='\033[00;34m'
+RESTORE='\033[0m'
+
+#size of individual xterm windows
+width=78
+pixelwidth=472
+height=20
+xpos=0
+ypos=911
+space=5
 
 
 echo $(pwd)
 echo 'STARTING DAQ'
-echo '    Cleaning up first...'
-/bin/bash ~/sdvlp/eudaq-drs4/etc/scripts/KILLRUN.psi
-#cd `dirname $1`/bin
-cd ~/sdvlp/eudaq-drs4/bin
+echo 'Cleaning up first...'
+/bin/bash ~/eudaq-drs4/etc/scripts/KILLRUN.pad
+cd ~/eudaq-drs4/bin
 
-sleep 1
-echo '    Making sure all data files are properly writeprotected'
-chmod a=r /data/run*.raw
-echo '\033[1;32;48m    ...Done!\033[0m'
-#cd bin
-echo 'pwd' $(pwd)
-ls
 
-echo '    Starting Subprocesses'
+echo -e "Making all data files properly write-protected.${RESTORE}\n"
+chmod a=r ~/eudaq-drs4/data/run*.raw
+echo -e "${GREEN}Done!${RESTORE}\n"
 
-echo '        RunControl'
-~/sdvlp/eudaq-drs4/bin/euRun.exe -x 0 -y 0 -w 600 -g 500 -a tcp://$RCPORT  &
+
+echo 'Starting Subprocesses'
+
+echo 'RunControl'
+~/eudaq-drs4/bin/euRun.exe -x 0 -y -28 -w 500 -g 600 -a tcp://$RCPORT  &
 sleep 2
 
-echo '        LogCollector'
-~/sdvlp/eudaq-drs4/bin/euLog.exe -l DEBUG -x 900 -y 0 -w 1000 -g 550 -r  tcp://$HOSTNAME:$RCPORT &
-echo '\033[1;36;48m PLEASE WAIT...\033[0m'
+echo 'LogCollector'
+~/eudaq-drs4/bin/euLog.exe -l DEBUG -x 600 -y -28 -w 600 -g 722 -r  tcp://$HOSTNAME:$RCPORT &
+echo -e "${GREEN}Please wait ..${RESTORE}\n"
 sleep 2
 
-echo '        DataCollector @ rapidshare'
-xterm -geom 78x20+10-30 -hold -e 'ssh -tY rapidshare scripts/StartDataCollector.sh' &
-echo '\033[1;36;48m PLEASE WAIT...\033[0m'
+echo 'DataCollector @ Rapidshare'
+xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY rapidshare scripts/StartDataCollector.sh' &
+xpos=$((xpos+pixelwidth+space))
+echo -e "${GREEN}Please wait ..${RESTORE}\n"
 sleep 2
 
-# Old Version
-#ssh -X -Y rapidshare ("xterm -sb -sl 1000 -geom 80x10-500-169 -fn fixed -T 'DataCollector' -e 'tmux attach -s eudaq || tmux new -s eudaq;  cd sdvlp/eudaq-drs4/bin/; Collector' ")
+echo 'TUProducer @ DAQ'
+xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -T 'TU' -e '~/eudaq-drs4/bin/TUProducer.exe -r tcp://$HOSTNAME:$RCPORT'  &
+xpos=$((xpos+pixelwidth+space))
+echo -e "${GREEN}Please wait ..${RESTORE}\n"
+sleep 2
 
-if [ "$DRS" = true ]; then
-    echo '        DRS4 @ PiM1'
-    xterm -geom 78x20+1450-30 -hold -e 'ssh -tY pim1 scripts/StartDRS4.sh' &
-    echo '\033[1;36;48m PLEASE WAIT...\033[0m'
+
+
+if [ "$CMS" = true ]; then
+    echo "${BLUE} CMSPixel @Pim1 ${RESTORE}\n"
+    xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 scripts/StartCMSPixel.sh' &
+    xpos=$((xpos+pixelwidth+space))
+    echo -e "${GREEN}Please wait ..${RESTORE}\n"
+    sleep 1
 fi
 
 
-#echo '        OnlineMonitor'
-#./OnlineMon.exe -tc 0 -r tcp://$HOSTNAME:$RCPORT  &
+if [ "$CAEN" = true ]; then
+    echo "${BLUE} CAEN @ VME ${RESTORE}\n"
+    xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY vme scripts/StartVME.sh' &
+    xpos=$((xpos+pixelwidth+space))
+    echo -e "${GREEN}Please wait ..${RESTORE}\n"
+    sleep 1
+fi
 
-#ssh -X -Y eudet@$EUDRBIP1 "(xterm -sb -sl 1000 -geom 80x10-500-169 -fn fixed -T 'EUDRB Producer 1' -e 'cd eudaq/bin/; ./EUDRBProducer.exe -n EUDRB1 -r $HOSTNAME:$RCPORT | tee log')" &
+if [ "$DRS" = true ]; then
+    echo "${BLUE} DRS4 @ PiM1 ${RESTORE}\n"
+    xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 scripts/StartDRS4.sh' &
+    xpos=$((xpos+pixelwidth+space))
+    echo -e "${GREEN}Please wait ..${RESTORE}\n"
+    sleep 1
+fi
 
-#sleep 1
+if [ "$CLK" = true ]; then
+    echo "${BLUE} ClockGen @ DAQ ${RESTORE}\n"
+    xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e '/home/testbeam/scripts/clockgen.sh'  &
+    xpos=$((xpos+pixelwidth+space))
+    echo -e "${GREEN}Please wait ..${RESTORE}\n"
+    sleep 1
+fi
 
-#echo '        EUDRB 2'
-#ssh -X -Y eudet@$EUDRBIP2 "(xterm -sb -sl 1000 -geom 80x10-500-20 -fn fixed -T 'EUDRB Producer 2' -e 'cd eudaq/bin/; ./EUDRBProducer.exe -n EUDRB2 -r $HOSTNAME:$RCPORT | tee log')" &
 
+if [ "$CMS_DIG" = true ]; then
+    sleep 2
+    echo "${BLUE} CMSPixelDigital @ Pim1 ${RESTORE}\n"
+    xterm -geom $width'x'$height'+'$xpos'+'$ypos -hold -e 'ssh -tY pim1 scripts/StartCMSPixelDig.sh' &
+    xpos=$((xpos+pixelwidth+space))
+    echo -e "${GREEN}Please wait ..${RESTORE}\n"
+    sleep 1
+fi
 
 cd -
-echo '\033[1;32;48m\t ...Done!\033[0m'
-echo '\033[1;32;48mSTART OF DAQ COMPLETE\033[0m'
-
+echo -e "${GREEN}DONE!${RESTORE}\n"
+echo -e "${GREEN}START OF DAQ COMPLETE${RESTORE}\n"
