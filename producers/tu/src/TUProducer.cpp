@@ -58,7 +58,7 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     stream = new Trigger_logic_tpc_Stream(); //neither this
     if (tc->enable(false) != 0){throw(-1);}
 
-    TUServer = new Server(44444);
+    //TUServer = new Server(8889);
   }catch (...){
     std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU!" << CLEAR;
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
@@ -157,6 +157,7 @@ void TUProducer::MainLoop(){
 
 					uint64_t ts = time_stamps[1];
 					m_ev = handshake_count;
+					//TUServer->writex(eudaq::to_string(m_ev));
 					
 					//real data event
 					//std::cout << "m_run: " << m_run << std::endl;
@@ -271,6 +272,7 @@ void TUProducer::OnTerminate(){
 		done = true;
 		delete tc; //clean up
 		delete stream;
+        //delete TUServer;
 		eudaq::mSleep(1000);
 		}catch(...){
 		    std::cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer." << CLEAR;
