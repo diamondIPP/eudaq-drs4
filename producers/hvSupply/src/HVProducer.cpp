@@ -22,7 +22,7 @@ using namespace std;
 HVProducer::HVProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity): eudaq::Producer(name, runcontrol),
                        m_event_type(EVENT_TYPE), Done(false), HVStarted(false), m_ev(0), m_run(0) {
 
-  DataClient = new Client(44444, "None");
+  DataClient = new Client(8889, "None");
 }
 
 
@@ -34,6 +34,9 @@ void HVProducer::MainLoop(){
   eudaq::print_banner("Starting HV Producer!");
 
 	do{
+    cout << "Bla" << endl;
+    cout << DataClient->readx() << endl;
+    eudaq::mSleep(100);
 //	  	if(!tc ){
 //			eudaq::mSleep(500);
 //			continue;}
@@ -222,6 +225,7 @@ void HVProducer::OnTerminate(){
       delete client->Interface;
       delete client;
     }
+    delete DataClient;
     Done = true;
     eudaq::mSleep(1000);
     SetStatus(eudaq::Status::LVL_OK);
