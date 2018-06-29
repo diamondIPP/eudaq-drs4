@@ -11,7 +11,7 @@ namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
-: m_tfile(0), m_ttree(0), m_noe(0), chan(4), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false) {
+: m_tfile(0), m_ttree(0), m_noe(0), n_channels(4), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false) {
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
@@ -40,8 +40,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     v_forc_time = new vector<float>;
 
     // integrals
-    regions = new std::map<int,WaveformSignalRegions* >;
-    IntegralNames = new std::vector<std::string>;
+    regions = new map<uint8_t, WaveformSignalRegions* >;
     IntegralValues = new std::vector<float>;
     TimeIntegralValues = new vector<float>;
     IntegralPeaks = new std::vector<Int_t>;
@@ -160,20 +159,6 @@ void FileWriterTreeDRS4::Configure(){
     pulser_channel = uint8_t(m_config->Get("pulser_channel", 1));
     trigger_channel = uint8_t(m_config->Get("trigger_channel", 2));
 
-    // default ranges
-    ranges["pulserDRS4"] = new pair<float, float>(m_config->Get("pulser_range_drs4", make_pair(800, 1000)));
-    ranges["PeakIntegral1"] = new pair<float, float>(m_config->Get("PeakIntegral1_range", make_pair(0, 1)));
-    ranges["PeakIntegral2"] = new pair<float, float>(m_config->Get("PeakIntegral2_range", make_pair(8, 12)));
-    // additional ranges from the config file
-    for (auto i_key: m_config->GetKeys()){
-        size_t found = i_key.find("_range");
-        if (found == string::npos) continue;
-        if (i_key.at(0) == '#') continue;
-        string name = i_key.substr(0, found);
-        if (ranges.count(name)==0)
-            ranges[name] = new pair<float, float>(m_config->Get(i_key, make_pair(0, 0)));
-    }
-
     // saved waveforms
     save_waveforms = m_config->Get("save_waveforms", uint16_t(9));
 
@@ -185,64 +170,48 @@ void FileWriterTreeDRS4::Configure(){
 
     // regions todo: add default range
     active_regions = m_config->Get("active_regions", uint16_t(0));
-    macro->AddLine(TString::Format("active_regions: %d", active_regions));
-    for (uint8_t i = 0; i < 4; i++)
+    macro->AddLine("[General]");
+    macro->AddLine((append_spaces(21, "max event number = ") + to_string(max_event_number)).c_str());
+    macro->AddLine((append_spaces(21, "pulser channel = ") + to_string(int(pulser_channel))).c_str());
+    macro->AddLine((append_spaces(21, "trigger channel = ") + to_string(int(trigger_channel))).c_str());
+    macro->AddLine((append_spaces(21, "pulser threshold = ") + to_string(pulser_threshold)).c_str());
+    macro->AddLine((append_spaces(21, "active regions = ") + to_string(GetBitMask(active_regions))).c_str());
+    macro->AddLine((append_spaces(21, "save waveforms = ") + GetBitMask(save_waveforms)).c_str());
+    macro->AddLine((append_spaces(21, "fft waveforms = ") + GetBitMask(fft_waveforms)).c_str());
+    macro->AddLine((append_spaces(21, "spectrum waveforms = ") + GetBitMask(fft_waveforms)).c_str());
+    macro->AddLine((append_spaces(20, "polarities = ") + GetPolarities(polarities)).c_str());
+    macro->AddLine((append_spaces(20, "pulser polarities = ") + GetPolarities(pulser_polarities)).c_str());
+
+    for (uint8_t i = 0; i < n_channels; i++) if (UseWaveForm(active_regions, i)) n_active_channels++;
+    for (uint8_t i = 0; i < n_channels; i++)
         if (UseWaveForm(active_regions, i)) (*regions)[i] = new WaveformSignalRegions(i, polarities.at(i), pulser_polarities.at(i));
-    macro->AddLine("");
-    macro->AddLine("Signal Windows");
-    stringstream ss_ped, ss_sig, ss_pul;
-    ss_ped << "  Pedestal:\n"; ss_sig << "  Signal:\n"; ss_pul << "  Pulser:\n";
-    for (auto i_key: m_config->GetKeys()){
-        size_t found = i_key.find("_region");
-        if (found == string::npos) continue;
-        if (i_key.find("active_regions") != string::npos) continue;
-        pair<int, int> region_def = m_config->Get(i_key, make_pair(0, 0));
-        string name = i_key.substr(0, found);
-        string reg = (split(name, "_").size() > 1) ? split(name, "_").at(1) : "";
-        if (name.find("pedestal_") != string::npos) ss_ped << "    region_" << reg << ":" << string(5 - reg.size(), ' ') << to_string(region_def) << "\n";
-        if (name.find("signal_") != string::npos) ss_sig << "    region_" << reg << ":" << string(5 - reg.size(), ' ') << to_string(region_def) << "\n";
-        if (name.find("pulser") != string::npos) ss_pul << "    region" << reg << ": " << string(5 - reg.size(), ' ') << to_string(region_def) << "\n";
-        TString key = name + ":" + string(20 - name.size(), ' ') + TString::Format("%4d - %4d", region_def.first, region_def.second);
-        macro->AddLine(key);
-        WaveformSignalRegion region = WaveformSignalRegion(region_def.first, region_def.second, name);
-        // add all PeakIntegral ranges for the region
-        for (auto i_rg: ranges){
-            if (i_rg.first.find("PeakIntegral") != std::string::npos){
-                WaveformIntegral integralDef = WaveformIntegral(int(i_rg.second->first), int(i_rg.second->second), i_rg.first);
-                region.AddIntegral(integralDef);
-            }
-        }
-        for (uint8_t i = 0; i< 4;i++)
-            if ((active_regions & 1<<i) == 1<<i)
-                regions->at(i)->AddRegion(region);
-    }
-    macro->AddLine("");
-    macro->AddLine("Signal Definitions:");
-    for (auto i: ranges){
-        if (i.first.find("PeakIntegral") != std::string::npos){
-                TString key = "* " + i.first + ":";
-                key += string(abs(20 - key.Length()), ' ') + TString::Format("%4d - %4d", int(i.second->first), int(i.second->second));
-                macro->AddLine(key);
-        }
+
+    // read the peak integral ranges from the config file
+    pulser_range = m_config->Get("pulser_range_drs4", make_pair(800, 1000));
+    ReadIntegralRanges();
+    for (auto ch: ranges) {
+      macro->AddLine(TString::Format("\n[Integral Ranges %d]", ch.first));
+      for (auto range: ch.second)
+        macro->AddLine((append_spaces(21, range.first + " =") + to_string(*range.second)).c_str());
     }
 
-    // output
-    cout << "CHANNEL AND PULSER SETTINGS:" << endl;
-    cout << append_spaces(24, "  pulser channel:") << int(pulser_channel) << endl;
-    cout << append_spaces(24, "  trigger channel:") << int(trigger_channel) << endl;
-    cout << append_spaces(24, "  pulser_int threshold:") << pulser_threshold << endl;
-    cout << append_spaces(24, "  save waveforms:") << save_waveforms << ":  " << GetBitMask(save_waveforms) << endl;
-    cout << append_spaces(24, "  fft waveforms:") << fft_waveforms << ":  " << GetBitMask(fft_waveforms) << endl;
-    cout << append_spaces(24, "  spectrum waveforms:") << spectrum_waveforms << ":  " << GetBitMask(spectrum_waveforms) << endl;
-    cout << append_spaces(24, "  active regions:") << active_regions << ":  " << GetBitMask(active_regions) << endl;
-    cout << append_spaces(27, "  polarities:") << GetPolarities(polarities) << endl;
-    cout << append_spaces(27, "  pulser polarites:") << GetPolarities(pulser_polarities) << endl;
+    // read the region where we want to find the peak from the config file
+    ReadIntegralRegions();
+    for (auto ch: *regions) {
+      macro->AddLine(TString::Format("\n[Integral Regions %d]", ch.first));
+      for (auto region: ch.second->GetRegions())
+        macro->AddLine((append_spaces(21, to_string(region->GetName()) + " =") + to_string(region->GetRegion())).c_str());
+    }
 
-    cout<<"RANGES: " << ranges.size() << endl;
-    for (auto& it: ranges) cout << append_spaces(25, "  range_" + it.first + ":") << to_string(*(it.second)) << endl;
-
-    cout << "SIGNAL WINDOWS (REGIONS):" << endl;
-    cout << "  " << trim(ss_ped.str(), " ,") << "  " << trim(ss_sig.str(), " ,") << "  " << trim(ss_pul.str(), " ,") << flush;
+    macro->Print();
+    // add the list of all the integral names corresponding to the entries in the integral vectors
+    macro->AddLine("\n[Integral Names]");
+    vector<TString> names;
+    for (auto ch: *regions)
+      for (auto region: ch.second->GetRegions())
+        for (auto integral: region->GetIntegrals())
+          names.push_back(TString::Format("\"ch%d_%s_%s\"", int(ch.first), region->GetName(), integral->GetName().c_str()));
+    macro->AddLine(("Names = [" + to_string(names) + "]").c_str());
 
     cout << "\nMAXIMUM NUMBER OF EVENTS: " << (max_event_number ? to_string(max_event_number) : "ALL") << endl;
     EUDAQ_INFO("End of Configure!");
@@ -256,13 +225,13 @@ void FileWriterTreeDRS4::Configure(){
 void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     this->runnumber = runnumber;
     EUDAQ_INFO("Converting the input file into a DRS4 TTree " );
-    string foutput(FileNamer(m_filepattern).Set('X', ".root").Set('R', runnumber));
-    EUDAQ_INFO("Preparing the output file: " + foutput);
+    string f_output = FileNamer(m_filepattern).Set('X', ".root").Set('R', runnumber);
+    EUDAQ_INFO("Preparing the output file: " + f_output);
 
     c1 = new TCanvas();
     c1->Draw();
 
-    m_tfile = new TFile(foutput.c_str(), "RECREATE");
+    m_tfile = new TFile(f_output.c_str(), "RECREATE");
     m_ttree = new TTree("tree", "a simple Tree with simple variables");
 
     // Set Branch Addresses
@@ -286,7 +255,6 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("wf_isDA", &f_isDa);
 
     // integrals
-    m_ttree->Branch("IntegralNames",&IntegralNames);
     m_ttree->Branch("IntegralValues",&IntegralValues);
     m_ttree->Branch("TimeIntegralValues",&TimeIntegralValues);
     m_ttree->Branch("IntegralPeaks",&IntegralPeaks);
@@ -349,11 +317,8 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         eudaq::PluginManager::Initialize(ev);
         tcal = PluginManager::GetTimeCalibration(ev);
         FillFullTime();
-        stringstream ss;
-        ss << "tcal [";
-        for (auto i:tcal.at(0)) ss << i << ", ";
-        ss << "\b\b]";
-        macro->AddLine(ss.str().c_str());
+        macro->AddLine("\n[Time Calibration]");
+        macro->AddLine(("tcal = [" + to_string(tcal.at(0)) + "]").c_str());
         cout << "loading the first event...." << endl;
         //todo: add time stamp for the very first tu event
         return;
@@ -405,6 +370,8 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     //use different order of wfs in order to 'know' if its a pulser event or not.
     vector<uint8_t > wf_order = {2,1,0,3};
     ResizeVectors(sev.GetNWaveforms());
+    FillRegionIntegrals(sev);
+
     for (auto iwf:wf_order){
 
         const eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
@@ -430,9 +397,6 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         if (iwf == wf_order.at(0)) f_trigger_cell = waveform.GetTriggerCell(); // same for every waveform
 
         // calculate the signal and so on
-        // float sig = CalculatePeak(data, 1075, 1150);
-        if (verbose > 3) cout << "get Values1.0 " << iwf << endl;
-        FillRegionIntegrals(iwf, &waveform);
 
         if (verbose > 3) cout << "get Values1.1 " << iwf << endl;
         FillTotalRange(iwf, &waveform);
@@ -486,8 +450,11 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     -------------------------DECONSTRUCTOR-------------------------------
     =====================================================================*/
 FileWriterTreeDRS4::~FileWriterTreeDRS4() {
-    macro->AddLine("\nSensor Names:");
-    macro->AddLine(("  " + to_string(sensor_name)).c_str());
+    macro->AddLine("\n[Sensor Names]");
+    vector<string> names;
+    for (auto name: sensor_name)
+      names.push_back("\"" + name + "\"");
+    macro->AddLine(("Names = [" + to_string(names) + "]").c_str());
     stringstream ss;
     ss << "Summary of RUN " << runnumber << "\n";
     long entries = m_ttree->GetEntries();
@@ -710,83 +677,48 @@ void FileWriterTreeDRS4::calc_noise(uint8_t iwf) {
   noise->at(iwf) = calc_mean(*noise_vectors.at(iwf));
 }
 
-void FileWriterTreeDRS4::FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf){
-    if (regions->count(iwf) == 0) return;
-    WaveformSignalRegions * this_regions = (*regions)[iwf];
-    UInt_t nRegions = UInt_t(this_regions->GetNRegions());
-    for (uint16_t i=0; i < nRegions; i++){
-        if(verbose) cout << "REGION LOOP" << endl;
-        WaveformSignalRegion * region = this_regions->GetRegion(i);
-        signed char polarity;
-        polarity = (string(region->GetName()).find("pulser") != string::npos) ? this_regions->GetPulserPolarity() : this_regions->GetPolarity();
-        uint16_t low_border = region->GetLowBoarder();
-        uint16_t high_border = region->GetHighBoarder();
-        uint16_t peak_pos = wf->getIndex(low_border, high_border, polarity);
+void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
+
+    for (auto channel: *regions){
+      const StandardWaveform * wf = &sev.GetWaveform(channel.first);
+      channel.second->GetRegion(0)->SetPeakPostion(5);
+      for (auto region: channel.second->GetRegions()){
+        signed char polarity = (string(region->GetName()).find("pulser") != string::npos) ? channel.second->GetPulserPolarity() : channel.second->GetPolarity();
+        uint16_t peak_pos = wf->getIndex(region->GetLowBoarder(), region->GetHighBoarder(), polarity);
         region->SetPeakPostion(peak_pos);
-        size_t nIntegrals = region->GetNIntegrals();
-        for (UInt_t k = 0; k < nIntegrals;k++){
-            WaveformIntegral* p = region->GetIntegralPointer(k);
-            if (p==0){
-                std::cout<<"Invalid Integral Pointer. Continue."<<std::endl;
-                continue;
-            }
-            if (verbose) cout << "GET INTEGRAL " << k << " " << peak_pos << " " << endl;
-            std::string name = p->GetName();
-            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-            p->SetPeakPosition(peak_pos,wf->GetNSamples());
-            float integral, time_integral(0);
-            if (name.find("peaktopeak")!=std::string::npos){
-                integral = wf->getPeakToPeak(low_border,high_border);
-            }
-            else if (name.find("median")!=name.npos){
-                integral = wf->getMedian(low_border,high_border);
-            }
-            else if (name.find("full")!=name.npos){
-                integral = wf->getIntegral(low_border,high_border);
-            }
-            else {
-                integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
-                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf), 2.0);
-            }
-            p->SetIntegral(integral);
-            p->SetTimeIntegral(time_integral);
+        for (auto integral: region->GetIntegrals()){
+          std::string name = integral->GetName();
+          std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+          integral->SetPeakPosition(peak_pos, wf->GetNSamples());
+          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(0), 2.0));
+          if (name.find("peaktopeak")!=std::string::npos){
+            integral->SetIntegral(wf->getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
+          } else if (name.find("median")!=name.npos){
+            integral->SetIntegral(wf->getMedian(integral->GetIntegralStart(), integral->GetIntegralStop()));
+          } else
+            integral->SetIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop()));
         }
+      }
     }
 } // end FillRegionIntegrals()
 
 void FileWriterTreeDRS4::FillRegionVectors(){
-    IntegralNames->clear();
     IntegralValues->clear();
     TimeIntegralValues->clear();
     IntegralPeaks->clear();
     IntegralPeakTime->clear();
     IntegralLength->clear();
-
-    for (uint8_t iwf = 0; iwf < 4; iwf++){
-        if (regions->count(iwf) == 0) continue;
-        WaveformSignalRegions *this_regions = (*regions)[iwf];
-        for (UInt_t i = 0; i < this_regions->GetNRegions(); i++){
-            string name = "ch"+to_string(int(iwf))+"_";
-            WaveformSignalRegion* region = this_regions->GetRegion(i);
-            name += region->GetName();
-            name += "_";
-            uint16_t peak_pos = region->GetPeakPosition();
-
-            for (UInt_t k = 0; k<region->GetNIntegrals();k++){
-                WaveformIntegral* p = region->GetIntegralPointer(k);
-                float integral = p->GetIntegral();
-                string final_name = name;
-                final_name += p->GetName();
-                IntegralNames->push_back(final_name);
-                IntegralValues->push_back(integral);
-                TimeIntegralValues->push_back(p->GetTimeIntegral());
-                IntegralPeaks->emplace_back(peak_pos);
-                IntegralPeakTime->push_back(getTriggerTime(iwf, peak_pos));
-                uint16_t bin_low = p->GetIntegralStart();
-                uint16_t bin_up = p->GetIntegralStop();
-                IntegralLength->push_back(getTimeDifference(iwf, bin_low, bin_up));
-            }
+    for (auto ch: *regions){
+      for (auto region: ch.second->GetRegions()) {
+        uint16_t peak_pos = region->GetPeakPosition();
+        for (auto integral: region->GetIntegrals()) {
+          IntegralValues->push_back(integral->GetIntegral());
+          TimeIntegralValues->push_back(integral->GetTimeIntegral());
+          IntegralPeaks->emplace_back(peak_pos);
+          IntegralPeakTime->push_back(getTriggerTime(ch.first, peak_pos));
+          IntegralLength->push_back(getTimeDifference(ch.first, integral->GetIntegralStart(), integral->GetIntegralStop()));
         }
+      }
     }
 }
 
@@ -840,7 +772,7 @@ void FileWriterTreeDRS4::UpdateWaveforms(uint8_t iwf){
 } // end UpdateWaveforms()
 
 inline int FileWriterTreeDRS4::IsPulserEvent(const StandardWaveform *wf){
-    float pulser_int = wf->getIntegral(uint16_t(ranges["pulserDRS4"]->first), uint16_t(ranges["pulserDRS4"]->second), true);
+    float pulser_int = wf->getIntegral(pulser_range.first, pulser_range.second, true);
     return pulser_int > pulser_threshold;
 } //end IsPulserEvent
 
@@ -929,5 +861,55 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
             old_time = f_time;
         }
     }
+
+void FileWriterTreeDRS4::ReadIntegralRanges() {
+
+  for (uint8_t i_ch(0); i_ch < n_channels; i_ch++) {
+    if (not UseWaveForm(active_regions, i_ch)) continue;
+    // Default ranges
+    ranges[i_ch]["PeakIntegral1"] = new pair<float, float>(m_config->Get("PeakIntegral1_range", make_pair(8, 12)));
+  }
+  // additional ranges from the config file
+  for (auto i_key: m_config->GetKeys()) {
+    if (i_key.find("pulser") != string::npos) continue; // skip if it's the pulser range for the drs4
+    size_t found = i_key.find("_range");
+    if (found == string::npos) continue;
+    if (i_key.at(0) == '#') continue;
+    string name = i_key.substr(0, found);
+    vector<uint16_t> tmp = {0, 0, 0, 0, 0, 0, 0, 0};
+    vector<uint16_t> range_def = from_string(m_config->Get(i_key, "bla"), tmp);
+    uint8_t i(0);
+    for (uint8_t i_ch(0); i_ch < n_channels; i_ch++) {
+      if (not UseWaveForm(active_regions, i_ch)) continue;  // skip if the channel has no signal waveform
+      if (ranges.at(i_ch).count(name) > 0) continue;        // skip if the range already exists
+      ranges.at(i_ch)[name] = new pair<float, float>(make_pair(range_def.at(i), range_def.at(i + 1)));
+      if (range_def.size() > i + 2) i += 2;
+    }
+  }
+}
+
+void FileWriterTreeDRS4::ReadIntegralRegions() {
+
+  for (const auto &i_key: m_config->GetKeys()){
+    if (i_key.find("active_regions") != string::npos) continue;
+    size_t found = i_key.find("_region");
+    if (found == string::npos) continue;
+    string name = i_key.substr(0, found);
+    vector<uint16_t> tmp = {0, 0, 0, 0, 0, 0, 0, 0};
+    vector<uint16_t> region_def = from_string(m_config->Get(i_key, "bla"), tmp);
+    uint8_t i(0);
+    for (auto ch: ranges){
+      WaveformSignalRegion region = WaveformSignalRegion(region_def.at(i), region_def.at(i + 1), name);
+      if (region_def.size() > i + 2) i += 2;
+      // add all PeakIntegral ranges for the region
+      for (auto range: ch.second){
+        if (range.first.find("PeakIntegral") == string::npos) continue;  // only consider the integral ranges around the peak
+        WaveformIntegral integralDef = WaveformIntegral(int(range.second->first), int(range.second->second), range.first);
+        region.AddIntegral(integralDef);
+      }
+      regions->at(ch.first)->AddRegion(region);
+    }
+  }
+}
 
 #endif // ROOT_FOUND

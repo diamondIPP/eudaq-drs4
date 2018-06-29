@@ -101,14 +101,11 @@ namespace eudaq {
       buffer << cfile.rdbuf();
       conf_string = buffer.str();
     }
-    cout << "config: " << conf_string << endl;
     auto conv_config = new eudaq::Configuration(conf_string);
     eudaq::Configuration conf(dev.GetTag("CONFIG"));
     conf.Set("timeDelay", dev.GetTag("longTimeDelay", "0"));
-    cout << "Initialising!" << endl;
     for (size_t i = 0; i < dev.NumEvents(); ++i) {
       const eudaq::Event & subev = *dev.GetEvent(i);
-      cout << subev.GetSubType() << endl;
       if (subev.GetSubType().find("CMS") != string::npos and not conf_string.empty())
         GetInstance().GetPlugin(subev).SetConfig(conv_config);
       GetInstance().GetPlugin(subev).Initialize(subev, conf);

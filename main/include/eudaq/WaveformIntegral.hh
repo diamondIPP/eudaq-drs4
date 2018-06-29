@@ -30,7 +30,8 @@ class WaveformIntegral:public TObject{
         void Print() const {Print(std::cout,true);}
         void Print(std::ostream& out, bool bEndl=false) const;
         void SetName(std::string name){this->name=name;}
-        const char *GetName() const {return name.c_str();}
+//        const char * GetName() const { return name.c_str(); }
+        std::string GetName() { return name; }
     private:
         bool calculated;
         int down_range;

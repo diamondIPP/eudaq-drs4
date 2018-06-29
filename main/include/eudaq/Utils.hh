@@ -386,7 +386,7 @@ namespace eudaq {
     return tmp;
   }
 
-  std::vector<ssize_t > range(ssize_t begin, ssize_t end=SIZE_MAX, int32_t step=1);
+  std::vector<size_t > range(size_t begin, size_t end=SIZE_MAX, int32_t step=1);
 
     class ProgressBar {
 
