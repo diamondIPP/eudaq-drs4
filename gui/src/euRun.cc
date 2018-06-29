@@ -4,10 +4,7 @@
 #include "euRunApplication.h"
 #include "euRun.hh"
 #include "eudaq/OptionParser.hh"
-#include "eudaq/Utils.hh"
 #include "Colours.hh"
-#include "eudaq/Status.hh"
-#include <exception>
 #include "config.h" // for version symbols
 
 static const char * statuses[] = {
@@ -171,6 +168,14 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
     cmbConfig->addItem(item);
   }
   cmbConfig->setEditText("default");
+  QSettings flux_settings("../conf/flux.ini", QSettings::IniFormat);
+  std::vector<int> fluxes;
+  for (auto iflux: flux_settings.childGroups())
+    fluxes.push_back(iflux.toInt());
+  std::sort(fluxes.begin(), fluxes.end());
+  for (auto iflux: fluxes)
+    cmbFlux->addItem(QString(std::to_string(iflux).c_str()));
+  cmbFlux->setEditText(QString(std::to_string(fluxes.at(0)).c_str()));
   QSize fsize = frameGeometry().size();
   if (geom.x() == -1) geom.setX(x());
   if (geom.y() == -1) geom.setY(y());
@@ -185,8 +190,8 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
   connect(this,SIGNAL(btnLogSetStatus(bool)),this, SLOT(btnLogSetStatusSlot(bool)));
   connect(this, SIGNAL(SetState(int)),this,SLOT(SetStateSlot(int)));
   m_statustimer.start(500);
-  txtGeoID->setText(QString::number(eudaq::ReadFromFile(GEOID_FILE, 0U)));
-  txtGeoID->installEventFilter(this);
+//  txtGeoID->setText(QString::number(eudaq::ReadFromFile(GEOID_FILE, 0U)));
+//  txtGeoID->installEventFilter(this);
   setWindowIcon(QIcon("../images/Icon_euRun.png"));
   setWindowTitle("ETH/PSI Run Control based on eudaq " PACKAGE_VERSION);
 }
@@ -262,16 +267,16 @@ void RunControlGUI::OnConnect(const eudaq::ConnectionInfo & id) {
 }
 
 
-bool RunControlGUI::eventFilter(QObject *object, QEvent *event) {
-  if (object == txtGeoID && event->type() == QEvent::MouseButtonDblClick) {
-    int oldid = txtGeoID->text().toInt();
-    bool ok = false;
-    int newid = QInputDialog::getInt(this, "Increment GeoID to:", "value", oldid+1, 0, 2147483647, 1, &ok);
-    if (ok) {
-      txtGeoID->setText(QString::number(newid));
-      eudaq::WriteToFile(GEOID_FILE, newid);
-    }
-    return true;
-  }
-  return false;
-}
+//bool RunControlGUI::eventFilter(QObject *object, QEvent *event) {
+//  if (object == txtGeoID && event->type() == QEvent::MouseButtonDblClick) {
+//    int oldid = txtGeoID->text().toInt();
+//    bool ok = false;
+//    int newid = QInputDialog::getInt(this, "Increment GeoID to:", "value", oldid+1, 0, 2147483647, 1, &ok);
+//    if (ok) {
+//      txtGeoID->setText(QString::number(newid));
+//      eudaq::WriteToFile(GEOID_FILE, newid);
+//    }
+//    return true;
+//  }
+//  return false;
+//}

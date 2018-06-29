@@ -10,6 +10,7 @@
 #include <QPainter>
 #include <QTimer>
 #include <QInputDialog>
+#include <QSettings>
 
 using eudaq::to_string;
 using eudaq::from_string;
@@ -68,7 +69,7 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
         event->accept();
       }
     }
-    bool eventFilter(QObject *object, QEvent *event);
+//    bool eventFilter(QObject *object, QEvent *event);
     private slots:
 
 
@@ -81,21 +82,27 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
 
   void on_btnTerminate_clicked() { close(); }
 
-    void on_btnConfig_clicked() {
-        std::string settings = cmbConfig->currentText().toStdString();
-        Configure(settings, txtGeoID->text().toInt());
-        SetState(ST_READY);
-        dostatus = true;
-        //Reset Scalers
-        EmitStatus("SCALERS", "-,-,-,-");
-        EmitStatus("PARTICLES", "0");
-        EmitStatus("TRIG", "0");
-        EmitStatus("EVENT","0");
-        EmitStatus("FILEBYTES","0 MB");
-        EmitStatus("MEANRATE","NAN Hz");
-        EmitStatus("RATE","NAN Hz");
-        EmitStatus("FULLRATE","NAN Hz");
-      }
+  void on_btnConfig_clicked() {
+
+      std::string settings = cmbConfig->currentText().toStdString();
+      QSettings fluxes("../conf/flux.ini", QSettings::IniFormat);
+      fluxes.beginGroup(cmbFlux->currentText());
+      std::map<std::string, int> extras;
+      for (auto key: fluxes.allKeys())
+          extras[key.toStdString()] = fluxes.value(key).toInt();
+      Configure(settings, extras);
+      SetState(ST_READY);
+      dostatus = true;
+      //Reset Scalers
+      EmitStatus("SCALERS", "-,-,-,-");
+      EmitStatus("PARTICLES", "0");
+      EmitStatus("TRIG", "0");
+      EmitStatus("EVENT","0");
+      EmitStatus("FILEBYTES","0 MB");
+      EmitStatus("MEANRATE","NAN Hz");
+      EmitStatus("RATE","NAN Hz");
+      EmitStatus("FULLRATE","NAN Hz");
+  }
     //void on_btnReset_clicked() {
     //  Reset();
     //}
