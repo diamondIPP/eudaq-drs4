@@ -12,6 +12,9 @@ GREEN = '\033[92m'
 BOLD = '\033[1m'
 ENDC = '\033[0m'
 
+BeamPc = 'pim1'
+DataPc = 'rapidshare'
+
 
 def warning(txt):
     print '{}{}{}{}'.format(BOLD, RED, txt, ENDC)
@@ -46,22 +49,20 @@ def kill_all():
     finished('Killing EUDAQ on DAQ complete')
 
     # kill all processes on computer in the beam area
-    beam_pc = 'analysis'
-    warning('\nCleaning up the beam computer "{}"'.format(beam_pc))
+    warning('\nCleaning up the beam computer "{}"'.format(BeamPc))
     eudaq_screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen']
-    for pid, screen in get_screens(beam_pc).iteritems():
+    for pid, screen in get_screens(BeamPc).iteritems():
         if screen in eudaq_screens:
             print '  killing {} with pid {}'.format(screen, pid)
-            system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(beam_pc, pid))
+            system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(BeamPc, pid))
     finished('Killing screens on beam computer complete')
 
     # kill the data collector
-    data_pc = 'rapidshare'
-    warning('\nCleaning up the data computer "{}"'.format(data_pc))
-    for pid, screen in get_screens(data_pc).iteritems():
+    warning('\nCleaning up the data computer "{}"'.format(DataPc))
+    for pid, screen in get_screens(DataPc).iteritems():
         if screen == 'DataCollectorScreen':
             print '  killing {} with pid {}'.format(screen, pid)
-            system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(data_pc, pid))
+            system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(DataPc, pid))
     finished('Killing the data collector on the data pc complete')
 
     # kill all xterm windows

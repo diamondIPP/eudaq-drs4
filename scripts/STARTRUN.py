@@ -16,7 +16,7 @@ RCPORT = 44000
 MonitorNumber = 0
 Location = 'psi'
 DataPC = 'rapidshare'
-BeamPC = 'analysis'
+BeamPC = 'pim1'
 XMax = 311.  # chars
 YMax = 20  # chars
 Space = 10  # pixel
@@ -31,8 +31,11 @@ def get_output(command):
 
 
 def get_x(name):
-    return int(get_output('xwininfo -name "{}" | grep "Absolute upper-left X"'.format(name)).split(':')[-1])
-
+    while True:
+        try:
+            return int(get_output('xwininfo -name "{}" | grep "Absolute upper-left X"'.format(name)).split(':')[-1])
+        except ValueError:
+            sleep(.1)
 
 def get_width(name):
     return int(get_output('xwininfo -name "{}" | grep "Width"'.format(name)).split(':')[-1])
@@ -69,7 +72,7 @@ class EudaqStart:
         print_red('  starting RunControl')
         port = 'tcp://{}'.format(RCPORT)
         system('{d} -x 0 -y -60 -w {w} -g {h} -a {p} &'.format(d=join(self.Dir, 'bin', 'euRun.exe'), w=int(self.W / 3.), h=int(self.H * 2 / 3.), p=port))
-        sleep(2)
+        sleep(1)
 
     def start_logcontrol(self):
         print_red('  starting LogControl')
@@ -85,17 +88,17 @@ class EudaqStart:
 
     def start_cms_tel(self):
         if self.CMSTel:
-            self.start_xterm('CMS Pixel Telescope', 'ssh -tY {} scripts/StartCMSPixel.sh'.format(BeamPC))
+            self.start_xterm('CMS Pixel Telescope', 'ssh -tY {} ~/scripts/StartCMSPixel.sh'.format(BeamPC))
 
     def start_cms_dut(self):
         if self.CMSDUT:
-            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} scripts/StartCMSPixelDig.sh'.format(BeamPC))
+            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} ~/scripts/StartCMSPixelDig.sh'.format(BeamPC))
 
     def start_drs4(self):
         if self.DRS:
-            self.start_xterm('DRS4Producer', 'ssh -tY {} scripts/StartDRS4'.format(BeamPC))
+            self.start_xterm('DRS4Producer', 'ssh -tY {} ~/scripts/StartDRS4.sh'.format(BeamPC))
         elif self.DRSGUI:
-            self.start_xterm('DRS4Producer', 'ssh -tY {} software/DRS4/drsosc'.format(BeamPC))
+            self.start_xterm('DRS4Producer', 'ssh -tY {} ~/software/DRS4/drsosc'.format(BeamPC))
 
     def start_clockgen(self):
         if self.CLK:
