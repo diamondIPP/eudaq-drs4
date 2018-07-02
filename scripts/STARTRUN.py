@@ -42,13 +42,14 @@ def get_width(name):
 
 
 class EudaqStart:
-    def __init__(self, cms_tel, cms_dut, clk, caen, drs, drsgui):
+    def __init__(self, cms_tel, cms_dut, clk, caen, drs, drsgui, wbcscan):
         self.CMSTel = cms_tel
         self.CMSDUT = cms_dut
         self.CAEN = caen
         self.CLK = clk
         self.DRS = drs
         self.DRSGUI = drsgui
+        self.WBCSCAN = wbcscan
         self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui]) + 2
         self.Hostname = self.get_ip()
         self.Port = 'tcp://{}:{}'.format(self.Hostname, RCPORT)
@@ -94,6 +95,10 @@ class EudaqStart:
         if self.CMSDUT:
             self.start_xterm('CMS Pixel DUT', 'ssh -tY {} ~/scripts/StartCMSPixelDig.sh'.format(BeamPC))
 
+    def start_wbc_scan(self):
+        if self.WBCSCAN:
+            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} ~/scripts/wbcScan.sh'.format(BeamPC))
+
     def start_drs4(self):
         if self.DRS:
             self.start_xterm('DRS4Producer', 'ssh -tY {} ~/scripts/StartDRS4.sh'.format(BeamPC))
@@ -137,7 +142,8 @@ if __name__ == '__main__':
     p.add_argument('-drsgui', action='store_true')
     p.add_argument('-caen', action='store_true')
     p.add_argument('-clk', action='store_true')
-    
+    p.add_argument('-wbc', action='store_true')
+
     args = p.parse_args()
-    z = EudaqStart(args.cmstel, args.cmsdut, args.clk, args.caen, args.drs, args.drsgui)
+    z = EudaqStart(args.cmstel, args.cmsdut, args.clk, args.caen, args.drs, args.drsgui, args.wbc)
     z.run()
