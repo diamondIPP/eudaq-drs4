@@ -7,6 +7,7 @@ using namespace eudaq;
 
 namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
 
+
 /** =====================================================================
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
@@ -22,6 +23,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     //Polarities of signals, default is positive signals
     polarities.resize(4, 1);
     pulser_polarities.resize(4, 1);
+    spectrum_polarities.resize(4, 1);
 
     //how many events will be analyzed, 0 = all events
     max_event_number = 0;
@@ -50,6 +52,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     // general waveform information
     v_polarities = new vector<int16_t>;
     v_pulser_polarities = new vector<int16_t>;
+    v_spectrum_polarities = new vector<int16_t>;
     v_is_saturated = new vector<bool>;
     v_median = new vector<float>;
     v_average = new vector<float>;
@@ -165,8 +168,10 @@ void FileWriterTreeDRS4::Configure(){
     // polarities
     polarities = m_config->Get("polarities", polarities);
     pulser_polarities = m_config->Get("pulser_polarities", pulser_polarities);
+    spectrum_polarities = m_config->Get("spectrum_polarities", spectrum_polarities);
     for (auto i: polarities)  v_polarities->push_back(uint16_t(i * 1));
     for (auto i: pulser_polarities) v_pulser_polarities->push_back(uint16_t(i * 1));
+    for (auto i: spectrum_polarities) v_spectrum_polarities->push_back(uint16_t(i * 1));
 
     // regions todo: add default range
     active_regions = m_config->Get("active_regions", uint16_t(0));
@@ -178,9 +183,10 @@ void FileWriterTreeDRS4::Configure(){
     macro->AddLine((append_spaces(21, "active regions = ") + to_string(GetBitMask(active_regions))).c_str());
     macro->AddLine((append_spaces(21, "save waveforms = ") + GetBitMask(save_waveforms)).c_str());
     macro->AddLine((append_spaces(21, "fft waveforms = ") + GetBitMask(fft_waveforms)).c_str());
-    macro->AddLine((append_spaces(21, "spectrum waveforms = ") + GetBitMask(fft_waveforms)).c_str());
+    macro->AddLine((append_spaces(21, "spectrum waveforms = ") + GetBitMask(spectrum_waveforms)).c_str());
     macro->AddLine((append_spaces(20, "polarities = ") + GetPolarities(polarities)).c_str());
     macro->AddLine((append_spaces(20, "pulser polarities = ") + GetPolarities(pulser_polarities)).c_str());
+    macro->AddLine((append_spaces(20, "spectrum_polarities = ") + GetPolarities(spectrum_polarities)).c_str());
 
     for (uint8_t i = 0; i < n_channels; i++) if (UseWaveForm(active_regions, i)) n_active_channels++;
     for (uint8_t i = 0; i < n_channels; i++)
@@ -264,6 +270,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     // DUT
     m_ttree->Branch("polarities", &v_polarities);
     m_ttree->Branch("pulser_polarities", &v_pulser_polarities);
+    m_ttree->Branch("spectrum_polarities", &v_spectrum_polarities);
     m_ttree->Branch("is_saturated", &v_is_saturated);
     m_ttree->Branch("median", &v_median);
     m_ttree->Branch("average", &v_average);
@@ -303,7 +310,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("row", &f_row);
     m_ttree->Branch("adc", &f_adc);
     m_ttree->Branch("charge", &f_charge);
-    verbose = 0;
+    verbose = 4;
     
     EUDAQ_INFO("Done with creating Branches!");
 }
@@ -368,11 +375,12 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
 
     //use different order of wfs in order to 'know' if its a pulser event or not.
-    vector<uint8_t > wf_order = {2,1,0,3};
+    vector<uint8_t> wf_order = {2,1,0,3};
     ResizeVectors(sev.GetNWaveforms());
     FillRegionIntegrals(sev);
 
-    for (auto iwf:wf_order){
+    for (auto iwf : wf_order){
+        if (verbose > 3) cout<<"Channel Nr: "<< int(iwf) <<endl;
 
         const eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
         // save the sensor names
@@ -388,7 +396,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         calc_noise(iwf);
 
         this->FillSpectrumData(iwf);
-        if (verbose > 3) cout<<"DoSpectrumFitting "<<iwf<<endl;
+        if (verbose > 3) cout<<"DoSpectrumFitting "<< iwf <<endl;
         this->DoSpectrumFitting(iwf);
         if (verbose > 3) cout << "DoFFT " << iwf << endl;
         this->DoFFTAnalysis(iwf);
@@ -421,6 +429,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 
         data->clear();
     } // end iwf waveform loop
+
 
     FillRegionVectors();
 
@@ -633,23 +642,27 @@ void FileWriterTreeDRS4::DoFFTAnalysis(uint8_t iwf){
 } // end DoFFTAnalysis()
 
 inline void FileWriterTreeDRS4::DoSpectrumFitting(uint8_t iwf){
-
     if (!UseWaveForm(spectrum_waveforms, iwf)) return;
 
     w_spectrum.Start(false);
+
     float max = *max_element(data_pos.begin(), data_pos.end());
     //return if the max element is lower than 4 sigma of the noise
     float threshold = 4 * noise->at(iwf).second + noise->at(iwf).first;
+
     if (max <= threshold) return;
     // tspec threshold is in per cent to max peak
+
     threshold = threshold / max * 100;
     uint16_t size = uint16_t(data_pos.size());
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
+
     for(uint8_t i=0; i < peaks; i++){
         uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
         uint16_t min_bin = bin - 5 >= 0 ? uint16_t(bin - 5) : uint16_t(0);
         uint16_t max_bin = bin + 5 < size ? uint16_t(bin + 5) : uint16_t(size - 1);
         max = *std::max_element(&data_pos.at(min_bin), &data_pos.at(max_bin));
+        std::cout << bin << std::endl;
         peaks_x.at(iwf)->push_back(bin);
         peaks_x_time.at(iwf)->push_back(getTriggerTime(iwf, bin));
         peaks_y.at(iwf)->push_back(max);
@@ -662,8 +675,9 @@ void FileWriterTreeDRS4::FillSpectrumData(uint8_t iwf){
     bool b_fft = UseWaveForm(fft_waveforms, iwf);
     if(b_spectrum || b_fft){
         data_pos.resize(data->size());
+        //irgendwas is mit den channels verkehrt - mal checken welcher welcher ist
         for (uint16_t i = 0; i < data->size(); i++)
-            data_pos.at(i) = polarities.at(iwf) * data->at(i);
+            data_pos.at(i) = spectrum_polarities.at(iwf) * data->at(i);
     }
 } // end FillSpectrumData()
 

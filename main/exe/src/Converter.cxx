@@ -6,13 +6,12 @@
 #include "eudaq/MultiFileReader.hh"
 
 using namespace eudaq;
-unsigned dbg = 0; 
-
+unsigned dbg = 0;
 
 int main(int, char ** argv) {
-	std::clock_t    start;
+  std::clock_t    start;
+  start = std::clock();
 
-	start = std::clock();
   eudaq::OptionParser op("EUDAQ File Converter", "1.0", "", 1);
   eudaq::Option<std::string> type(op, "t", "type", "native", "name", "Output file type");
   eudaq::Option<std::string> events(op, "e", "events", "", "numbers", "Event numbers to convert (eg. '1-10,99' default is all)");
@@ -21,10 +20,10 @@ int main(int, char ** argv) {
   eudaq::OptionFlag async(op, "a", "nosync", "Disables Synchronisation with TLU events");
   eudaq::Option<size_t> syncEvents(op, "n" ,"syncevents",1000,"size_t","Number of events that need to be synchronous before they are used");
   eudaq::Option<uint64_t> syncDelay(op, "d" ,"longDelay",20,"uint64_t","us time long time delay");
-  eudaq::Option<std::string> level(op, "l", "log-level", "INFO", "level",
-      "The minimum level for displaying log messages locally");
+  eudaq::Option<std::string> level(op, "l", "log-level", "INFO", "level", "The minimum level for displaying log messages locally");
   eudaq::Option<std::string> configFileName(op,"c","config", "", "string","Configuration filename");
   op.ExtraHelpText("Available output types are: " + to_string(eudaq::FileWriterFactory::GetTypes(), ", "));
+
   try {
     op.Parse(argv);
     EUDAQ_LOG_LEVEL(level.Value());

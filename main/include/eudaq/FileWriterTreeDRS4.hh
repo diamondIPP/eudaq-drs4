@@ -92,9 +92,11 @@ namespace eudaq {
         int n_pixels;
         std::vector<signed char> polarities;
         std::vector<signed char> pulser_polarities;
+        std::vector<signed char> spectrum_polarities;
 
         std::vector<int16_t> *v_polarities;
         std::vector<int16_t> *v_pulser_polarities;
+        std::vector<int16_t> *v_spectrum_polarities;
 
         // drs4 timing calibration
         std::map<uint8_t, std::vector<float> > tcal;
