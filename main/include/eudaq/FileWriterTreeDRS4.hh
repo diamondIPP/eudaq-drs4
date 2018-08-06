@@ -211,6 +211,12 @@ namespace eudaq {
         std::vector<uint64_t> * v_scaler;
         std::vector<uint64_t> * old_scaler;
 
+        //peak finding
+        std::pair<float, float> peak_finding_roi;
+        int n_peaks_total;
+        int n_peaks_after_roi;
+        int n_peaks_before_roi;
+
     };
 }
 

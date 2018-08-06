@@ -157,6 +157,9 @@ void FileWriterTreeDRS4::Configure(){
     spectrum_waveforms = m_config->Get("spectrum_waveforms", uint16_t(0));
     fft_waveforms = m_config->Get("fft_waveforms", uint16_t(0));
 
+    //peak finding
+    peak_finding_roi = m_config->Get("peak_finding_roi", make_pair(0.0, 0.0));
+
     // channels
     pulser_threshold = m_config->Get("pulser_drs4_threshold", 80);
     pulser_channel = uint8_t(m_config->Get("pulser_channel", 1));
@@ -297,6 +300,9 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
             m_ttree->Branch(TString::Format("peaks%d_x", i_wf), &peaks_x.at(i_wf));
             m_ttree->Branch(TString::Format("peaks%d_x_time", i_wf), &peaks_x_time.at(i_wf));
             m_ttree->Branch(TString::Format("peaks%d_y", i_wf), &peaks_y.at(i_wf));
+            m_ttree->Branch(TString::Format("n_peaks%d_total", i_wf), &n_peaks_total);
+            m_ttree->Branch(TString::Format("n_peaks%d_before_roi", i_wf), &n_peaks_before_roi);
+            m_ttree->Branch(TString::Format("n_peaks%d_after_roi", i_wf), &n_peaks_after_roi);
         }
         if (UseWaveForm(fft_waveforms, i_wf)) {
             m_ttree->Branch(TString::Format("fft_modes%d", i_wf), &fft_modes.at(i_wf));
@@ -310,7 +316,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("row", &f_row);
     m_ttree->Branch("adc", &f_adc);
     m_ttree->Branch("charge", &f_charge);
-    verbose = 4;
+    verbose = 1;
     
     EUDAQ_INFO("Done with creating Branches!");
 }
@@ -655,27 +661,41 @@ inline void FileWriterTreeDRS4::DoSpectrumFitting(uint8_t iwf){
 
     threshold = threshold / max * 100;
     uint16_t size = uint16_t(data_pos.size());
-    int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
 
+    n_peaks_total = 0;
+    n_peaks_before_roi = 0;
+    n_peaks_after_roi = 0;
+
+    int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
+    n_peaks_total = peaks; //this goes in the root file
+    std::cout << "npeaks: " << n_peaks_total << std::endl;
     for(uint8_t i=0; i < peaks; i++){
         uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
         uint16_t min_bin = bin - 5 >= 0 ? uint16_t(bin - 5) : uint16_t(0);
         uint16_t max_bin = bin + 5 < size ? uint16_t(bin + 5) : uint16_t(size - 1);
         max = *std::max_element(&data_pos.at(min_bin), &data_pos.at(max_bin));
-        std::cout << bin << std::endl;
         peaks_x.at(iwf)->push_back(bin);
-        peaks_x_time.at(iwf)->push_back(getTriggerTime(iwf, bin));
+        float peaktime = getTriggerTime(iwf, bin);
+
+        if (peaktime < peak_finding_roi.first){
+            n_peaks_before_roi++;}
+
+        if (peaktime >= peak_finding_roi.second){
+            n_peaks_after_roi++;}
+
+        peaks_x_time.at(iwf)->push_back(peaktime);
         peaks_y.at(iwf)->push_back(max);
+
     }
     w_spectrum.Stop();
 } // end DoSpectrumFitting()
+
 
 void FileWriterTreeDRS4::FillSpectrumData(uint8_t iwf){
     bool b_spectrum = UseWaveForm(spectrum_waveforms, iwf);
     bool b_fft = UseWaveForm(fft_waveforms, iwf);
     if(b_spectrum || b_fft){
         data_pos.resize(data->size());
-        //irgendwas is mit den channels verkehrt - mal checken welcher welcher ist
         for (uint16_t i = 0; i < data->size(); i++)
             data_pos.at(i) = spectrum_polarities.at(iwf) * data->at(i);
     }
