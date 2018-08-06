@@ -668,7 +668,6 @@ inline void FileWriterTreeDRS4::DoSpectrumFitting(uint8_t iwf){
 
     int peaks = spec->SearchHighRes(&data_pos[0], &decon[0], size, spec_sigma, threshold, spec_rm_bg, spec_decon_iter, spec_markov, spec_aver_win);
     n_peaks_total = peaks; //this goes in the root file
-    std::cout << "npeaks: " << n_peaks_total << std::endl;
     for(uint8_t i=0; i < peaks; i++){
         uint16_t bin = uint16_t(spec->GetPositionX()[i] + .5);
         uint16_t min_bin = bin - 5 >= 0 ? uint16_t(bin - 5) : uint16_t(0);
