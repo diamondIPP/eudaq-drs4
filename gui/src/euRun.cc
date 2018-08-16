@@ -164,10 +164,12 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
   QDir dir("../conf/", "*.conf");
   for (size_t i = 0; i < dir.count(); ++i) {
     QString item = dir[i];
+    if (item.toStdString().find("converter") != std::string::npos)  //exclude the converter config files
+      continue;
     item.chop(5);
     cmbConfig->addItem(item);
   }
-  cmbConfig->setEditText("default");
+  cmbConfig->setEditText(cmbConfig->itemText(0));
   QSettings flux_settings("../conf/flux.ini", QSettings::IniFormat);
   std::vector<int> fluxes;
   for (auto iflux: flux_settings.childGroups())
