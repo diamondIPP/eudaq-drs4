@@ -50,7 +50,7 @@ def kill_all():
 
     # kill all processes on computer in the beam area
     warning('\nCleaning up the beam computer "{}"'.format(BeamPc))
-    eudaq_screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen']
+    eudaq_screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT']
     for pid, screen in get_screens(BeamPc).iteritems():
         if screen in eudaq_screens:
             print '  killing {} with pid {}'.format(screen, pid)
