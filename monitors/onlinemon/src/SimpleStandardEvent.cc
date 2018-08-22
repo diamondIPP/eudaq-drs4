@@ -33,14 +33,22 @@ void SimpleStandardEvent::addTUEvent(SimpleStandardTUEvent & tuev){
 	_tuev.push_back(tuev);
 }
 
+bool SimpleStandardEvent::planeExists(SimpleStandardPlane &plane) {
+  for (const auto &ipl: _planes)
+    if (ipl == plane)
+      return true;
+  return false;
+}
 
 void SimpleStandardEvent::addPlane(SimpleStandardPlane &plane) {
 	// Checks if plane with same name and id is registered already
-	bool found = false;
-	for (unsigned int  i = 0; i < _planes.size(); ++i) {
-		if (_planes.at(i) == plane) found = true;
+	uint16_t duplicates = 1;
+	while (planeExists(plane)) {
+    duplicates++;
+    plane.setName(plane.getName() + "-" + std::to_string(duplicates));
 	}
-	if (found) plane.addSuffix("-2");
+	if (duplicates > 1)
+	  plane.setName(plane.getBaseName() + "-" + std::to_string(duplicates));
 	_planes.push_back(plane);
 }
 

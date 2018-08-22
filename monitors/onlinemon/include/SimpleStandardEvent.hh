@@ -53,6 +53,7 @@ class SimpleStandardEvent {
     SimpleStandardEvent();
 
     void addPlane(SimpleStandardPlane &plane);
+    bool planeExists(SimpleStandardPlane &plane);
     void addWaveform(SimpleStandardWaveform &wf);
     void addTUEvent(SimpleStandardTUEvent &tuev);
     SimpleStandardPlane getPlane (const int i) const {return _planes.at(i);}

@@ -9,7 +9,8 @@
 #include <vector>
 #include "include/SimpleStandardPlane.hh"
 
-SimpleStandardPlane::SimpleStandardPlane(const std::string & name, const int id, const int maxX, const int maxY, const int tlu_event, const int pivot_pixel, OnlineMonConfiguration* mymon) : _name(name), _id(id), _maxX(maxX), _maxY(maxY),_binsX(maxX), _binsY(maxY)
+SimpleStandardPlane::SimpleStandardPlane(const std::string & name, const int id, const int maxX, const int maxY, const int tlu_event, const int pivot_pixel, OnlineMonConfiguration* mymon) :
+_name(name), _baseName(name), _id(id), _maxX(maxX), _maxY(maxY),_binsX(maxX), _binsY(maxY)
 {
   const int hits_reserve=500;
   _hits.reserve(hits_reserve);
