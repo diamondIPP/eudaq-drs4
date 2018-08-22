@@ -56,8 +56,7 @@ namespace eudaq {
       void SetCMSPixelConversion(bool val);
 
     private:
-      /** The map that correlates the event type with its converter plugin.
-       */
+      /** The map that correlates the event type with its converter plugin. */
       std::map<t_eventid, DataConverterPlugin *> m_pluginmap;
 
       PluginManager() {}
