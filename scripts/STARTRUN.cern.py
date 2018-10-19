@@ -2,13 +2,12 @@
 # --------------------------------------------------------
 #       PYTHON SCRIPT TO START ALL RUNNING EUDAQ PROCESSES
 # -------------------------------------------------------
-from commands import getstatusoutput
 from screeninfo import get_monitors
 from os.path import dirname, realpath, join
-from os import chmod, system, environ
+from os import chmod, environ
 from glob import glob
 from time import sleep
-from KILLRUN import warning, finished, RED, ENDC
+from KILLRUN import *
 from argparse import ArgumentParser
 from getpass import getuser
 
@@ -25,7 +24,7 @@ Space = 10  # pixel
 
 
 def get_ip():
-    return get_output('ifconfig {} | grep "inet addr"'.format(InetDevice)).strip('inet addr:').split()[0]
+    return get_output('ifconfig {} | grep "inet "'.format(InetDevice)).strip('inet addr:').split()[0]
 
 
 def print_red(txt):
@@ -66,6 +65,8 @@ def make_ssh_dir(host, cmd):
 
 class EudaqStart:
     def __init__(self, cms_tel, cms_dut, clk, caen, drs, drsgui, wbcscan, dig1, dig2):
+        self.kill_run()
+
         self.CMSTel = cms_tel
         self.CMSDUT = cms_dut
         self.CAEN = caen
@@ -88,6 +89,13 @@ class EudaqStart:
 
         # set the correct HOSTNAME environment for EUDAQ
         environ['HOSTNAME'] = self.Hostname
+
+    @staticmethod
+    def kill_run():
+        kill_daq_processes()
+        # kill_beam_processes()
+        kill_xterms()
+        finished('\nKILLRUN complete')
 
     def protect_data(self):
         for f in glob(join(self.DataDir, 'run*.raw')):
