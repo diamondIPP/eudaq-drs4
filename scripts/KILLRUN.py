@@ -38,37 +38,59 @@ def get_screens(host):
     return screens
 
 
-def kill_all():
-    # first kill all processes on the DAQ computer
+def kill_process(process, pid):
+    try:
+        print '  killing {} with pid {} ...'.format(process, pid)
+        kill(pid, SIGTERM)
+    except Exception as err:
+        print err
+
+
+def kill_ssh_process(screen, hostname, pid):
+    try:
+        print '  killing {} with pid {}'.format(screen, pid)
+        system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(hostname, pid))
+    except Exception as err:
+        print err
+
+
+def kill_daq_processes():
+    """ Kill all processes on the pc running the DAQ main window. """
     warning('\nCleaning up DAQ computer ...')
     daq_processes = ['TUProducer', 'euLog.exe', 'euRun.exe', 'TestDataCollector.exe']
     for process in daq_processes:
         for pid in get_pids(process):
-            print '  killing {} with pid {}'.format(process, pid)
-            kill(pid, SIGTERM)
-    finished('Killing EUDAQ on DAQ complete')
+            kill_process(process, pid)
+    finished('Killing EUDAQ on DAQ PC complete')
 
-    # kill all processes on computer in the beam area
+
+def kill_beam_processes():
+    """ Kill all EUDAQ processes on computer in the beam area. """
     warning('\nCleaning up the beam computer "{}"'.format(BeamPc))
     eudaq_screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT']
     for pid, screen in get_screens(BeamPc).iteritems():
         if screen in eudaq_screens:
-            print '  killing {} with pid {}'.format(screen, pid)
-            system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(BeamPc, pid))
+            kill_ssh_process(screen, BeamPc, pid)
     finished('Killing screens on beam computer complete')
 
-    # kill the data collector
+
+def kill_data_collector():
+    """ Kill the data collector if running on seperate PC. """
     warning('\nCleaning up the data computer "{}"'.format(DataPc))
     for pid, screen in get_screens(DataPc).iteritems():
         if screen == 'DataCollectorScreen':
-            print '  killing {} with pid {}'.format(screen, pid)
-            system('ssh -tY {} screen -XS {} kill 2>/dev/null'.format(DataPc, pid))
+            kill_ssh_process(screen, DataPc, pid)
     finished('Killing the data collector on the data pc complete')
 
-    # kill all xterm windows
+
+def kill_xterms():
     if get_pids('xterm'):
         system('killall xterm')
+
+
+def kill_all():
+    kill_daq_processes()
+    kill_beam_processes()
+    kill_data_collector()
+    kill_xterms()
     finished('\nKILLRUN complete')
-
-
-kill_all()
