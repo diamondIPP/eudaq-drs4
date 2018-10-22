@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(TUProducer)
 
-add_definitions(-std=c++11 -stdlib=libc++)
+add_definitions(-std=c++11)
 
 FIND_PATH(CONFIG++_INCLUDE_DIR libconfig.h++ /usr/include /usr/local/include)
 FIND_LIBRARY(CONFIG++_LIBRARY NAMES config++ PATH /usr/lib /usr/local/lib) 
