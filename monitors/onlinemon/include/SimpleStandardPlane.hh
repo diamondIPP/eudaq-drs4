@@ -28,6 +28,7 @@
 class SimpleStandardPlane {
   protected:
     std::string _name;
+    std::string _baseName;
     int _id;
     int _maxX;
     int _maxY;
@@ -60,6 +61,7 @@ class SimpleStandardPlane {
     SimpleStandardHit getHit(const int i) const { return _hits.at(i); }
     SimpleStandardHit getRawHit(const int i) const { return _rawhits.at(i); }
     std::string getName() const {return _name; }
+    std::string getBaseName() const {return _baseName; }
     void setTriggerPhase(unsigned char trig_phase){_trigger_phase=trig_phase;}
     unsigned char getTriggerPhase() const {return _trigger_phase;}
     int getID() const {return _id;}
@@ -70,6 +72,7 @@ class SimpleStandardPlane {
     int getPivotPixel() const { return _pivot_pixel;}
     int getTLUEvent()const { return _tlu_event;}
     void addSuffix( const std::string & suf ) { _name = _name + suf; }
+    void setName( const std::string & name ) { _name = name; }
     void reducePixels(const int reduceX, const int reduceY);
     void setMonitorConfiguration(OnlineMonConfiguration *mymon)
     {

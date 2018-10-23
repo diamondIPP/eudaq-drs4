@@ -26,7 +26,7 @@ EventAlignmentHistos::EventAlignmentHistos(): hasWaveForm(true), _nOffsets(5), _
     _PulserRate = init_profile("p_pu", "Pulser Rate", 200, "Fraction of Pulser Events [%]", fillColor);
     _PulserLegend = new TText(.7, .8, "Mean: ?");
     _PulserRate->GetListOfFunctions()->Add(_PulserLegend);
-    for (uint8_t i(7); i < 10; i++)
+    for (uint8_t i(7); i < 18; i++)
       _PixelCorrelations.push_back(init_profile(string(TString::Format("p_pc%d", i)), string(TString::Format("Pixel Correlation - REF %d", i)), _bin_size, "Correlation Factor", fillColor));
     _IsAligned = init_th2i("h_al", "Event Alignment");
     _Corr = new TGraph();

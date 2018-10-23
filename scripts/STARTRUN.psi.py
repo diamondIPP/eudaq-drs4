@@ -13,10 +13,9 @@ from argparse import ArgumentParser
 
 
 RCPORT = 44000
-MonitorNumber = 1
-Location = 'cern'
-InetDevice = 'wlp4s0'
-DataPC = None  # enter None if the data is collected on the same pc
+MonitorNumber = 0
+Location = 'psi'
+DataPC = 'rapidshare'
 BeamPC = 'pim1'
 XMax = 311.  # chars
 YMax = 20  # chars
@@ -38,7 +37,6 @@ def get_x(name):
         except ValueError:
             sleep(.1)
 
-
 def get_width(name):
     return int(get_output('xwininfo -name "{}" | grep "Width"'.format(name)).split(':')[-1])
 
@@ -52,7 +50,7 @@ class EudaqStart:
         self.DRS = drs
         self.DRSGUI = drsgui
         self.WBCSCAN = wbcscan
-        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui, wbcscan]) + 2
+        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui]) + 2
         self.Hostname = self.get_ip()
         self.Port = 'tcp://{}:{}'.format(self.Hostname, RCPORT)
         self.Dir = dirname(dirname(realpath(__file__)))
@@ -69,7 +67,7 @@ class EudaqStart:
 
     @staticmethod
     def get_ip():
-        return get_output('ifconfig {} | grep "inet addr"'.format(InetDevice)).strip('inet addr:').split()[0]
+        return get_output('ifconfig eth0 | grep "inet addr"').strip('inet addr:').split()[0]
 
     def start_runcontrol(self):
         print_red('  starting RunControl')
@@ -81,11 +79,10 @@ class EudaqStart:
         print_red('  starting LogControl')
         x = int(self.W / 3.) + get_x('ETH/PSI Run Control based on eudaq 1.4.5')
         system('{d} -l DEBUG -x {x} -y -60 -w {w} -g {h} -r {p} &'.format(d=join(self.Dir, 'bin', 'euLog.exe'), x=x, w=int(self.W / 3.), h=int(self.H * 2 / 3.), p=self.Port))
-        sleep(2)
+        sleep(1)
 
     def start_data_collector(self):
-        cmd = 'ssh -tY {} scripts/StartDataCollector.sh'.format(DataPC) if DataPC is not None else join(self.Dir, 'bin', 'TestDataCollector.exe -r {}'.format(self.Port))
-        self.start_xterm('DataCollector', cmd)
+        self.start_xterm('DataCollector', 'ssh -tY {} scripts/StartDataCollector.sh'.format(DataPC))
 
     def start_tu(self):
         self.start_xterm('TU', '{d} -r {p}'.format(d=join(self.Dir, 'bin', 'TUProducer.exe'), p=self.Port))
@@ -100,7 +97,7 @@ class EudaqStart:
 
     def start_wbc_scan(self):
         if self.WBCSCAN:
-            self.start_xterm('CMS Pixel DUT', 'ssh -tY {}'.format(BeamPC))
+            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} ~/scripts/wbcScan.sh'.format(BeamPC))
 
     def start_drs4(self):
         if self.DRS:
@@ -119,7 +116,7 @@ class EudaqStart:
     def start_xterm(self, tit, cmd):
         print_red('  Starting {}'.format(tit))
         system('xterm -xrm "XTerm.vt100.allowTitleOps: false" -geom {w}x{h}+{x}+{y} -hold -T "{t}" -e {c} &'.format(w=self.XWidth, h=YMax, x=self.XPos, y=int(self.H * 3. / 4), t=tit, c=cmd))
-        sleep(3)
+        sleep(2)
         self.XPos += int(get_width(tit) + Space + (get_x('DataCollector') if not self.XPos else 0))
 
     def run(self):
@@ -133,7 +130,6 @@ class EudaqStart:
         self.start_clockgen()
         self.start_drs4()
         self.start_caen()
-        self.start_wbc_scan()
         finished('Starting EUDAQ complete!')
 
 

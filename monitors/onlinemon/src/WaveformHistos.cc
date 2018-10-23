@@ -24,7 +24,7 @@ _n_wfs(10),_sensor(p.getName()), _id(p.getID()),n_fills(0),n_fills_bad(0),n_fill
     // signal_integral_range = make_pair(500.,800.);
     //signal_integral_range   = make_pair(  200, 350.);
     //signal_integral_range = make_pair(140, 220.); //changed to this by cdorfer on oct 31
-    signal_integral_range = make_pair(250., 350.); /**changed to this by mreichmann on aug 10 2016*/
+    signal_integral_range = make_pair(20., 120.); /**changed to this by mreichmann on aug 10 2016*/
 //    signal_integral_range = make_pair(20., 100.); /**changed to this by mreichmann on aug 30th 2017*/
     //pedestal_integral_range = make_pair(   10, 160.);// should be the same length as signal
 //    pulser_integral_range = make_pair(760,860);

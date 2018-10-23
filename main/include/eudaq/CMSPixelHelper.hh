@@ -110,7 +110,7 @@ namespace eudaq {
         cnf.SetSection(i);
         std::string roctype = cnf.Get("roctype","roctype","");
         if (roctype == "") continue;
-        bool is_digital = (roctype.find("dig") == -1) ? false : true;
+        bool is_digital = !(roctype.find("dig") == -1);
 
         std::string fname = m_conv_cfg->GetKeys().size() > 0 ? m_conv_cfg->Get("phCalibrationFile", "") : "";
         if (fname == "") fname = cnf.Get("phCalibrationFile","");
@@ -210,10 +210,10 @@ namespace eudaq {
         return false;
       }
 
-      unsigned plane_id;
-      if(m_detector == "TRP") { plane_id = 6; }      // TRP
-      else if(m_detector == "DUT") { plane_id = 7; } // DUT
-      else { plane_id = 8; }                         // REF
+//      unsigned plane_id(0);
+//      if(m_detector == "TRP") { plane_id = 6; }      // TRP
+//      else if(m_detector == "DUT") { plane_id = 7; } // DUT
+//      else { plane_id = 8; }                         // REF
 
       // Set decoder to reasonable verbosity (still informing about problems:
       pxar::Log::ReportingLevel() = pxar::Log::FromString("CRITICAL");
@@ -253,42 +253,42 @@ namespace eudaq {
       // Iterate over all planes and check for pixel hits:
       for(size_t roc = 0; roc < m_nplanes; roc++) {
 
-	// We are using the event's "sensor" (m_detector) to distinguish DUT and REF:
-	StandardPlane plane(plane_id + roc, m_event_type, m_detector);
-	plane.SetTrigCount(evt->triggerCount());
-	plane.SetTrigPhase(evt->triggerPhase());
+        // We are using the event's "sensor" (m_detector) to distinguish DUT and REF:
+        StandardPlane plane(roc, m_event_type, m_detector);
+        plane.SetTrigCount(evt->triggerCount());
+        plane.SetTrigPhase(evt->triggerPhase());
 
-	// Initialize the plane size (zero suppressed), set the number of pixels
-	// Check which carrier PCB has been used and book planes accordingly:
-	if(m_rotated_pcb) { plane.SetSizeZS(ROC_NUMROWS, ROC_NUMCOLS, 0); }
-	else { plane.SetSizeZS(ROC_NUMCOLS, ROC_NUMROWS, 0); }
-	plane.SetTLUEvent(0);
+        // Initialize the plane size (zero suppressed), set the number of pixels
+        // Check which carrier PCB has been used and book planes accordingly:
+        if(m_rotated_pcb) { plane.SetSizeZS(ROC_NUMROWS, ROC_NUMCOLS, 0); }
+        else { plane.SetSizeZS(ROC_NUMCOLS, ROC_NUMROWS, 0); }
+        plane.SetTLUEvent(0);
 
-	// Store all decoded pixels belonging to this plane:
-	for(std::vector<pxar::pixel>::iterator it = evt->pixels.begin(); it != evt->pixels.end(); ++it){
-	  // Check if current pixel belongs on this plane:
-	  if(it->roc() == roc) {
-      std::string identifier = (std::string)m_detector+(std::string)TString::Format("%01zu%02d%02d",roc,it->row(),it->column());
+        // Store all decoded pixels belonging to this plane:
+        for(std::vector<pxar::pixel>::iterator it = evt->pixels.begin(); it != evt->pixels.end(); ++it){
+          // Check if current pixel belongs on this plane:
+          if(it->roc() == roc) {
+            std::string identifier = (std::string)m_detector+(std::string)TString::Format("%01zu%02d%02d",roc,it->row(),it->column());
 
-      float charge;
-      if (do_conversion){
-          charge = getCharge(vcal_vals.find(identifier)->second, it->value());
-          if (charge < 0){
-            EUDAQ_WARN(std::string("Invalid cluster charge -" + to_string(charge) +  "/" + to_string(it->value())));
-            charge = 0;
+            float charge;
+            if (do_conversion){
+                charge = getCharge(vcal_vals.find(identifier)->second, it->value());
+                if (charge < 0){
+                  EUDAQ_WARN(std::string("Invalid cluster charge -" + to_string(charge) +  "/" + to_string(it->value())));
+                  charge = 0;
+                }
+            }
+            else
+                charge = it->value();
+
+            //std::cout << "filling charge " <<it->value()<<" "<< charge << " "<<factor<<" "<<identifier<<std::endl;
+            if(m_rotated_pcb) { plane.PushPixel(it->row(), it->column(), charge /*it->value()*/); }
+            else { plane.PushPixel(it->column(), it->row(), charge /*it->value()*/); }
           }
-      }
-      else
-          charge = it->value();
+        }
 
-      //std::cout << "filling charge " <<it->value()<<" "<< charge << " "<<factor<<" "<<identifier<<std::endl;
-	    if(m_rotated_pcb) { plane.PushPixel(it->row(), it->column(), charge /*it->value()*/); }
-	    else { plane.PushPixel(it->column(), it->row(), charge /*it->value()*/); }
-	  }
-	}
-
-	// Add plane to the output event:
-	out.AddPlane(plane);
+        // Add plane to the output event:
+        out.AddPlane(plane);
       }
       return true;
     }
