@@ -50,7 +50,7 @@ class EudaqStart:
         self.DRS = drs
         self.DRSGUI = drsgui
         self.WBCSCAN = wbcscan
-        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui]) + 2
+        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui, wbcscan]) + 2
         self.Hostname = self.get_ip()
         self.Port = 'tcp://{}:{}'.format(self.Hostname, RCPORT)
         self.Dir = dirname(dirname(realpath(__file__)))
@@ -97,7 +97,7 @@ class EudaqStart:
 
     def start_wbc_scan(self):
         if self.WBCSCAN:
-            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} ~/scripts/wbcScan.sh'.format(BeamPC))
+            self.start_xterm('CMS Pixel DUT', 'ssh -tY {}'.format(BeamPC))
 
     def start_drs4(self):
         if self.DRS:
@@ -130,6 +130,7 @@ class EudaqStart:
         self.start_clockgen()
         self.start_drs4()
         self.start_caen()
+        self.start_wbc_scan()
         finished('Starting EUDAQ complete!')
 
 
