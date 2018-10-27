@@ -81,3 +81,4 @@ AutoDict*
 data
 conf/converter_waveform_integrals.conf
 cmake-build-debug/
+client_secret.json
