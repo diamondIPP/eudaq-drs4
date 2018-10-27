@@ -94,3 +94,6 @@ def kill_all():
     kill_data_collector()
     kill_xterms()
     finished('\nKILLRUN complete')
+
+if __name__ == '__main__':
+    kill_all()

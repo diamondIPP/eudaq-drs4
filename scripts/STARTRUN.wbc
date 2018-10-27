@@ -1,2 +1,2 @@
 #! /bin/bash
-./STARTRUN.py -drsgui -wbc
+./STARTRUN.py -wbc

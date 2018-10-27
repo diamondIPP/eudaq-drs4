@@ -1,2 +1,2 @@
 #! /bin/bash
-./STARTRUN.py -cmstel -cmsdut -clk
+./STARTRUN.psi.py -cmstel -cmsdut -clk

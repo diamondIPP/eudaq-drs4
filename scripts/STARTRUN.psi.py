@@ -2,13 +2,12 @@
 # --------------------------------------------------------
 #       PYTHON SCRIPT TO START ALL RUNNING EUDAQ PROCESSES
 # -------------------------------------------------------
-from commands import getstatusoutput
 from screeninfo import get_monitors
 from os.path import dirname, realpath, join
-from os import chmod, system
+from os import chmod
 from glob import glob
 from time import sleep
-from KILLRUN import warning, finished, RED, ENDC
+from KILLRUN import *
 from argparse import ArgumentParser
 
 
@@ -43,6 +42,8 @@ def get_width(name):
 
 class EudaqStart:
     def __init__(self, cms_tel, cms_dut, clk, caen, drs, drsgui, wbcscan):
+        kill_all()
+
         self.CMSTel = cms_tel
         self.CMSDUT = cms_dut
         self.CAEN = caen
@@ -93,7 +94,7 @@ class EudaqStart:
 
     def start_cms_dut(self):
         if self.CMSDUT:
-            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} ~/scripts/StartCMSPixelDig.sh'.format(BeamPC))
+            self.start_xterm('CMS Pixel DUT', 'ssh -tY {} ~/scripts/StartCMSPixelDut.sh'.format(BeamPC))
 
     def start_wbc_scan(self):
         if self.WBCSCAN:
