@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from glob import glob
 import gtts
 import warnings
 from os.path import getctime
@@ -11,6 +10,7 @@ from spreadsheet import *
 from argparse import ArgumentParser
 from utils import *
 from eudaq import Eudaq
+from currents import *
 
 
 def get_latest_file():
