@@ -6,10 +6,11 @@ import warnings
 from os.path import getctime
 from os import system
 from time import sleep, time
-from datetime import datetime, timedelta
+from datetime import timedelta
 from spreadsheet import *
 from argparse import ArgumentParser
 from utils import *
+from eudaq import Eudaq
 
 
 def get_latest_file():
@@ -53,15 +54,19 @@ def play(message):
         system('cvlc -q --play-and-exit ~/Downloads/lady.mp3 >/dev/null 2>&1')
 
 
-def update_sheet(sheet, data):
-    first_unfilled = get_first_unfilled(sheet, col='J')
+def update_sheet(sheet, data, first_unfilled):
     sheet.update_cell(first_unfilled, col2num('B'), data[0].strftime('%m/%d/%Y'))
     sheet.update_cell(first_unfilled, col2num('C'), data[1].strftime('%H:%M:%S'))
     sheet.update_cell(first_unfilled, col2num('D'), data[2].strftime('%H:%M:%S'))
     sheet.update_cell(first_unfilled, col2num('J'), 'TRUE')
 
 
+def collimaters_busy(sheet, first_unfilled):
+    return sheet.col_values(col2num('K'))[first_unfilled] == 'FALSE'
+
+
 def run():
+    eudaq = Eudaq()
     run_numbers = get_run_numbers(get_latest_file())
     t_start = time()
     sheet = load_sheet()
@@ -72,8 +77,12 @@ def run():
         if last_run not in run_numbers:
             run_numbers.append(last_run)
             play('Filling the google sheet...')
-            update_sheet(sheet, get_infos(filename, last_run))
+            first_unfilled = get_first_unfilled(sheet, col='J')
+            update_sheet(sheet, get_infos(filename, last_run), first_unfilled)
             play('Done')
+            while collimaters_busy(sheet, first_unfilled):
+                sleep(5)
+            eudaq.start()
         now = datetime.fromtimestamp(time() - t_start) - timedelta(hours=1)
         info('Already running for {}'.format(now.strftime('%H:%M:%S')), overlay=True)
         if (time() - t_start) / (55 * 60) - 1 > reloads:

@@ -150,6 +150,7 @@ class Run(Mouse, Keys):
                     self.adjust_fs11_ou(fs11_ou)
                     self.LastFS11OU = fs11_ou
                 self.LastUnfilledRow = first_unfilled
+                self.Sheet.update_cell(first_unfilled - 1, col2num('K'), 'TRUE')
             sleep(5)  # need large sleep time because google sheets can only be read 100 times per 100 seconds
 
 
