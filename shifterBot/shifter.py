@@ -14,8 +14,8 @@ from eudaq import Eudaq
 
 
 def get_latest_file():
-    # files = glob('/home/testbeam/eudaq-drs4/logs/*')
-    files = glob('/data/psi_2018_10/logs_eudaq/*')
+    files = glob('/home/testbeam/eudaq-drs4/logs/*')
+    # files = glob('/data/psi_2018_10/logs_eudaq/*')
     return max(files, key=getctime)
 
 
@@ -25,6 +25,9 @@ def get_run_numbers(filename):
 
 
 def get_last_run_number(filename):
+    numbers = get_run_numbers(filename)
+    if not numbers:
+        return -1
     return get_run_numbers(filename)[-1]
 
 
@@ -62,12 +65,12 @@ def update_sheet(sheet, data, first_unfilled):
 
 
 def collimaters_busy(sheet, first_unfilled):
-    return sheet.col_values(col2num('K'))[first_unfilled] == 'FALSE'
+    return sheet.col_values(col2num('K'))[first_unfilled - 1] == 'FALSE'
 
 
 def run():
     eudaq = Eudaq()
-    run_numbers = get_run_numbers(get_latest_file())
+    run_numbers = get_run_numbers(get_latest_file()) + [-1]
     t_start = time()
     sheet = load_sheet()
     reloads = 0
@@ -82,6 +85,8 @@ def run():
             play('Done')
             while collimaters_busy(sheet, first_unfilled):
                 sleep(5)
+            eudaq.configure()
+            sleep(10)
             eudaq.start()
         now = datetime.fromtimestamp(time() - t_start) - timedelta(hours=1)
         info('Already running for {}'.format(now.strftime('%H:%M:%S')), overlay=True)

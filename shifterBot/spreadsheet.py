@@ -10,7 +10,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 def load_sheet():
     scope = ['https://spreadsheets.google.com/feeds']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('/home/testbeam/sdvlp/eudaq-drs4/shifterBot/client_secret.json', scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name('/home/testbeam/eudaq-drs4/shifterBot/client_secret.json', scope)
     client = gspread.authorize(creds)
     return client.open_by_key('1EC2ZlWRUOo6VmfrQKcpWxcF8dX3SOBiXF51LgPqI4Dw').sheet1
 
