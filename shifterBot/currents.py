@@ -5,6 +5,7 @@ from os.path import join, getmtime, expanduser
 from glob import glob
 from datetime import datetime
 from numpy import mean
+from collections import OrderedDict
 
 
 class Currents:
@@ -29,10 +30,12 @@ class Currents:
         return sorted(glob(join(self.get_device_dir(device, channel), '*.log')), key=getmtime)[-1]
 
     def get_currents(self, t_start, t_stop, sheet, row):
-        filenames = [self.get_last_file(device, channel) for device, channel in get_device_channel(sheet, row)]
-        return [self.get_current(filename, t_start, t_stop) for filename in filenames]
+        filenames = OrderedDict([(name, self.get_last_file(device, channel)) for device, channel, name in get_name_device_channel(sheet, row)])
+        self.Data = {name: self.get_current(filename, t_start, t_stop) for name, filename in filenames.iteritems()}
+        return self.Data
 
-    def get_current(self, filename, t_start, t_stop):
+    @staticmethod
+    def get_current(filename, t_start, t_stop):
         day = datetime.strptime(' '.join(filename.strip('.log').split('_')[-6:]), '%Y %m %d %H %M %S')
         currents = []
         with open(filename) as f:
@@ -50,13 +53,15 @@ class Currents:
     def update(self, sheet, row, t_start, t_stop):
         data = sheet.get_all_values()
         currents = self.get_currents(t_start, t_stop, sheet, row)
-        self.Data = currents
         cols = [i for i, word in enumerate(data[1], 1) if 'I [nA]' in word]
         for col, current in zip(cols, currents):
             sheet.update_cell(row, col, current)
 
 
-
-def get_device_channel(sheet, row):
+def get_name_device_channel(sheet, row):
     data = sheet.get_all_values()
-    return [(data[row - 1][i], data[row - 1][i + 1]) for i, word in enumerate(data[1]) if 'HV' in word and data[row - 1][i]]
+    names = [data[row - 1][i] for i, word in enumerate(data[1]) if 'Name' in word and data[row - 1][i]]
+    info = [[data[row - 1][i], data[row - 1][i + 1]] for i, word in enumerate(data[1]) if 'HV' in word and data[row - 1][i]]
+    for i, name in enumerate(names):
+        info[i].append(name)
+    return info
