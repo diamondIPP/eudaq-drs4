@@ -76,7 +76,7 @@ def collimaters_busy(sheet, first_unfilled):
     return sheet.col_values(col2num('K'))[first_unfilled - 1] == 'FALSE'
 
 
-def run():
+def run(configure_eudaq=True, start_eudaq=True):
     eudaq = Eudaq()
     run_numbers = get_run_numbers(get_latest_file()) + [-1]
     t_start = time()
@@ -91,11 +91,13 @@ def run():
             first_unfilled = get_first_unfilled(sheet, col='J')
             update_sheet(sheet, first_unfilled, *get_times(filename, last_run))
             play('Done')
-            while collimaters_busy(sheet, first_unfilled):
-                sleep(5)
-            eudaq.configure()
-            sleep(10)
-            eudaq.start()
+            if start_eudaq:
+                while collimaters_busy(sheet, first_unfilled):
+                    sleep(5)
+                if configure_eudaq:
+                    eudaq.configure()
+                    sleep(10)
+                eudaq.start()
         now = datetime.fromtimestamp(time() - t_start) - timedelta(hours=1)
         info('Already running for {}'.format(now.strftime('%H:%M:%S')), overlay=True)
         if (time() - t_start) / (55 * 60) - 1 > reloads:
@@ -109,8 +111,10 @@ if __name__ == '__main__':
 
     p = ArgumentParser()
     p.add_argument('-t', action='store_true')
+    p.add_argument('-s', action='store_false')
+    p.add_argument('-c', action='store_true')
     args = p.parse_args()
 
     print_banner('Starting PSI EUDAQ Shifter Bot =)')
     if not args.t:
-        run()
+        run(args.c, args.s)
