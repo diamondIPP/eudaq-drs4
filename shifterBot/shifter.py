@@ -31,7 +31,7 @@ def get_last_run_number(filename):
     return get_run_numbers(filename)[-1]
 
 
-def get_infos(filename, run_number):
+def get_times(filename, run_number):
     day, t_start = None, None
     with open(filename) as f:
         for line in f:
@@ -39,14 +39,13 @@ def get_infos(filename, run_number):
                 words = line.split()
                 nr = int(words[3].strip(':'))
                 if nr == run_number:
-                    day = datetime.strptime(words[4], '%Y-%m-%d')
-                    t_start = datetime.strptime(words[5], '%H:%M:%S.%f')
+                    t_start = datetime.strptime(' '.join(words[4:6]), '%Y-%m-%d %H:%M:%S.%f')
             if 'Stopping Run' in line:
                 words = line.split()
                 nr = int(words[3])
                 if nr == run_number:
-                    t_stop = datetime.strptime(words[5], '%H:%M:%S.%f')
-                    return day, t_start, t_stop
+                    t_stop = datetime.strptime(' '.join(words[4:6]), '%Y-%m-%d %H:%M:%S.%f')
+                    return t_start, t_stop
 
 
 def play(message):
@@ -57,11 +56,20 @@ def play(message):
         system('cvlc -q --play-and-exit ~/Downloads/lady.mp3 >/dev/null 2>&1')
 
 
-def update_sheet(sheet, data, first_unfilled):
-    sheet.update_cell(first_unfilled, col2num('B'), data[0].strftime('%m/%d/%Y'))
-    sheet.update_cell(first_unfilled, col2num('C'), data[1].strftime('%H:%M:%S'))
-    sheet.update_cell(first_unfilled, col2num('D'), data[2].strftime('%H:%M:%S'))
+def update_sheet(sheet, first_unfilled, t_start, t_stop):
+    sheet.update_cell(first_unfilled, col2num('B'), t_start.strftime('%m/%d/%Y'))
+    sheet.update_cell(first_unfilled, col2num('C'), t_start.strftime('%H:%M:%S'))
+    sheet.update_cell(first_unfilled, col2num('D'), t_stop.strftime('%H:%M:%S'))
     sheet.update_cell(first_unfilled, col2num('J'), 'TRUE')
+    currents = Currents(hv_dir='~/sdvlp/HVClient')
+    currents.update(sheet, first_unfilled, t_start, t_stop)
+
+
+def manual_update(sheet_row):
+    sheet = load_sheet()
+    run_number = int(sheet.col_values(1)[sheet_row - 1])
+    print_banner('Updating run {}'.format(run_number))
+    update_sheet(sheet, sheet_row, *get_times(get_latest_file(), run_number))
 
 
 def collimaters_busy(sheet, first_unfilled):
@@ -81,7 +89,7 @@ def run():
             run_numbers.append(last_run)
             play('Filling the google sheet...')
             first_unfilled = get_first_unfilled(sheet, col='J')
-            update_sheet(sheet, get_infos(filename, last_run), first_unfilled)
+            update_sheet(sheet, first_unfilled, *get_times(filename, last_run))
             play('Done')
             while collimaters_busy(sheet, first_unfilled):
                 sleep(5)
