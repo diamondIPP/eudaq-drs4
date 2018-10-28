@@ -6,13 +6,16 @@
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from warnings import catch_warnings, simplefilter
 
 
 def load_sheet():
-    scope = ['https://spreadsheets.google.com/feeds']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('/home/testbeam/eudaq-drs4/shifterBot/client_secret.json', scope)
-    client = gspread.authorize(creds)
-    return client.open_by_key('1EC2ZlWRUOo6VmfrQKcpWxcF8dX3SOBiXF51LgPqI4Dw').sheet1
+    with catch_warnings():
+        simplefilter('ignore')
+        scope = ['https://spreadsheets.google.com/feeds']
+        creds = ServiceAccountCredentials.from_json_keyfile_name('/home/testbeam/eudaq-drs4/shifterBot/client_secret.json', scope)
+        client = gspread.authorize(creds)
+        return client.open_by_key('1EC2ZlWRUOo6VmfrQKcpWxcF8dX3SOBiXF51LgPqI4Dw').sheet1
 
 
 def num2col(n):
