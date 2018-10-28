@@ -92,6 +92,8 @@ def run(configure_eudaq=True, start_eudaq=True):
             update_sheet(sheet, first_unfilled, *get_times(filename, last_run))
             play('Done')
             if start_eudaq:
+                eudaq.press_ctrl_alt_left(3)
+                sleep(.5)
                 while collimaters_busy(sheet, first_unfilled):
                     sleep(5)
                 if configure_eudaq:
