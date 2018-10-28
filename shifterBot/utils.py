@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 from datetime import datetime
+import gtts
+import warnings
+from os import system
 
 
 GREEN = '\033[92m'
@@ -21,3 +24,11 @@ def info(msg, overlay=False, prnt=True):
 
 def print_banner(msg, symbol='=', new_lines=True):
     print '{n}{delim}\n{msg}\n{delim}{n}'.format(delim=(len(str(msg)) + 10) * symbol, msg=msg, n='\n' if new_lines else '')
+
+
+def play(message):
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        lady_out = gtts.gTTS(text=message, lang='en')
+        lady_out.save('/home/testbeam/Downloads/lady.mp3')
+        system('cvlc -q --play-and-exit ~/Downloads/lady.mp3 >/dev/null 2>&1')
