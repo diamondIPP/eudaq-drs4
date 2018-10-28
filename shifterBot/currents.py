@@ -13,6 +13,7 @@ class Currents:
         self.HVDir = expanduser(hv_dir)
         self.ConfigFileName = join(self.HVDir, 'config', 'keithley.cfg')
         self.DataDir = self.get_data_dir()
+        self.Data = None
 
     def get_data_dir(self):
         parser = ConfigParser()
@@ -49,6 +50,7 @@ class Currents:
     def update(self, sheet, row, t_start, t_stop):
         data = sheet.get_all_values()
         currents = self.get_currents(t_start, t_stop, sheet, row)
+        self.Data = currents
         cols = [i for i, word in enumerate(data[1], 1) if 'I [nA]' in word]
         for col, current in zip(cols, currents):
             sheet.update_cell(row, col, current)

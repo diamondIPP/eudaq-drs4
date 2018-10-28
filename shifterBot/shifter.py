@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 from utils import *
 from eudaq import Eudaq
 from currents import *
+from Email import Email
 
 
 def get_latest_file():
@@ -63,6 +64,8 @@ def update_sheet(sheet, first_unfilled, t_start, t_stop):
     sheet.update_cell(first_unfilled, col2num('J'), 'TRUE')
     currents = Currents(hv_dir='~/sdvlp/HVClient')
     currents.update(sheet, first_unfilled, t_start, t_stop)
+    return t_start, t_stop, currents.Data
+
 
 
 def manual_update(sheet_row):
@@ -78,6 +81,7 @@ def collimaters_busy(sheet, first_unfilled):
 
 def run(configure_eudaq=True, start_eudaq=True):
     eudaq = Eudaq()
+    mail = Email()
     run_numbers = get_run_numbers(get_latest_file()) + [-1]
     t_start = time()
     sheet = load_sheet()
@@ -89,7 +93,7 @@ def run(configure_eudaq=True, start_eudaq=True):
             run_numbers.append(last_run)
             play('Filling the google sheet...')
             first_unfilled = get_first_unfilled(sheet, col='J')
-            update_sheet(sheet, first_unfilled, *get_times(filename, last_run))
+            data = update_sheet(sheet, first_unfilled, *get_times(filename, last_run))
             play('Done')
             if start_eudaq:
                 eudaq.press_ctrl_alt_left(3)
@@ -100,6 +104,8 @@ def run(configure_eudaq=True, start_eudaq=True):
                     eudaq.configure()
                     sleep(10)
                 eudaq.start()
+            msg = 'Time Start: {}\nTime Finished: {}\nCurrents: {}'.format(*data)
+            mail.send_message('Finished Run {}'.format(last_run), msg)
         now = datetime.fromtimestamp(time() - t_start) - timedelta(hours=1)
         info('Already running for {}'.format(now.strftime('%H:%M:%S')), overlay=True)
         if (time() - t_start) / (55 * 60) - 1 > reloads:
