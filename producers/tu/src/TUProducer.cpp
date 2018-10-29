@@ -388,6 +388,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
   		std::cout << "--> Setting prescaler and delay..";
 		int scal = conf.Get("prescaler", 1);
+		std::cout << "  Prescaler: " << scal << std::endl;
 		int predel = conf.Get("prescaler_delay", 5); //must be >4
 		if(tc->set_prescaler(scal) != 0){throw(-1);}
 		if(tc->set_prescaler_delay(predel) != 0){throw(-1);}
@@ -398,6 +399,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		double freq = conf.Get("pulser_freq", 0);
 		int width = conf.Get("pulser_width", 0);
 		int puldel = conf.Get("pulser_delay", 5); //must be > 4
+		std::cout << "  Frequency: " << freq << std::endl;
 
 		if(tc->set_Pulser_width(freq, width) != 0){throw(-1);}
 		if(tc->set_pulser_delay(puldel) != 0){throw(-1);}
