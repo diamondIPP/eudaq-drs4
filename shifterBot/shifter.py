@@ -30,9 +30,9 @@ class ShifterBot:
         self.LatestFile = self.get_latest_file()
         self.RunNumbers = self.get_run_numbers() + [-1]
 
-    def get_latest_file(self):
+    def get_latest_file(self, ind=-1):
         files = glob(join(self.LogDir, '*'))
-        return max(files, key=getctime)
+        return sorted(files, key=getctime)[ind]
 
     def get_run_numbers(self, filename=None):
         filename = self.LatestFile if filename is None else filename
@@ -77,14 +77,16 @@ class ShifterBot:
             self.Sheet = load_sheet()
             self.Reloads += 1
 
-    def get_currents(self, t_start, t_stop, row=None):
+    def get_currents(self, t_start, t_stop, row=None, ind=-1):
         row = self.FirstUnfilledRow if row is None else row
-        return self.Currents.get_currents(t_start, t_stop, self.Sheet, row)
+        return self.Currents.get_currents(t_start, t_stop, self.Sheet, row, ind)
 
-    def manual_update(self, sheet_row):
+    def manual_update(self, sheet_row, filename=None):
+        """Fills in the google sheet for a given [sheet_row]."""
         run_number = int(self.Sheet.col_values(1)[sheet_row - 1])
         print_banner('Updating run {}'.format(run_number))
-        self.update_sheet(sheet_row, *self.get_times(run_number))
+        t_start, t_stop = self.get_times(run_number, filename)
+        self.update_sheet(t_start, t_stop, sheet_row)
 
     def collimaters_busy(self):
         return self.Sheet.col_values(col2num('K'))[self.FirstUnfilledRow - 1] == 'FALSE'
@@ -98,7 +100,7 @@ class ShifterBot:
             last_run = self.get_last_run_number()
             if last_run not in self.RunNumbers:
                 t_start, t_stop = self.get_times(last_run)
-                msg = 'Time Start:\t\t{}\nTime Finished:\t{}\n'.format(t_start.replace(microsecond=0), t_stop.replace(microsecond=0))
+                msg = 'Time Start: {}\nTime Finished: {}\n'.format(t_start.replace(microsecond=0), t_stop.replace(microsecond=0))
                 msg += '\n'.join(['Current of {n}:\t{c}'.format(n=name, c='{0:1.1f}'.format(current) if current != '?' else '?') for name, current in self.get_currents(t_start, t_stop).iteritems()])
                 self.Mail.send_message('Finished Run {}'.format(last_run), msg)
                 self.FirstUnfilledRow = get_first_unfilled(self.Sheet, col='J')
