@@ -1,2 +1,2 @@
 #! /bin/bash
-./STARTRUN.py -drsgui -cmstel
+./STARTRUN.psi.py -drsgui -cmstel

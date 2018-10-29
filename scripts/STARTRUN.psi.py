@@ -51,7 +51,7 @@ class EudaqStart:
         self.DRS = drs
         self.DRSGUI = drsgui
         self.WBCSCAN = wbcscan
-        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui]) + 2
+        self.NWindows = sum([cms_tel, cms_dut, caen, clk, drs, drsgui, wbcscan]) + 2
         self.Hostname = self.get_ip()
         self.Port = 'tcp://{}:{}'.format(self.Hostname, RCPORT)
         self.Dir = dirname(dirname(realpath(__file__)))
@@ -131,6 +131,7 @@ class EudaqStart:
         self.start_clockgen()
         self.start_drs4()
         self.start_caen()
+        self.start_wbc_scan()
         finished('Starting EUDAQ complete!')
 
 

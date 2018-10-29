@@ -1,2 +1,2 @@
 #! /bin/bash
-./STARTRUN.py -wbc
+./STARTRUN.psi.py -wbc
