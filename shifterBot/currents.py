@@ -26,11 +26,11 @@ class Currents:
         parser.read(self.ConfigFileName)
         return join(self.DataDir, '{}_CH{}'.format(parser.get('HV{}'.format(device), 'name'), channel))
 
-    def get_last_file(self, device, channel):
-        return sorted(glob(join(self.get_device_dir(device, channel), '*.log')), key=getmtime)[-1]
+    def get_last_file(self, device, channel, ind=-1):
+        return sorted(glob(join(self.get_device_dir(device, channel), '*.log')), key=getmtime)[ind]
 
-    def get_currents(self, t_start, t_stop, sheet, row):
-        filenames = OrderedDict([(name, self.get_last_file(device, channel)) for device, channel, name in get_name_device_channel(sheet, row)])
+    def get_currents(self, t_start, t_stop, sheet, row, ind=-1):
+        filenames = OrderedDict([(name, self.get_last_file(device, channel, ind)) for device, channel, name in get_name_device_channel(sheet, row)])
         self.Data = {name: self.get_current(filename, t_start, t_stop) for name, filename in filenames.iteritems()}
         return self.Data
 
@@ -52,7 +52,7 @@ class Currents:
 
     def update(self, sheet, row, t_start, t_stop):
         data = sheet.get_all_values()
-        currents = self.get_currents(t_start, t_stop, sheet, row)
+        currents = self.get_currents(t_start, t_stop, sheet, row).values()
         cols = [i for i, word in enumerate(data[1], 1) if 'I [nA]' in word]
         for col, current in zip(cols, currents):
             sheet.update_cell(row, col, current)
