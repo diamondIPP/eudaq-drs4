@@ -95,14 +95,22 @@ class ShifterBot:
         now = datetime.fromtimestamp(time() - self.TStart) - timedelta(hours=1)
         info('Already running for {}'.format(now.strftime('%H:%M:%S')), overlay=True)
 
+    @staticmethod
+    def prepare_message(t_start, t_stop, currents):
+        max_l = len('Current of {n}:'.format(n=max(currents.keys(), key=len)))
+        message = '{}{}\n'.format('Time Start:'.ljust(max_l + 2).replace(' ', '&nbsp;'), t_start.replace(microsecond=0)).replace('Start', make_red('Start'))
+        message += '{}{}\n'.format('Time Stop:'.ljust(max_l + 2).replace(' ', '&nbsp;'), t_stop.replace(microsecond=0)).replace('Stop', make_green('Stop'))
+        return message + '\n'.join(['Current of {n}:\t{c}'.format(n=name.ljust(max_l - 12 - (1 if current < 0 else 0)).replace(' ', '&nbsp;'), c='{0:1.1f}'.format(current) if current != '?' else '?')
+                                    for name, current in currents.iteritems()])
+
     def run_mail_bot(self):
         while True:
             last_run = self.get_last_run_number()
             if last_run not in self.RunNumbers:
                 t_start, t_stop = self.get_times(last_run)
-                msg = 'Time Start: {}\nTime Finished: {}\n'.format(t_start.replace(microsecond=0), t_stop.replace(microsecond=0))
-                msg += '\n'.join(['Current of {n}:\t{c}'.format(n=name, c='{0:1.1f}'.format(current) if current != '?' else '?') for name, current in self.get_currents(t_start, t_stop).iteritems()])
-                self.Mail.send_message('Finished Run {}'.format(last_run), msg)
+                currents = self.get_currents(t_start, t_stop)
+                message = self.prepare_message(t_start, t_stop, currents)
+                self.Mail.send_message('Finished Run {}'.format(last_run), message)
                 self.FirstUnfilledRow = get_first_unfilled(self.Sheet, col='J')
                 self.RunNumbers.append(last_run)
             self.print_running_time()

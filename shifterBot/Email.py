@@ -17,7 +17,7 @@ class Email:
         self.Server = self.load_server()
         self.TStart = time()
         self.Reloads = 0
-        self.ReloadInterval = 20  # minutes
+        self.ReloadInterval = 10  # minutes
 
     @staticmethod
     def __get_pw():
@@ -29,7 +29,7 @@ class Email:
         message['From'] = self.MyAddress
         message['To'] = ', '.join(self.Recipients)
         message['Subject'] = subject
-        message.attach(MIMEText(msg, 'plain'))
+        message.attach(MIMEText(make_html(msg), 'html'))
         return message
 
     def load_server(self):
