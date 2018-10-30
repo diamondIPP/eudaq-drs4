@@ -81,6 +81,18 @@ class Keys:
             self.k.tap_key('w')
             self.k.release_key(self.k.control_key)
 
+    def press_ctrl_page_up(self, num=1):
+        for i in range(num):
+            self.k.press_key(self.k.control_key)
+            self.k.tap_key(self.k.page_up_key)
+            self.k.release_key(self.k.control_key)
+
+    def press_ctrl_page_down(self, num=1):
+        for i in range(num):
+            self.k.press_key(self.k.control_key)
+            self.k.tap_key(self.k.page_down_key)
+            self.k.release_key(self.k.control_key)
+
     def press_shift_left(self, num=1):
         for i in range(num):
             self.k.press_key(self.k.shift_key)
@@ -131,6 +143,9 @@ class Keys:
 
     def type(self, txt):
         self.k.type_string(txt)
+
+    def switch_terminal_tab(self, n=1):
+        self.press_ctrl_page_down(n)
 
     @staticmethod
     def suppress_xlib_output(num):

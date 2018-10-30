@@ -47,3 +47,16 @@ class Eudaq(Mouse, Keys):
         self.idle()
         self.press_enter()
         self.idle()
+
+    def start_onlinemon(self, run):
+        self.click(*loads(self.get_from_config('EUDAQ', 'online monitor window')))
+        self.idle()
+        self.switch_terminal_tab()
+        self.idle()
+        self.press_ctrl_and('c')
+        self.idle()
+        self.type('OnlineMonitor {} -x 1920'.format(run))
+        self.idle()
+        self.press_enter()
+
+

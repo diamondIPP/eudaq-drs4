@@ -15,9 +15,6 @@ class Email:
         self.MyUserName = 'micha.reichmann'
         self.Recipients = [self.MyAddress, 'sandiego@phys.ethz.ch', 'dhits@ethz.ch']
         self.Server = self.load_server()
-        self.TStart = time()
-        self.Reloads = 0
-        self.ReloadInterval = 10  # minutes
 
     @staticmethod
     def __get_pw():
@@ -39,14 +36,13 @@ class Email:
         return server
 
     def send_message(self, subject, msg):
+        self.reload_server()
         text = self.prepare_message(subject, msg).as_string()
         self.Server.sendmail(self.MyUserName, self.Recipients, text)
 
     def reload_server(self):
-        if (time() - self.TStart) / (self.ReloadInterval * 60) - 1 > self.Reloads:
-            info('reloading mail server ...\n')
-            self.Server = self.load_server()
-            self.Reloads += 1
+        info('reloading mail server ...\n')
+        self.Server = self.load_server()
 
 
 if __name__ == '__main__':

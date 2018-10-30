@@ -115,10 +115,9 @@ class ShifterBot:
                 self.RunNumbers.append(last_run)
             self.print_running_time()
             self.reload_sheet()
-            self.Mail.reload_server()
             sleep(5)
 
-    def run(self, configure_eudaq=True, start_eudaq=True):
+    def run(self, configure_eudaq=True, start_eudaq=True, start_online_mon=False):
         while True:
             last_run = self.get_last_run_number()
             if last_run not in self.RunNumbers:
@@ -135,6 +134,9 @@ class ShifterBot:
                         self.Eudaq.configure()
                         sleep(10)
                     self.Eudaq.start()
+                    if start_online_mon:
+                        sleep(10)
+                        self.Eudaq.start_onlinemon(last_run + 1)
                 self.FirstUnfilledRow = get_first_unfilled(self.Sheet, col='J')
                 self.RunNumbers.append(last_run)
             self.print_running_time()
@@ -149,6 +151,7 @@ if __name__ == '__main__':
     p.add_argument('-s', action='store_false')
     p.add_argument('-c', action='store_true')
     p.add_argument('-m', action='store_true')
+    p.add_argument('-o', '--online_mon', action='store_true')
     args = p.parse_args()
 
     print_banner('Starting PSI EUDAQ {} Bot =)'.format('Mail' if args.m else 'Shifter'))
@@ -158,4 +161,4 @@ if __name__ == '__main__':
         if args.m:
             bot.run_mail_bot()
         else:
-            bot.run(args.c, args.s)
+            bot.run(args.c, args.s, args.online_mon)
