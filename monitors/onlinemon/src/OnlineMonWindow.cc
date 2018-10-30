@@ -37,7 +37,7 @@ using namespace std;
 
 
 // the constructor
-OnlineMonWindow::OnlineMonWindow(const TGWindow* p, UInt_t w, UInt_t h)
+OnlineMonWindow::OnlineMonWindow(const TGWindow* p, UInt_t x, UInt_t y, UInt_t w, UInt_t h)
 : TGMainFrame(p,w,h,kVerticalFrame), _eventnum(0), _runnum(0), _analysedEvents(0), _lastEvent(0) {
 
 	//init snapshot counter
@@ -148,7 +148,8 @@ OnlineMonWindow::OnlineMonWindow(const TGWindow* p, UInt_t w, UInt_t h)
 	SetWindowName(name.data());
 	MapSubwindows();
 	//Resize(GetDefaultSize());
-	Resize(w,h);
+	MoveResize(x, y, w, h);
+  SetWMPosition(x, y);
 	Layout();
 	MapSubwindows();
 	MapWindow();

@@ -66,12 +66,12 @@
 
 using namespace std;
 
-RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & datafile, int /*x*/, int /*y*/, int /*w*/,
-       int /*h*/, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
+RootMonitor::RootMonitor(const std::string & runcontrol, const std::string & datafile, int x, int y, int w,
+       int h, int argc, int offline, const unsigned lim, const unsigned skip_, const unsigned int skip_with_counter,
        const std::string & conffile): eudaq::Holder<int>(argc), eudaq::Monitor("OnlineMon", runcontrol, lim, skip_, skip_with_counter, datafile, conffile), _offline(offline), _planesInitialized(false){
 
   if (_offline <= 0){
-    onlinemon = new OnlineMonWindow(gClient->GetRoot(),800,600);
+    onlinemon = new OnlineMonWindow(gClient->GetRoot(), x, y, w, h);
     if (onlinemon == nullptr){
       cerr << "Error Allocationg OnlineMonWindow" << endl;
       exit(-1);
@@ -581,8 +581,8 @@ int main(int argc, const char ** argv) {
       " run control address to 'null://'");
   eudaq::Option<int>             x(op, "x", "left",    100, "pos");
   eudaq::Option<int>             y(op, "y", "top",       0, "pos");
-  eudaq::Option<int>             w(op, "w", "width",  1400, "pos");
-  eudaq::Option<int>             h(op, "g", "height",  700, "pos", "The initial position of the window");
+  eudaq::Option<int>             w(op, "w", "width",   800, "pos");
+  eudaq::Option<int>             h(op, "g", "height",  600, "pos", "The initial position of the window");
   eudaq::Option<int>             reduce(op, "rd", "reduce",  1, "Reduce the number of events");
   eudaq::Option<unsigned>        limit(op, "n", "limit", 0, "Event number limit for analysis");
   eudaq::Option<unsigned>        skip_counter(op, "sc", "skip_count", 10, "Number of events to skip per every taken event");

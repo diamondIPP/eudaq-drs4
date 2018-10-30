@@ -115,7 +115,7 @@ class OnlineMonWindow : public TGMainFrame{
     int snapshot_sequence;
 #endif
   public:
-    OnlineMonWindow(const TGWindow *p, UInt_t w, UInt_t h);
+    OnlineMonWindow(const TGWindow *p, UInt_t x=0, UInt_t y=100, UInt_t w=800, UInt_t h=600);
     //#ifndef __CINT__
     //void setRootMonitor(RootMonitor *mon) {_mon = mon;}
     //#endif
