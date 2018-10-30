@@ -37,7 +37,7 @@ class Eudaq(Mouse, Keys):
 
     def set_flux(self, sheet, row):
         flux = sheet.col_values(col2num('G'))[row - 1]
-        flux = 10000 if flux == 'MAX' else flux
+        flux = '10000' if flux == 'MAX' else flux
         print flux
         self.click(*loads(self.get_from_config('EUDAQ', 'flux')))
         self.idle()
