@@ -148,8 +148,8 @@ if __name__ == '__main__':
 
     p = ArgumentParser()
     p.add_argument('-t', action='store_true')
-    p.add_argument('-s', action='store_false')
-    p.add_argument('-c', action='store_true')
+    p.add_argument('-s', '--no_restart', action='store_false')
+    p.add_argument('-c', '--reconfigure',  action='store_true')
     p.add_argument('-m', action='store_true')
     p.add_argument('-o', '--online_mon', action='store_true')
     args = p.parse_args()
