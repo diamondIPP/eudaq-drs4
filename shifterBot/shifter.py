@@ -63,13 +63,13 @@ class ShifterBot:
                         t_stop = datetime.strptime(' '.join(words[4:6]), '%Y-%m-%d %H:%M:%S.%f')
                         return t_start, t_stop
 
-    def update_sheet(self, t_start, t_stop, row=None):
+    def update_sheet(self, t_start, t_stop, row=None, cur_index=-1):
         row = self.FirstUnfilledRow if row is None else row
         self.Sheet.update_cell(row, col2num('B'), t_start.strftime('%m/%d/%Y'))
         self.Sheet.update_cell(row, col2num('C'), t_start.strftime('%H:%M:%S'))
         self.Sheet.update_cell(row, col2num('D'), t_stop.strftime('%H:%M:%S'))
         self.Sheet.update_cell(row, col2num('J'), 'TRUE')
-        self.Currents.update(self.Sheet, row, t_start, t_stop)
+        self.Currents.update(self.Sheet, row, t_start, t_stop, cur_index)
 
     def reload_sheet(self):
         if (time() - self.TStart) / (55 * 60) - 1 > self.Reloads:
@@ -81,12 +81,12 @@ class ShifterBot:
         row = self.FirstUnfilledRow if row is None else row
         return self.Currents.get_currents(t_start, t_stop, self.Sheet, row, ind)
 
-    def manual_update(self, sheet_row, filename=None):
+    def manual_update(self, sheet_row, filename=None, cur_ind=-1):
         """Fills in the google sheet for a given [sheet_row]."""
         run_number = int(self.Sheet.col_values(1)[sheet_row - 1])
         print_banner('Updating run {}'.format(run_number))
         t_start, t_stop = self.get_times(run_number, filename)
-        self.update_sheet(t_start, t_stop, sheet_row)
+        self.update_sheet(t_start, t_stop, sheet_row, cur_ind)
 
     def collimaters_busy(self):
         return self.Sheet.col_values(col2num('K'))[self.FirstUnfilledRow - 1] == 'FALSE'
@@ -97,7 +97,7 @@ class ShifterBot:
 
     @staticmethod
     def prepare_message(t_start, t_stop, currents):
-        max_l = len('Current of {n}:'.format(n=max(currents.keys(), key=len)))
+        max_l = len('Current of {n}:'.format(n=max(currents.keys(), key=len))) if currents else 0
         message = '{}{}\n'.format('Time Start:'.ljust(max_l + 2).replace(' ', '&nbsp;'), t_start.replace(microsecond=0)).replace('Start', make_red('Start'))
         message += '{}{}\n'.format('Time Stop:'.ljust(max_l + 2).replace(' ', '&nbsp;'), t_stop.replace(microsecond=0)).replace('Stop', make_green('Stop'))
         return message + '\n'.join(['Current of {n}:\t{c}'.format(n=name.ljust(max_l - 12 - (1 if current < 0 else 0)).replace(' ', '&nbsp;'), c='{0:1.1f}'.format(current) if current != '?' else '?')

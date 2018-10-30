@@ -50,9 +50,9 @@ class Currents:
                         pass
         return mean(currents) * 1e9 if currents else '?'
 
-    def update(self, sheet, row, t_start, t_stop):
+    def update(self, sheet, row, t_start, t_stop, ind=-1):
         data = sheet.get_all_values()
-        currents = self.get_currents(t_start, t_stop, sheet, row).values()
+        currents = self.get_currents(t_start, t_stop, sheet, row, ind).values()
         cols = [i for i, word in enumerate(data[1], 1) if 'I [nA]' in word]
         for col, current in zip(cols, currents):
             sheet.update_cell(row, col, current)
