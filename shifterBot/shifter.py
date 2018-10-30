@@ -125,6 +125,8 @@ class ShifterBot:
                 play('Filling the google sheet for run {}...'.format(last_run))
                 self.update_sheet(*self.get_times(last_run))
                 play('Done')
+                self.FirstUnfilledRow = get_first_unfilled(self.Sheet, col='J')
+                self.RunNumbers.append(last_run)
                 if start_eudaq:
                     self.Eudaq.press_ctrl_alt_left(3)
                     sleep(.5)
@@ -135,8 +137,6 @@ class ShifterBot:
                         self.Eudaq.configure()
                         sleep(10)
                     self.Eudaq.start()
-                self.FirstUnfilledRow = get_first_unfilled(self.Sheet, col='J')
-                self.RunNumbers.append(last_run)
             self.print_running_time()
             self.reload_sheet()
             sleep(5)
