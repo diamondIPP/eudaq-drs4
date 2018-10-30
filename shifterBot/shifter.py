@@ -161,4 +161,4 @@ if __name__ == '__main__':
         if args.m:
             bot.run_mail_bot()
         else:
-            bot.run(args.c, args.s, args.online_mon)
+            bot.run(args.reconfigure, args.no_restart, args.online_mon)
