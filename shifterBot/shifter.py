@@ -31,10 +31,10 @@ class ShifterBot:
         self.RunNumbers = self.get_run_numbers() + [-1]
 
         self.RunningModes = '\nRunning Modes:\n' \
-                            '  {g}0:{e} only fill in google sheet (for Voltage Scan)\n' \
-                            '  {g}1:{e} also restart the EUDAQ (for Pixel)\n' \
-                            '  {g}2:{e} also reconfigure EUDAQ with the correct flux (for Pad Ratescan)\n' \
-                            '  {g}3:{e} testing mode without starting the loop\n'.format(g=BOLD + GREEN, e=ENDC)
+                            '  {g}0: FILL  {e} only fill in google sheet (for Voltage Scan)\n' \
+                            '  {g}1: START {e} also restart the EUDAQ (for Pixel)\n' \
+                            '  {g}2: CONFIG{e} also reconfigure EUDAQ with the correct flux (for Pad Ratescan)\n' \
+                            '  {g}3: TEST  {e} testing mode without starting the loop\n'.format(g=BOLD + GREEN, e=ENDC)
 
     def get_latest_file(self, ind=-1):
         files = glob(join(self.LogDir, '*'))
