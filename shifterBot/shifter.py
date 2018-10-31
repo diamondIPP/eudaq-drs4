@@ -137,6 +137,10 @@ class ShifterBot:
                 start_eudaq = False
             elif selection == 1:
                 configure_eudaq = False
+                start_eudaq = True
+            elif selection == 2:
+                start_eudaq = True
+                configure_eudaq = True
         while True:
             last_run = self.get_last_run_number()
             if last_run not in self.RunNumbers:
