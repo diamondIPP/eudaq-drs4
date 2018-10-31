@@ -108,12 +108,16 @@ class Run(Mouse, Keys):
         self.set_fs11('fs11-o', value)
         self.set_fs11('fs11-u', value)
 
+    def set_all_fs11(self, lr_value, ou_value):
+        self.set_fs11_lr(lr_value)
+        self.set_fs11_ou(ou_value)
+
     def adjust_fs11(self, string, value):
         self.set_fs11(string, value)
         idle()
         diff = value - self.get_fs11_value(string)
         iterations = 0
-        while abs(diff) > float(self.get_from_config('SetPoint', 'max diff')) and iterations < self.get_from_config('SetPoint', 'max iterations'):
+        while abs(diff) > float(self.get_from_config('SetPoint', 'max diff')) and iterations < int(self.get_from_config('SetPoint', 'max iterations')):
             if abs(diff) < float(self.get_from_config('SetPoint', 'start adjust diff')):
                 self.increment_fs11(string) if diff > 0 else self.decrement_fs11(string)
             sleep(1)
@@ -121,16 +125,19 @@ class Run(Mouse, Keys):
             iterations += 1
 
     def adjust_fs11_lr(self, value):
+        self.set_fs11_lr(value)
         self.adjust_fs11('fs11-l', value)
         idle()
         self.adjust_fs11('fs11-r', value)
 
     def adjust_fs11_ou(self, value):
+        self.set_fs11_ou(value)
         self.adjust_fs11('fs11-o', value)
         idle()
         self.adjust_fs11('fs11-u', value)
 
     def adjust_all_fs11(self, lr_value, ou_value):
+        self.set_all_fs11(lr_value, ou_value)
         self.adjust_fs11_lr(lr_value)
         idle()
         self.adjust_fs11_ou(ou_value)
