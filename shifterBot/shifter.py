@@ -58,7 +58,7 @@ class ShifterBot:
         with open(filename) as f:
             for line in f:
                 if 'Starting Run' in line:
-                    words = line.split()
+                    words = line.replace('Continued', '').split()
                     nr = int(words[3].strip(':'))
                     if nr == run_number:
                         t_start = datetime.strptime(' '.join(words[4:6]), '%Y-%m-%d %H:%M:%S.%f')
