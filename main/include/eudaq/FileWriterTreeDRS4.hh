@@ -167,6 +167,8 @@ namespace eudaq {
         std::vector<uint32_t> *f_charge;
 
         // average waveforms of channels
+        std::vector<float> * v_rise_time;
+        std::vector<float> * v_rise_width;
         TH1F *avgWF_0;
         TH1F *avgWF_0_pul;
         TH1F *avgWF_0_sig;
