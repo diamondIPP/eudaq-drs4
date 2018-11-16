@@ -40,8 +40,6 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     f_beam_current = UINT16_MAX;
     v_forc_pos = new vector<uint16_t>;
     v_forc_time = new vector<float>;
-//    v_rise_time = new vector<float>;
-//    v_rise_width = new vector<float>;
 
     // integrals
     regions = new map<uint8_t, WaveformSignalRegions* >;
@@ -68,6 +66,8 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     v_npeaks = new vector<uint8_t>;
     v_npeaks->resize(4, 0);
     v_max_peak_time->resize(4, 0);
+    v_rise_time = new vector<float>;
+    v_fall_time = new vector<float>;
 
     // waveforms
     for (uint8_t i = 0; i < 4; i++) f_wf[i] = new vector<float>;
@@ -286,8 +286,8 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
       m_ttree->Branch("peak_positions", &v_peak_positions);
       m_ttree->Branch("peak_times", &v_peak_times);
       m_ttree->Branch("n_peaks", &v_npeaks);
-//        m_ttree->Branch("rise_width", &v_rise_width);
-//        m_ttree->Branch("rise_time", &v_rise_time);
+        m_ttree->Branch("fall_time", &v_fall_time);
+        m_ttree->Branch("rise_time", &v_rise_time);
     }
 
     // fft stuff and spectrum
@@ -569,10 +569,10 @@ inline void FileWriterTreeDRS4::ResizeVectors(size_t n_channels) {
     v_is_saturated->resize(n_channels);
     v_median->resize(n_channels);
     v_average->resize(n_channels);
-    v_max_peak_time->resize(4, 0);
-    v_max_peak_position->resize(4, 0);
-//    v_rise_time->resize(4);
-//    v_rise_width->resize(4);
+    v_max_peak_time->resize(n_channels, 0);
+    v_max_peak_position->resize(n_channels, 0);
+    v_rise_time->resize(n_channels);
+    v_fall_time->resize(n_channels);
 
     f_isDa->resize(n_channels);
 
@@ -770,9 +770,8 @@ void FileWriterTreeDRS4::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     if (UseWaveForm(active_regions, iwf)){
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
-//        auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
-//        v_rise_width->at(iwf) = float(erfFit.GetParameter(2));
-//        v_rise_time->at(iwf) = float(erfFit.GetParameter(1));
+        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), pol, noise->at(iwf).first, noise->at(iwf).second, &tcal.at(0));
+        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), pol, noise->at(iwf).first, noise->at(iwf).second, &tcal.at(0));
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);

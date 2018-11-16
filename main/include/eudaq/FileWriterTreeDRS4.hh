@@ -155,6 +155,8 @@ namespace eudaq {
         std::vector<std::vector<uint16_t> > * v_peak_positions;
         std::vector<std::vector<float> > * v_peak_times;
         std::vector<uint8_t> * v_npeaks;
+        std::vector<float> * v_rise_time;
+        std::vector<float> * v_fall_time;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;
@@ -167,8 +169,6 @@ namespace eudaq {
         std::vector<uint32_t> *f_charge;
 
         // average waveforms of channels
-        std::vector<float> * v_rise_time;
-        std::vector<float> * v_rise_width;
         TH1F *avgWF_0;
         TH1F *avgWF_0_pul;
         TH1F *avgWF_0_sig;
