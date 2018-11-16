@@ -158,7 +158,7 @@ float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed 
 	float t_stop = times.at(uint16_t(max_index - 1));
 	for (uint16_t i(bin_low); i < max_index; i++)
 	  if (fabs(m_samples.at(i)) >= std::fabs(noise) + 4 * sigma){
-	    t_start = tcal->at(i);
+	    t_start = times.at(i);
 	    break;
 	  }
   return t_stop - t_start;
@@ -168,11 +168,11 @@ float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed 
 
 	std::vector<float> times = getCalibratedTimes(tcal);
 	uint16_t max_index = getIndex(bin_low, bin_high, pol);
-	float t_start = times.at(uint16_t(max_index - 1));
+	float t_start = times.at(uint16_t(max_index + 1));
 	float t_stop = times.at(bin_high);
   for (uint16_t i(max_index); i < bin_high; i++)
     if (fabs(m_samples.at(i)) <= std::fabs(noise) + 4 * sigma){
-      t_stop = tcal->at(i);
+      t_stop = times.at(i);
       break;
     }
   return t_stop - t_start;
