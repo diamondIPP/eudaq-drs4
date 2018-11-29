@@ -84,8 +84,8 @@ public:
     float getPeakFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
     TF1 getRFFit(std::vector<float>*) const;
     TF1 getErfFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
-    float getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, float noise, float sigma, std::vector<float> * tcal) const;
-    float getFallTime(uint16_t bin_low, uint16_t bin_high, signed char pol, float noise, float sigma, std::vector<float> * tcal) const;
+    float getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const;
+    float getFallTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const;
 
 private:
 	uint64_t m_timestamp;

@@ -150,31 +150,45 @@ TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char
   return fit;
 }
 
-float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, float noise, float sigma, std::vector<float> * tcal) const {
+float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
 
 	std::vector<float> times = getCalibratedTimes(tcal);
 	uint16_t max_index = getIndex(bin_low, bin_high, pol);
+	float max_value = m_samples.at(max_index);
 	float t_start = times.at(bin_low);
 	float t_stop = times.at(uint16_t(max_index - 1));
-	for (uint16_t i(bin_low); i < max_index; i++)
-	  if (fabs(m_samples.at(i)) >= std::fabs(noise) + 4 * sigma){
-	    t_start = tcal->at(i);
-	    break;
-	  }
+	bool found_stop(false);
+	for (uint16_t i(max_index); i > bin_low; i--) {
+    if (fabs(m_samples.at(i)) <= max_value * .8 and not found_stop){
+      t_stop = tcal->at(i);
+      found_stop = true;
+    }
+    if (fabs(m_samples.at(i)) <= max_value * .2) {
+      t_start = tcal->at(i);
+      break;
+    }
+  }
   return t_stop - t_start;
 }
 
-float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed char pol, float noise, float sigma, std::vector<float> *tcal) const {
+float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
 
 	std::vector<float> times = getCalibratedTimes(tcal);
 	uint16_t max_index = getIndex(bin_low, bin_high, pol);
-	float t_start = times.at(uint16_t(max_index - 1));
+	float t_start = times.at(uint16_t(max_index + 1));
 	float t_stop = times.at(bin_high);
-  for (uint16_t i(max_index); i < bin_high; i++)
-    if (fabs(m_samples.at(i)) <= std::fabs(noise) + 4 * sigma){
+  float max_value = m_samples.at(max_index);
+  bool found_start(false);
+  for (uint16_t i(max_index); i < bin_high; i++) {
+    if (fabs(m_samples.at(i)) <= max_value * .8 and not found_start){
+      t_start = tcal->at(i);
+      found_start = true;
+    }
+    if (fabs(m_samples.at(i)) <= max_value * .2) {
       t_stop = tcal->at(i);
       break;
     }
+  }
   return t_stop - t_start;
 }
 
