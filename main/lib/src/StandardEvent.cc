@@ -160,11 +160,11 @@ float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed 
 	bool found_stop(false);
 	for (uint16_t i(max_index); i > bin_low; i--) {
     if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_stop){
-      t_stop = tcal->at(i);
+      t_stop = times.at(i);
       found_stop = true;
     }
     if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .2) {
-      t_start = tcal->at(i);
+      t_start = times.at(i);
       break;
     }
   }
@@ -181,11 +181,11 @@ float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed 
   bool found_start(false);
   for (uint16_t i(max_index); i < bin_high; i++) {
     if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_start){
-      t_start = tcal->at(i);
+      t_start = times.at(i);
       found_start = true;
     }
     if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .2) {
-      t_stop = tcal->at(i);
+      t_stop = times.at(i);
       break;
     }
   }
