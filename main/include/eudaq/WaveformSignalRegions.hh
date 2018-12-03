@@ -29,6 +29,7 @@ class WaveformSignalRegions:public TObject{
         uint16_t GetNRegions() { return uint16_t(regions.size()); }
         signed char GetPolarity() { return polarity; }
         signed char GetPulserPolarity() { return pulserPolarity; }
+        void SetPolarity(signed char pol) { polarity = pol; }
         WaveformSignalRegion* GetRegion(UInt_t i);
         WaveformSignalRegion* GetRegion(std::string name);
         std::vector<WaveformSignalRegion*> GetRegions();
