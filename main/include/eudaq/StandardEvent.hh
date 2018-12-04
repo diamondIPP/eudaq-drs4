@@ -12,8 +12,7 @@ namespace eudaq {
 
 class DLLEXPORT StandardWaveform : public Serializable{
 public:
-	StandardWaveform(unsigned id, const std::string & type,
-			const std::string & sensor = "");
+	StandardWaveform(unsigned id, const std::string & type, const std::string & sensor = "");
 	StandardWaveform(Deserializer &);
 	StandardWaveform();
 	void Serialize(Serializer &) const;
@@ -29,6 +28,7 @@ public:
 	std::vector<float>* GetData() const{return &m_samples;};
 	void SetTriggerCell(uint16_t trigger_cell) {m_trigger_cell=trigger_cell;}
 	uint16_t GetTriggerCell() const{return m_trigger_cell;}
+	void SetPolarities(signed char polarity, signed char pulser_polarity) { m_polarity = polarity; m_pulser_polarity = pulser_polarity; }
 	unsigned ID() const;
 	void Print(std::ostream &) const;
 	std::string GetType() const {return m_type;}
@@ -86,6 +86,8 @@ public:
     TF1 getErfFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
     float getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const;
     float getFallTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const;
+    float getWFStartTime(uint16_t bin_low, uint16_t bin_high, float noise);
+    std::pair<float, float> fitMaximum(uint16_t bin_low, uint16_t bin_high, std::vector<float> * tcal) const;
 
 private:
 	uint64_t m_timestamp;
@@ -95,6 +97,8 @@ private:
 	unsigned m_id;
 	std::string m_type, m_sensor, m_channelname;
 	uint16_t m_trigger_cell;
+	signed char m_polarity;
+	signed char m_pulser_polarity;
 
 };
 

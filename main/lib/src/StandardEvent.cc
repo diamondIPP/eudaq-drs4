@@ -6,96 +6,101 @@
 #include "TGraph.h"
 #include "TCanvas.h"
 #include "TFitResult.h"
+#include "TGraphErrors.h"
+
+using namespace std;
+
 namespace eudaq {
 
-EUDAQ_DEFINE_EVENT(StandardEvent, str2id("_STD"));
+  EUDAQ_DEFINE_EVENT(StandardEvent, str2id("_STD"));
 
 /************************************************************************************************/
 /************************************* Standard Waveform ****************************************/
 /************************************************************************************************/
 
-eudaq::StandardWaveform::StandardWaveform(unsigned id, const std::string& type,
-		const std::string& sensor):m_channelnumber(-1){
-	m_id = id;
-	m_type = type;
-	m_sensor = sensor;
+eudaq::StandardWaveform::StandardWaveform(unsigned id, const std::string &type,
+                                          const std::string &sensor) : m_channelnumber(-1) {
+  m_id = id;
+  m_type = type;
+  m_sensor = sensor;
 }
 
-eudaq::StandardWaveform::StandardWaveform(Deserializer& ds): m_samples(0),m_channelnumber(-1) {
-	ds.read(m_type);
-	ds.read(m_sensor);
-	ds.read(m_id);
-	ds.read(m_channelnumber);
+eudaq::StandardWaveform::StandardWaveform(Deserializer &ds) : m_samples(0), m_channelnumber(-1) {
+  ds.read(m_type);
+  ds.read(m_sensor);
+  ds.read(m_id);
+  ds.read(m_channelnumber);
 }
 
-eudaq::StandardWaveform::StandardWaveform():m_id(0),m_sensor(0),m_type(0),m_channelnumber(-1) {}
+eudaq::StandardWaveform::StandardWaveform() : m_id(0), m_sensor(0), m_type(0), m_channelnumber(-1) {}
 
-void eudaq::StandardWaveform::Serialize(Serializer& ser) const {
-	ser.write(m_type);
-	ser.write(m_sensor);
-	ser.write(m_id);
-	ser.write(m_channelnumber);
-}
-void eudaq::StandardWaveform::SetNSamples(unsigned n_samples){
-	m_n_samples = n_samples;
+void eudaq::StandardWaveform::Serialize(Serializer &ser) const {
+  ser.write(m_type);
+  ser.write(m_sensor);
+  ser.write(m_id);
+  ser.write(m_channelnumber);
 }
 
-void StandardWaveform::Print(std::ostream & os) const {
-	os << m_id << ", " << m_type << ":" << m_sensor << ", [";
-	for (size_t i = 0; i < m_samples.size() && i < m_n_samples;i++){
-		os<<m_samples[i]<<" ";
-	}
-	os<<"]";
+void eudaq::StandardWaveform::SetNSamples(unsigned n_samples) {
+  m_n_samples = n_samples;
+}
+
+void StandardWaveform::Print(std::ostream &os) const {
+  os << m_id << ", " << m_type << ":" << m_sensor << ", [";
+  for (size_t i = 0; i < m_samples.size() && i < m_n_samples; i++) {
+    os << m_samples[i] << " ";
+  }
+  os << "]";
 }
 
 unsigned StandardWaveform::ID() const {
-	return m_id;
+  return m_id;
 }
 
 
 float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const {
-    if (max > this->GetNSamples() - 1) max = uint16_t(this->GetNSamples() - 1);
-    if (min < 0) min = 0;
-    float integral = 0;
-    for (uint16_t i = min; i <= max; i++){
-        if(!_abs)
-            integral += m_samples.at(i);
-        else
-            integral += std::abs(m_samples.at(i));
-    }
-    return integral/(float)(max-(int)min);
+  if (max > this->GetNSamples() - 1) max = uint16_t(this->GetNSamples() - 1);
+  if (min < 0) min = 0;
+  float integral = 0;
+  for (uint16_t i = min; i <= max; i++) {
+    if (!_abs)
+      integral += m_samples.at(i);
+    else
+      integral += std::abs(m_samples.at(i));
+  }
+  return integral / (float) (max - (int) min);
 }
 
-float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> * tcal, float sspeed) const {
-	if (high_bin > this->GetNSamples() - 1) high_bin = uint16_t(this->GetNSamples() - 1);
-	float max_low_length = (peak_pos - low_bin) * 1 / sspeed;
-	float max_high_length = (high_bin - peak_pos) * 1 / sspeed;
-    uint16_t size = uint16_t(std::min(m_samples.size(), tcal->size()));
-	float integral = tcal->at((tcell + peak_pos) % size) * m_samples.at(peak_pos);  // take the value at the peak pos as start value
-	// sum up the times if the bins to the left side of the peak pos until max length is reached
-	uint16_t i = uint16_t(peak_pos - 1);
-	float low_length = tcal->at((peak_pos + tcell) % size) / float(2.);
-	while (low_length + tcal->at((i + tcell) % size) < max_low_length) {
-		low_length += tcal->at((i + tcell) % size);
-		integral += m_samples.at(i) * tcal->at((i + tcell) % size);
-		if (i < 1) break;
-		i--;
-	}
-	integral += (max_low_length - low_length) * m_samples.at(i);
-	// same thing for the right side
-	i = uint16_t(peak_pos + 1);
-	float high_length = tcal->at((peak_pos + tcell) % size) / float(2.);
-	while (high_length+tcal->at((i + tcell) % size) < max_high_length) {
-		high_length += tcal->at((i + tcell) % size);
-		integral += m_samples.at(i) * tcal->at((i + tcell) % size);
-		if (i > size - 2) break;
-		i++;
-	}
-	integral += (max_high_length - high_length) * m_samples.at(i);
-	return integral / (max_high_length + max_low_length + 1 / sspeed);
+float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> *tcal, float sspeed) const {
+  if (high_bin > this->GetNSamples() - 1) high_bin = uint16_t(this->GetNSamples() - 1);
+  float max_low_length = (peak_pos - low_bin) * 1 / sspeed;
+  float max_high_length = (high_bin - peak_pos) * 1 / sspeed;
+  uint16_t size = uint16_t(std::min(m_samples.size(), tcal->size()));
+  float integral = tcal->at((tcell + peak_pos) % size) * m_samples.at(peak_pos);  // take the value at the peak pos as start value
+  // sum up the times if the bins to the left side of the peak pos until max length is reached
+  auto i = uint16_t(peak_pos - 1);
+  float low_length = tcal->at((peak_pos + tcell) % size) / float(2.);
+  while (low_length + tcal->at((i + tcell) % size) < max_low_length) {
+    low_length += tcal->at((i + tcell) % size);
+    integral += m_samples.at(i) * tcal->at((i + tcell) % size);
+    if (i < 1) break;
+    i--;
+  }
+  integral += (max_low_length - low_length) * m_samples.at(i);
+  // same thing for the right side
+  i = uint16_t(peak_pos + 1);
+  float high_length = tcal->at((peak_pos + tcell) % size) / float(2.);
+  while (high_length + tcal->at((i + tcell) % size) < max_high_length) {
+    high_length += tcal->at((i + tcell) % size);
+    integral += m_samples.at(i) * tcal->at((i + tcell) % size);
+    if (i > size - 2) break;
+    i++;
+  }
+  integral += (max_high_length - high_length) * m_samples.at(i);
+  return integral / (max_high_length + max_low_length + 1 / sspeed);
 }
 
-TF1 StandardWaveform::getRFFit(std::vector<float> * tcal) const{
+TF1 StandardWaveform::getRFFit(std::vector<float> *tcal) const {
 
   std::vector<float> t = getCalibratedTimes(tcal);
   TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
@@ -107,7 +112,7 @@ TF1 StandardWaveform::getRFFit(std::vector<float> * tcal) const{
   return fit;
 }
 
-std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> * tcal) const {
+std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> *tcal) const {
 
   std::vector<float> t = {tcal->at(m_trigger_cell)};
   for (uint16_t i(1); i < m_n_samples; i++)
@@ -115,7 +120,7 @@ std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> * tca
   return t;
 }
 
-float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
+float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
 
   std::vector<float> t = getCalibratedTimes(tcal);
   uint16_t high_bin = getIndex(bin_low, bin_high, pol);
@@ -130,10 +135,10 @@ float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed c
   return float(fit.GetParameter(1));
 }
 
-TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
+TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
 
   TF1 fit("fit", "[0]*TMath::Erf((x-[1])*[2]) + [3]", 0, 500);
-  if (getAbsMaxInRange(bin_low, bin_high) > 2000){
+  if (getAbsMaxInRange(bin_low, bin_high) > 2000) {
     fit.SetParameters(0, 0, 0, 0);
     return fit;
   }
@@ -150,16 +155,16 @@ TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char
   return fit;
 }
 
-float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> * tcal) const {
+float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
 
-	std::vector<float> times = getCalibratedTimes(tcal);
-	uint16_t max_index = getIndex(bin_low, bin_high, pol);
-	float max_value = m_samples.at(max_index);
-	float t_start = times.at(bin_low);
-	float t_stop = times.at(uint16_t(max_index - 1));
-	bool found_stop(false);
-	for (uint16_t i(max_index); i > bin_low; i--) {
-    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_stop){
+  std::vector<float> times = getCalibratedTimes(tcal);
+  uint16_t max_index = getIndex(bin_low, bin_high, pol);
+  float max_value = m_samples.at(max_index);
+  float t_start = times.at(bin_low);
+  float t_stop = times.at(uint16_t(max_index - 1));
+  bool found_stop(false);
+  for (uint16_t i(max_index); i > bin_low; i--) {
+    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_stop) {
       t_stop = times.at(i);
       found_stop = true;
     }
@@ -173,14 +178,14 @@ float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed 
 
 float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
 
-	std::vector<float> times = getCalibratedTimes(tcal);
-	uint16_t max_index = getIndex(bin_low, bin_high, pol);
-	float t_start = times.at(uint16_t(max_index + 1));
-	float t_stop = times.at(bin_high);
+  std::vector<float> times = getCalibratedTimes(tcal);
+  uint16_t max_index = getIndex(bin_low, bin_high, pol);
+  float t_start = times.at(uint16_t(max_index + 1));
+  float t_stop = times.at(bin_high);
   float max_value = m_samples.at(max_index);
   bool found_start(false);
   for (uint16_t i(max_index); i < bin_high; i++) {
-    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_start){
+    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_start) {
       t_start = times.at(i);
       found_start = true;
     }
@@ -190,6 +195,29 @@ float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed 
     }
   }
   return t_stop - t_start;
+}
+
+//float StandardWaveform::getWFStartTime(uint16_t bin_low, uint16_t bin_high, float noise) {
+//
+//  uint16_t max_index = getIndex(bin_low, bin_high, m_polarity);
+//  TGraphErrors g;
+//  uint16_t i_point(0);
+//  for (uint16_t i(max_index); i > bin_low; i--) {
+//    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8
+//  }
+//}
+
+std::pair<float, float> StandardWaveform::fitMaximum(uint16_t bin_low, uint16_t bin_high, vector<float> * tcal) {
+
+	TGraph gr;
+	TF1 fit("landau", "landau + [3]");
+	std::vector<float> times = getCalibratedTimes(tcal);
+	uint16_t max_index = getIndex(bin_low, bin_high, m_polarity);
+	for (auto i(uint16_t(max_index - 6)); i <= max_index + 6; i++)
+		gr.SetPoint(max_index - 6 + i, times.at(i), m_samples.at(i));
+	fit.SetParameters(m_polarity * 300, times.at(max_index), 2, 0);
+	gr.Fit(&fit, "q");
+	return make_pair(fit.GetParameter(1), fit.GetX(fit.GetParameter(1)));
 }
 
 float StandardWaveform::getTriggerTime(std::vector<float> * tcal) const {

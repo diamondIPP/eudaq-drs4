@@ -68,6 +68,9 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     v_max_peak_time->resize(4, 0);
     v_rise_time = new vector<float>;
     v_fall_time = new vector<float>;
+    v_wf_start = new vector<float>;
+    v_fit_peak_time = new vector<float>;
+    v_fit_peak_value = new vector<float>;
 
     // waveforms
     for (uint8_t i = 0; i < 4; i++) f_wf[i] = new vector<float>;
@@ -286,8 +289,11 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
       m_ttree->Branch("peak_positions", &v_peak_positions);
       m_ttree->Branch("peak_times", &v_peak_times);
       m_ttree->Branch("n_peaks", &v_npeaks);
-        m_ttree->Branch("fall_time", &v_fall_time);
-        m_ttree->Branch("rise_time", &v_rise_time);
+      m_ttree->Branch("fall_time", &v_fall_time);
+      m_ttree->Branch("rise_time", &v_rise_time);
+      m_ttree->Branch("wf_start", &v_wf_start);
+      m_ttree->Branch("fit_peak_time", &v_fit_peak_time);
+      m_ttree->Branch("fit_peak_value", &v_fit_peak_value);
     }
 
     // fft stuff and spectrum
@@ -350,7 +356,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 
     f_event_number = sev.GetEventNumber();
-    // set time stamp
+
     /** TU STUFF */
     SetTimeStamp(sev);
     SetBeamCurrent(sev);
@@ -358,18 +364,18 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
-    unsigned int nwfs = (unsigned int) sev.NumWaveforms();
+    SetWFPolarities(sev);
+    auto nwfs = (unsigned int) sev.NumWaveforms();
     f_nwfs = nwfs;
 
     if(f_event_number <= 10 && verbose > 0){
-        cout << "event number " << f_event_number << endl;
-        cout << "number of waveforms " << nwfs << endl;
         if(nwfs ==0){
             cout << "----------------------------------------" << endl;
             cout << "WARNING!!! NO WAVEFORMS IN THIS EVENT!!!" << endl;
             cout << "----------------------------------------" << endl;
         }
     }
+
     if (verbose > 3) cout << "ClearVectors" << endl;
     ClearVectors();
 
@@ -573,6 +579,9 @@ inline void FileWriterTreeDRS4::ResizeVectors(size_t n_channels) {
     v_max_peak_position->resize(n_channels, 0);
     v_rise_time->resize(n_channels);
     v_fall_time->resize(n_channels);
+    v_wf_start->resize(n_channels);
+    v_fit_peak_time->resize(n_channels);
+    v_fit_peak_value->resize(n_channels);
 
     f_isDa->resize(n_channels);
 
@@ -772,6 +781,9 @@ void FileWriterTreeDRS4::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
         v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), pol, &tcal.at(0));
         v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), pol, &tcal.at(0));
+        auto fit_peak = wf->fitMaximum(reg->GetLowBoarder(), reg->GetHighBoarder(), &tcal.at(0));
+        v_fit_peak_time->at(iwf) = fit_peak.first;
+        v_fit_peak_value->at(iwf) = fit_peak.second;
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
@@ -903,6 +915,12 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
             old_time = f_time;
         }
     }
+
+void FileWriterTreeDRS4::SetWFPolarities(StandardEvent sev) {
+
+    for (size_t iwf(0); iwf < sev.GetNWaveforms(); iwf++)
+        sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
+}
 
 void FileWriterTreeDRS4::ReadIntegralRanges() {
 
