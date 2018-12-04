@@ -207,7 +207,7 @@ float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed 
 //  }
 //}
 
-std::pair<float, float> StandardWaveform::fitMaximum(uint16_t bin_low, uint16_t bin_high, vector<float> * tcal) {
+std::pair<float, float> StandardWaveform::fitMaximum(uint16_t bin_low, uint16_t bin_high, vector<float> * tcal) const {
 
 	TGraph gr;
 	TF1 fit("landau", "landau + [3]");
