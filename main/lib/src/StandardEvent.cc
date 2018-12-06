@@ -155,42 +155,48 @@ TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char
   return fit;
 }
 
-float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
+float StandardWaveform::interpolate_time(uint16_t i, float value) const {
 
-  std::vector<float> times = getCalibratedTimes(tcal);
-  uint16_t max_index = getIndex(bin_low, bin_high, pol);
-  float max_value = m_samples.at(max_index);
-  float t_start = times.at(bin_low);
-  float t_stop = times.at(uint16_t(max_index - 1));
+  /** v = mt + a */
+  float m = (m_samples.at(i) - m_samples.at(uint16_t(i - 1))) / (m_times.at(i) - m_times.at(uint16_t(i - 1)));
+  float a = m_samples.at(i) - m * m_times.at(i);
+	return (value - a) / m;
+}
+
+float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, float noise) const {
+
+  uint16_t max_index = getIndex(bin_low, bin_high, m_polarity);
+  float max_value = m_samples.at(max_index) - noise;
+  float t_start = m_times.at(bin_low);
+  float t_stop = m_times.at(uint16_t(max_index - 1));
   bool found_stop(false);
   for (uint16_t i(max_index); i > bin_low; i--) {
-    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_stop) {
-      t_stop = times.at(i);
+    if (fabs(m_samples.at(i) - noise) < std::fabs(max_value) * .8 and not found_stop) {
+      t_stop = interpolate_time(i, float(.8 * max_value));
       found_stop = true;
     }
-    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .2) {
-      t_start = times.at(i);
+    if (fabs(m_samples.at(i) - noise) < std::fabs(max_value) * .2) {
+      t_start = interpolate_time(i, float(.2 * max_value));
       break;
     }
   }
   return t_stop - t_start;
 }
 
-float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
+float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, float noise) const {
 
-  std::vector<float> times = getCalibratedTimes(tcal);
-  uint16_t max_index = getIndex(bin_low, bin_high, pol);
-  float t_start = times.at(uint16_t(max_index + 1));
-  float t_stop = times.at(bin_high);
-  float max_value = m_samples.at(max_index);
+  uint16_t max_index = getIndex(bin_low, bin_high, m_polarity);
+  float t_start = m_times.at(uint16_t(max_index + 1));
+  float t_stop = m_times.at(bin_high);
+  float max_value = m_samples.at(max_index) - noise;
   bool found_start(false);
   for (uint16_t i(max_index); i < bin_high; i++) {
-    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8 and not found_start) {
-      t_start = times.at(i);
+    if (fabs(m_samples.at(i) - noise) <= std::fabs(max_value) * .8 and not found_start) {
+      t_start = interpolate_time(i, float(.8 * max_value));
       found_start = true;
     }
-    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .2) {
-      t_stop = times.at(i);
+    if (fabs(m_samples.at(i) - noise) <= std::fabs(max_value) * .2) {
+      t_stop =  interpolate_time(i, float(.2 * max_value));
       break;
     }
   }
