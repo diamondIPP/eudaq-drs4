@@ -73,7 +73,6 @@ namespace eudaq {
         void SetTimeStamp(StandardEvent);
         void SetBeamCurrent(StandardEvent);
         void SetScalers(StandardEvent);
-        void SetWFPolarities(StandardEvent);
         void ReadIntegralRanges();
         void ReadIntegralRegions();
         bool hasTU;
@@ -161,6 +160,7 @@ namespace eudaq {
         std::vector<float> * v_wf_start;
         std::vector<float> * v_fit_peak_time;
         std::vector<float> * v_fit_peak_value;
+        std::vector<float> * v_peaking_time;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;

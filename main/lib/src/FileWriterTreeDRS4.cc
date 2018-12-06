@@ -71,6 +71,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     v_wf_start = new vector<float>;
     v_fit_peak_time = new vector<float>;
     v_fit_peak_value = new vector<float>;
+    v_peaking_time = new vector<float>;
 
     // waveforms
     for (uint8_t i = 0; i < 4; i++) f_wf[i] = new vector<float>;
@@ -294,6 +295,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
       m_ttree->Branch("wf_start", &v_wf_start);
       m_ttree->Branch("fit_peak_time", &v_fit_peak_time);
       m_ttree->Branch("fit_peak_value", &v_fit_peak_value);
+      m_ttree->Branch("peaking_time", &v_peaking_time);
     }
 
     // fft stuff and spectrum
@@ -583,6 +585,7 @@ inline void FileWriterTreeDRS4::ResizeVectors(size_t n_channels) {
     v_wf_start->resize(n_channels);
     v_fit_peak_time->resize(n_channels);
     v_fit_peak_value->resize(n_channels);
+    v_peaking_time->resize(n_channels);
 
     f_isDa->resize(n_channels);
 
@@ -780,11 +783,13 @@ void FileWriterTreeDRS4::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     if (UseWaveForm(active_regions, iwf)){
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
-        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), pol, &tcal.at(0));
-        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), pol, &tcal.at(0));
-        auto fit_peak = wf->fitMaximum(reg->GetLowBoarder(), reg->GetHighBoarder(), &tcal.at(0));
+        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
+        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
+        auto fit_peak = wf->fitMaximum(reg->GetLowBoarder(), reg->GetHighBoarder());
         v_fit_peak_time->at(iwf) = fit_peak.first;
         v_fit_peak_value->at(iwf) = fit_peak.second;
+        v_wf_start->at(iwf) = wf->getWFStartTime(reg->GetLowBoarder(), reg->GetHighBoarder(), noise->at(iwf).first, fit_peak.second);
+        v_peaking_time->at(iwf) = v_fit_peak_time->at(iwf) - v_wf_start->at(iwf);
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
@@ -915,12 +920,6 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
         if (valid)
             old_time = f_time;
         }
-    }
-
-void FileWriterTreeDRS4::SetWFPolarities(StandardEvent sev) {
-
-    for (size_t iwf(0); iwf < sev.GetNWaveforms(); iwf++)
-        sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
 }
 
 void FileWriterTreeDRS4::ReadIntegralRanges() {

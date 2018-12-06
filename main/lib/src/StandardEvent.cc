@@ -197,27 +197,30 @@ float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, signed 
   return t_stop - t_start;
 }
 
-//float StandardWaveform::getWFStartTime(uint16_t bin_low, uint16_t bin_high, float noise) {
-//
-//  uint16_t max_index = getIndex(bin_low, bin_high, m_polarity);
-//  TGraphErrors g;
-//  uint16_t i_point(0);
-//  for (uint16_t i(max_index); i > bin_low; i--) {
-//    if (fabs(m_samples.at(i)) <= std::fabs(max_value) * .8
-//  }
-//}
+float StandardWaveform::getWFStartTime(uint16_t bin_low, uint16_t bin_high, float noise, float max_value) const {
 
-std::pair<float, float> StandardWaveform::fitMaximum(uint16_t bin_low, uint16_t bin_high, vector<float> * tcal) const {
+  uint16_t max_index = getIndex(bin_low, bin_high, m_polarity);
+  TGraphErrors g;
+  uint16_t i_point(0);
+  float max = std::fabs(max_value) - noise;
+  for (uint16_t i(max_index); i > bin_low; i--)
+    if (max * .2 <= fabs(m_samples.at(i) - noise) and fabs(m_samples.at(i) - noise) <= max * .8)
+      g.SetPoint(i_point++, m_times.at(i), m_samples.at(i));
+  TF1 fit("fit", "pol1", m_times.at(bin_low), m_times.at(bin_high));
+  g.Fit(&fit, "q");
+  return float(fit.GetX(noise));
+}
+
+std::pair<float, float> StandardWaveform::fitMaximum(uint16_t bin_low, uint16_t bin_high) const {
 
 	TGraph gr;
 	TF1 fit("landau", "landau + [3]");
-	std::vector<float> times = getCalibratedTimes(tcal);
 	uint16_t max_index = getIndex(bin_low, bin_high, m_polarity);
 	for (auto i(uint16_t(max_index - 6)); i <= max_index + 6; i++)
-		gr.SetPoint(max_index - 6 + i, times.at(i), m_samples.at(i));
-	fit.SetParameters(m_polarity * 300, times.at(max_index), 2, 0);
+		gr.SetPoint(i - max_index + 6, m_times.at(i), m_samples.at(i));
+	fit.SetParameters(m_polarity * 300, m_times.at(max_index), 2, 0);
 	gr.Fit(&fit, "q");
-	return make_pair(fit.GetParameter(1), fit.GetX(fit.GetParameter(1)));
+	return make_pair(fit.GetParameter(1), fit(fit.GetParameter(1)));
 }
 
 float StandardWaveform::getTriggerTime(std::vector<float> * tcal) const {
