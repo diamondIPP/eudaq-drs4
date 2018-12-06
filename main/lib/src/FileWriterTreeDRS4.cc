@@ -364,7 +364,6 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
-    SetWFPolarities(sev);
     auto nwfs = (unsigned int) sev.NumWaveforms();
     f_nwfs = nwfs;
 
@@ -398,6 +397,8 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     for (auto iwf : wf_order){
         if (verbose > 3) cout<<"Channel Nr: "<< int(iwf) <<endl;
 
+        sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
+        sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
         const eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
         // save the sensor names
         if (f_event_number == 0) {

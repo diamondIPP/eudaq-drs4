@@ -29,6 +29,7 @@ public:
 	void SetTriggerCell(uint16_t trigger_cell) {m_trigger_cell=trigger_cell;}
 	uint16_t GetTriggerCell() const{return m_trigger_cell;}
 	void SetPolarities(signed char polarity, signed char pulser_polarity) { m_polarity = polarity; m_pulser_polarity = pulser_polarity; }
+	void SetTimes(std::vector<float> * tcal) { m_times = getCalibratedTimes(tcal); }
 	unsigned ID() const;
 	void Print(std::ostream &) const;
 	std::string GetType() const {return m_type;}
@@ -99,6 +100,7 @@ private:
 	uint16_t m_trigger_cell;
 	signed char m_polarity;
 	signed char m_pulser_polarity;
+	std::vector<float> m_times;
 
 };
 
