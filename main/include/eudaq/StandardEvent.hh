@@ -17,7 +17,7 @@ public:
 	StandardWaveform();
 	void Serialize(Serializer &) const;
 	void SetNSamples(unsigned n_samples);
-	unsigned GetNSamples() const {return m_n_samples;}
+	uint16_t GetNSamples() const {return m_n_samples;}
 	template <typename T>
 	void SetWaveform(T (*data)) {//todo: FIx issue with template
 		m_samples.clear();
@@ -79,21 +79,22 @@ public:
     float getSpreadInRange(int min, int max) const{return (getMaxInRange(min,max)-getMinInRange(min,max));};
     float getPeakToPeak(int min, int max) const{return getSpreadInRange(min,max);}
     float getIntegral(uint16_t min, uint16_t max, bool _abs=false) const;
-    float getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> * tcal, float sspeed) const;
+    float getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const;
 		std::vector<float> getCalibratedTimes(std::vector<float>*) const;
     float getTriggerTime(std::vector<float>*) const;
-    float getPeakFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
+    float getPeakFit(uint16_t, uint16_t, signed char) const;
     TF1 getRFFit(std::vector<float>*) const;
-    TF1 getErfFit(uint16_t, uint16_t, signed char, std::vector<float>*) const;
+    TF1 getErfFit(uint16_t, uint16_t, signed char) const;
     float getRiseTime(uint16_t bin_low, uint16_t bin_high, float noise) const;
     float getFallTime(uint16_t bin_low, uint16_t bin_high, float noise) const;
     float getWFStartTime(uint16_t bin_low, uint16_t bin_high, float noise, float max_value) const;
     std::pair<float, float> fitMaximum(uint16_t bin_low, uint16_t bin_high) const;
-    float interpolate_time(uint16_t i, float value) const;
+    float interpolateTime(uint16_t ibin, float value) const;
+    float getBinWidth(uint16_t ibin) const { return m_times.at(ibin) - m_times.at(uint16_t(ibin - 1)); }
 
 private:
 	uint64_t m_timestamp;
-	int m_n_samples;
+	uint16_t m_n_samples;
 	int m_channelnumber;
 	mutable std::vector<float> m_samples;
 	unsigned m_id;

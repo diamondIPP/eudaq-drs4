@@ -7,6 +7,7 @@
 #include "TCanvas.h"
 #include "TFitResult.h"
 #include "TGraphErrors.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -71,33 +72,29 @@ float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const
   return integral / (float) (max - (int) min);
 }
 
-float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, uint16_t tcell, std::vector<float> *tcal, float sspeed) const {
-  if (high_bin > this->GetNSamples() - 1) high_bin = uint16_t(this->GetNSamples() - 1);
-  float max_low_length = (peak_pos - low_bin) * 1 / sspeed;
-  float max_high_length = (high_bin - peak_pos) * 1 / sspeed;
-  uint16_t size = uint16_t(std::min(m_samples.size(), tcal->size()));
-  float integral = tcal->at((tcell + peak_pos) % size) * m_samples.at(peak_pos);  // take the value at the peak pos as start value
+float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const {
+
+  high_bin = min(high_bin, uint16_t(m_n_samples - 1));
+  if (high_bin == peak_pos and low_bin == peak_pos)
+    return m_samples.at(peak_pos);
+  float max_low_length = (peak_pos - low_bin) / sspeed;
+  float max_high_length = (high_bin - peak_pos) / sspeed;
+  float integral = 0;  // take the value at the peak pos as start value
   // sum up the times if the bins to the left side of the peak pos until max length is reached
-  auto i = uint16_t(peak_pos - 1);
-  float low_length = tcal->at((peak_pos + tcell) % size) / float(2.);
-  while (low_length + tcal->at((i + tcell) % size) < max_low_length) {
-    low_length += tcal->at((i + tcell) % size);
-    integral += m_samples.at(i) * tcal->at((i + tcell) % size);
-    if (i < 1) break;
-    i--;
+  float low_length(0), high_length(0);
+  uint16_t ibin(peak_pos);
+  while (low_length <= max_low_length - 0.001) {
+    float width = min(getBinWidth(--ibin), max_low_length - low_length);  // take the diff between max und current length if it gets smaller than bin width
+    integral += width * (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2;
+    low_length += width;
   }
-  integral += (max_low_length - low_length) * m_samples.at(i);
-  // same thing for the right side
-  i = uint16_t(peak_pos + 1);
-  float high_length = tcal->at((peak_pos + tcell) % size) / float(2.);
-  while (high_length + tcal->at((i + tcell) % size) < max_high_length) {
-    high_length += tcal->at((i + tcell) % size);
-    integral += m_samples.at(i) * tcal->at((i + tcell) % size);
-    if (i > size - 2) break;
-    i++;
+  ibin = uint16_t(peak_pos - 1);
+  while (high_length <= max_high_length - 0.001) {
+    float width = min(getBinWidth(++ibin), max_high_length - high_length);  // take the diff between max und current length if it gets smaller than bin width
+    integral += width * (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2;
+    high_length += width;
   }
-  integral += (max_high_length - high_length) * m_samples.at(i);
-  return integral / (max_high_length + max_low_length + 1 / sspeed);
+  return integral / (max_high_length + max_low_length);
 }
 
 TF1 StandardWaveform::getRFFit(std::vector<float> *tcal) const {
@@ -120,14 +117,12 @@ std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> *tcal
   return t;
 }
 
-float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
+float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed char pol) const {
 
-  std::vector<float> t = getCalibratedTimes(tcal);
   uint16_t high_bin = getIndex(bin_low, bin_high, pol);
-  float t_high = t.at(high_bin);
-  t = std::vector<float>(t.begin() + high_bin - 50, t.begin() + high_bin + 5);
+  float t_high = m_times.at(high_bin);
+  vector<float> t = vector<float>(m_times.begin() + high_bin - 50, m_times.begin() + high_bin + 5);
   std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 50, m_samples.begin() + high_bin + 5);
-//  for (float &i : v) i = std::fabs(i);
   TGraph gr = TGraph(unsigned(t.size()), &t[0], &v[0]);
   TF1 fit("fit", "[0]*TMath::Landau(x, [1], [2]) - [3]", 0, 500);
   fit.SetParameters(pol * 1000, t_high, 5, pol * 5);
@@ -135,19 +130,16 @@ float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed c
   return float(fit.GetParameter(1));
 }
 
-TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol, std::vector<float> *tcal) const {
+TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char pol) const {
 
   TF1 fit("fit", "[0]*TMath::Erf((x-[1])*[2]) + [3]", 0, 500);
   if (getAbsMaxInRange(bin_low, bin_high) > 2000) {
     fit.SetParameters(0, 0, 0, 0);
     return fit;
   }
-  std::vector<float> t = getCalibratedTimes(tcal);
   uint16_t high_bin = getIndex(bin_low, bin_high, pol);
-  float t_high = t.at(high_bin);
-//  t = std::vector<float>(t.begin() + high_bin - 50, t.begin() + high_bin + 3);
-//  std::vector<float> v = std::vector<float>(m_samples.begin() + high_bin - 50, m_samples.begin() + high_bin + 3);
-  TGraph gr = TGraph(unsigned(t.size()), &t[0], &m_samples[0]);
+  float t_high = m_times.at(high_bin);
+  TGraph gr = TGraph(unsigned(m_times.size()), &m_times[0], &m_samples[0]);
   fit.SetParameters(100, t_high, pol * .5, pol * 100);
   fit.SetParLimits(0, 10, 500);
   fit.SetParLimits(1, t_high - 20, t_high + 2);
@@ -155,11 +147,11 @@ TF1 StandardWaveform::getErfFit(uint16_t bin_low, uint16_t bin_high, signed char
   return fit;
 }
 
-float StandardWaveform::interpolate_time(uint16_t i, float value) const {
+float StandardWaveform::interpolateTime(uint16_t ibin, float value) const {
 
   /** v = mt + a */
-  float m = (m_samples.at(i) - m_samples.at(uint16_t(i - 1))) / (m_times.at(i) - m_times.at(uint16_t(i - 1)));
-  float a = m_samples.at(i) - m * m_times.at(i);
+  float m = (m_samples.at(ibin) - m_samples.at(uint16_t(ibin - 1))) / (m_times.at(ibin) - m_times.at(uint16_t(ibin - 1)));
+  float a = m_samples.at(ibin) - m * m_times.at(ibin);
 	return (value - a) / m;
 }
 
@@ -172,11 +164,11 @@ float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, float n
   bool found_stop(false);
   for (uint16_t i(max_index); i > bin_low; i--) {
     if (fabs(m_samples.at(i) - noise) < std::fabs(max_value) * .8 and not found_stop) {
-      t_stop = interpolate_time(i, float(.8 * max_value));
+      t_stop = interpolateTime(i, float(.8 * max_value));
       found_stop = true;
     }
     if (fabs(m_samples.at(i) - noise) < std::fabs(max_value) * .2) {
-      t_start = interpolate_time(i, float(.2 * max_value));
+      t_start = interpolateTime(i, float(.2 * max_value));
       break;
     }
   }
@@ -192,11 +184,11 @@ float StandardWaveform::getFallTime(uint16_t bin_low, uint16_t bin_high, float n
   bool found_start(false);
   for (uint16_t i(max_index); i < bin_high; i++) {
     if (fabs(m_samples.at(i) - noise) <= std::fabs(max_value) * .8 and not found_start) {
-      t_start = interpolate_time(i, float(.8 * max_value));
+      t_start = interpolateTime(i, float(.8 * max_value));
       found_start = true;
     }
     if (fabs(m_samples.at(i) - noise) <= std::fabs(max_value) * .2) {
-      t_stop =  interpolate_time(i, float(.2 * max_value));
+      t_stop = interpolateTime(i, float(.2 * max_value));
       break;
     }
   }
