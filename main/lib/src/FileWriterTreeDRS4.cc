@@ -392,15 +392,17 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
 
     //use different order of wfs in order to 'know' if its a pulser event or not.
-    vector<uint8_t> wf_order = {2,1,0,3};
+    vector<uint8_t> wf_order = {2, 1, 0, 3};
+    for (auto iwf : wf_order) {
+      sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
+      sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
+    }
     ResizeVectors(sev.GetNWaveforms());
     FillRegionIntegrals(sev);
 
     for (auto iwf : wf_order){
         if (verbose > 3) cout<<"Channel Nr: "<< int(iwf) <<endl;
 
-        sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
-        sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
         const eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
         // save the sensor names
         if (f_event_number == 0) {
@@ -742,7 +744,7 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);
           integral->SetPeakPosition(peak_pos, wf->GetNSamples());
-          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(0), 2.0));
+          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, 2.0));
           if (name.find("peaktopeak")!=std::string::npos){
             integral->SetIntegral(wf->getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else if (name.find("median")!=name.npos){

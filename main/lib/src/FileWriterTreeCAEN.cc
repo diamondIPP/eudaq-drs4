@@ -448,6 +448,10 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     for (uint8_t iwf = 0; iwf < n_wfs; iwf++)
         if (iwf != pulser_channel)
             wf_order.push_back(iwf);
+    for (auto iwf : wf_order) {
+        sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
+        sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
+    }
     ResizeVectors(sev.GetNWaveforms());
     for (auto iwf:wf_order){
         const eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
@@ -801,7 +805,7 @@ void FileWriterTreeCAEN::FillRegionIntegrals(uint8_t iwf, const StandardWaveform
             }
             else {
                 integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
-                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(0), 2.5);
+                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, 2.5);
             }
             p->SetIntegral(integral);
             p->SetTimeIntegral(time_integral);
@@ -854,8 +858,8 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     if (UseWaveForm(active_regions, iwf)){
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
-        v_signal_peak_time->at(iwf) = wf->getPeakFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
-        auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity(), &tcal.at(0));
+        v_signal_peak_time->at(iwf) = wf->getPeakFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity());
+        auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity());
         v_rise_width->at(iwf) = float(erfFit.GetParameter(2));
         v_rise_time->at(iwf) = float(erfFit.GetParameter(1));
         v_t_thresh->at(iwf) = float(erfFit.GetX(pol * (2 * noise->at(iwf).second + noise->at(iwf).first)));
@@ -873,7 +877,7 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
 
   if (scint_channel == iwf) {
     WaveformSignalRegion * reg = regions->at(dia_channels->at(0))->GetRegion("signal_b");
-    auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), -1, &tcal.at(0));
+    auto erfFit = wf->getErfFit(reg->GetLowBoarder(), reg->GetHighBoarder(), -1);
     v_rise_width->at(iwf) = float(erfFit.GetParameter(2));
     v_rise_time->at(iwf) = float(erfFit.GetParameter(1));
     v_t_thresh->at(iwf) = float(erfFit.GetX((-10 * noise->at(iwf).second + noise->at(iwf).first)));
