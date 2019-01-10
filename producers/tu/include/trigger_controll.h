@@ -322,6 +322,8 @@ public:
      * @return 0 on sucess 1 on error
      ************************************************************************/
     int set_clk40_phases(int phase1, int phase2);
+    int get_clk40_phase1();
+    int get_clk40_phase2();
     
     /*******************************************************************//*!
      * @param: 0=negative polarity/1=positive polarity, LSB of an int
@@ -330,7 +332,8 @@ public:
                eg: 000000000000000010 means positive pulser 2, negative pulser1
      * @return 0 on sucess 1 on error
      ************************************************************************/
-    int set_pulser_polarity(int selector);
+    int set_pulser_polarity(int pol_pulser1, int pol_pulser2);
+    int get_pulser_polarities();
 
     /*******************************************************************//*!
      * @return the stored handshake delay 
@@ -409,6 +412,9 @@ private:
     int coincidence_edge_width;
     int handshake_mask;
     int handshake_delay;
+    int clk40_phase1;
+    int clk40_phase2;
+    int pulser_polarity;
     std::string ip_adr;
 };
 
