@@ -327,12 +327,22 @@ using namespace libconfig;
         sprintf(str,"/a?j=%d",delay);
         return this->http_backend(str);
     }
-    /* the phase ctl of the 40MHz clk is set by 2 ___bit numbers packed in to one 16bit int
-     */
-    int trigger_controll::set_clk40_phases(int phases)
-    {
+    /* the phase ctl of the 40MHz clk is set by 2 4bit numbers packed in to one 8bit int*/
+    int trigger_controll::set_clk40_phases(int phase1, int phase2)
+    {   
+        int phases = (phase2<<4) | phase1;
+        if (phases > 255) {return -1;}
         char str[32];
         sprintf(str,"/a?u=%d",phases);
+        return this->http_backend(str);
+    }
+
+    /* bit0: pulser1, bit1: pulser2; 0=neg/1=pos; eg. selector=2--> pulser2=pos & pulser1=neg */
+    int trigger_controll::set_pulser_polarity(int selector)
+    {
+        if (selector > 2) {return -1;}
+        char str[32];
+        sprintf(str,"/x?u=%d",selector);
         return this->http_backend(str);
     }
     /*delay 1 & 2 are packed in to a 32 bit int 11 downto 0 = delay 1
