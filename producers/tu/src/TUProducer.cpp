@@ -396,13 +396,16 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << BOLDGREEN << "... [OK] " << CLEAR;
 
 
-		std::cout << "--> Setting pulser frequency, width and delay ... " << std::endl;
+		std::cout << "--> Setting pulser frequency, width, delay and polarity.. " << std::endl;
 		double freq = conf.Get("pulser_freq", 0);
 		int width = conf.Get("pulser_width", 0);
 		int puldel = conf.Get("pulser_delay", 5); //must be > 4
+		int pol_pulser1 = conf.Get("pulser1_polarity", 0);
+		int pol_pulser2 = conf.Get("pulser2_polarity", 1);
 		std::cout << "     Frequency: " << freq << std::endl;
 		std::cout << "     Width: " << width << std::endl;
 		std::cout << "     Delay: " << freq << std::endl;
+		std::cout << "	   Pulser 1/2 Polarities: " << pol_pulser1 << "/" << pol_pulser2 << " (0=negative/1=positive)" << std::endl;
 
 		if(tc->set_Pulser_width(freq, width) != 0){throw(-1);}
 		if(tc->set_pulser_delay(puldel) != 0){throw(-1);}
@@ -438,6 +441,14 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		if(tc->set_delays() != 0){throw(-1);}
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
+		std::cout << "--> Set 40MHz clock phases..";
+		int clk40_phase1 = conf.Get("clk40_phase1", 0);
+		int clk40_phase2 = conf.Get("clk40_phase2", 0);
+		std::cout << "     CLK 1 Phase: " << clk40_phase1 << " [clk cycles]" << std::endl;
+		std::cout << "     CLK 2 Phase: " << clk40_phase2 << " [clk cycles]" << std::endl;
+		if(tc->set_clk40_phases(clk40_phase1, clk40_phase2)!=0){throw(-1);}
+
+
 		//set current UNIX timestamp
 		std::cout << "--> Set current UNIX time to TU..";
    		if(tc->set_time() != 0){throw(-1);}
@@ -460,7 +471,16 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << "Handshake mask: " << tc->get_handshake_mask() << std::endl << std::endl;
 
 		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
-		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl << std::endl;
+		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl;
+
+		std::cout << "CLK 1 Phase: [ns]:" << tc->get_clk40_phase1()*2.5 << std::endl;
+		std::cout << "CLK 2 Phase: [ns]:" << tc->get_clk40_phase2()*2.5 << std::endl;
+
+		std::string pol1 = (tc->get_pulser_polarities()&0x1 == 1) ? "positive" : "negative";
+		std::string pol2 = (tc->get_pulser_polarities()&0x2 == 1) ? "positive" : "negative";
+		std::cout << "Pulser 1 Polarity: " << pol1 << std::endl;
+		std::cout << "Pulser 2 Polarity: " << pol2 << std::endl;
+
 
 		std::cout << BOLDGREEN <<  "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << CLEAR;
 

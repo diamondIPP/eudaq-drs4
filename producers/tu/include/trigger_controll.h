@@ -318,10 +318,23 @@ public:
 
     /*******************************************************************//*!
      * Send the two phase settings packed in one int
-     * @param phases two ________ bit phase settings for the 40MHz clk gen packed in an int
+     * @param phases two 4bit phase settings for the 40MHz clk gen packed in an int
      * @return 0 on sucess 1 on error
      ************************************************************************/
-    int set_clk40_phases(int phases);
+    int set_clk40_phases(int phase1, int phase2);
+    int get_clk40_phase1();
+    int get_clk40_phase2();
+    
+    /*******************************************************************//*!
+     * @param: 0=negative polarity/1=positive polarity, LSB of an int
+               bit0: polarity of pulser 1
+               bit1: polarity of pulser 2
+               eg: 000000000000000010 means positive pulser 2, negative pulser1
+     * @return 0 on sucess 1 on error
+     ************************************************************************/
+    int set_pulser_polarity(int pol_pulser1, int pol_pulser2);
+    int get_pulser_polarities();
+
     /*******************************************************************//*!
      * @return the stored handshake delay 
      * @see set_handshake_delay(int mask)
@@ -399,6 +412,9 @@ private:
     int coincidence_edge_width;
     int handshake_mask;
     int handshake_delay;
+    int clk40_phase1;
+    int clk40_phase2;
+    int pulser_polarity;
     std::string ip_adr;
 };
 
