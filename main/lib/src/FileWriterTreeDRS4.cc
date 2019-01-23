@@ -50,9 +50,6 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     IntegralLength  = new std::vector<float>;
 
     // general waveform information
-    v_polarities = new vector<int16_t>;
-    v_pulser_polarities = new vector<int16_t>;
-    v_spectrum_polarities = new vector<int16_t>;
     v_is_saturated = new vector<bool>;
     v_median = new vector<float>;
     v_average = new vector<float>;
@@ -178,9 +175,6 @@ void FileWriterTreeDRS4::Configure(){
     polarities = m_config->Get("polarities", polarities);
     pulser_polarities = m_config->Get("pulser_polarities", pulser_polarities);
     spectrum_polarities = m_config->Get("spectrum_polarities", spectrum_polarities);
-    for (auto i: polarities)  v_polarities->push_back(uint16_t(i * 1));
-    for (auto i: pulser_polarities) v_pulser_polarities->push_back(uint16_t(i * 1));
-    for (auto i: spectrum_polarities) v_spectrum_polarities->push_back(uint16_t(i * 1));
 
     // regions todo: add default range
     active_regions = m_config->Get("active_regions", uint16_t(0));
@@ -277,9 +271,6 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("IntegralLength",&IntegralLength);
 
     // DUT
-    m_ttree->Branch("polarities", &v_polarities);
-    m_ttree->Branch("pulser_polarities", &v_pulser_polarities);
-    m_ttree->Branch("spectrum_polarities", &v_spectrum_polarities);
     m_ttree->Branch("is_saturated", &v_is_saturated);
     m_ttree->Branch("median", &v_median);
     m_ttree->Branch("average", &v_average);
