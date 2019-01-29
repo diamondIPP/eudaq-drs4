@@ -43,11 +43,11 @@ namespace eudaq {
 
     private:
         unsigned runnumber;
-        uint16_t n_channels;
         TH1F *histo;
         long max_event_number;
         uint16_t save_waveforms;
         uint16_t active_regions;
+        uint16_t n_active_channels;
         std::vector<uint16_t> * dia_channels;
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
@@ -64,6 +64,8 @@ namespace eudaq {
         std::string GetPolarities(std::vector<signed char> pol);
         void SetTimeStamp(StandardEvent);
         void SetBeamCurrent(StandardEvent);
+        void ReadIntegralRanges();
+        void ReadIntegralRegions();
         float GetRFPhase(float, float);
 
         // clocks for checking execution time
@@ -77,14 +79,11 @@ namespace eudaq {
         std::vector<std::string> sensor_name;
         // Book variables for the Event_to_TTree conversion
         unsigned m_noe;
-        short chan;
+        short n_channels;
         int n_pixels;
-        std::map<std::string, std::pair<float, float> *> ranges;
         std::vector<signed char> polarities;
         std::vector<signed char> pulser_polarities;
-
-        std::vector<int16_t> *v_polarities;
-        std::vector<int16_t> *v_pulser_polarities;
+        std::vector<signed char> spectrum_polarities;
 
         // drs4 timing calibration
         std::map<uint8_t, std::vector<float> > tcal;
@@ -110,6 +109,7 @@ namespace eudaq {
         float f_rf_phase;
         float f_rf_period;
         float f_rf_chi2;
+        bool fit_rf;
 
         bool f_pulser;
         std::vector<uint16_t> *v_forc_pos;
@@ -124,6 +124,7 @@ namespace eudaq {
 
         uint16_t spectrum_waveforms;
         uint16_t fft_waveforms;
+        std::pair<uint16_t, uint16_t> pulser_region;
         int pulser_threshold;
         uint8_t pulser_channel;
         uint8_t trigger_channel;
@@ -132,6 +133,7 @@ namespace eudaq {
 
         /** VECTOR BRANCHES */
         // integrals
+        std::map<uint8_t, std::map<std::string, std::pair<float, float> *> > ranges;
         std::map<int, WaveformSignalRegions *> *regions;
         std::vector<std::string> *IntegralNames;
         std::vector<float> *IntegralValues;
@@ -142,9 +144,8 @@ namespace eudaq {
 
         // general waveform information
         std::vector<float> * v_signal_peak_time;
-        std::vector<float> * v_rise_width;
         std::vector<float> * v_rise_time;
-        std::vector<float> * v_t_thresh;
+        std::vector<float> * v_fall_time;
         std::vector<bool> *v_is_saturated;
         std::vector<float> *v_median;
         std::vector<float> *v_average;
