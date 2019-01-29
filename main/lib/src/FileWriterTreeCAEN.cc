@@ -505,8 +505,11 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     -------------------------DECONSTRUCTOR-------------------------------
     =====================================================================*/
 FileWriterTreeCAEN::~FileWriterTreeCAEN() {
-    macro->AddLine("\nSensor Names:");
-    macro->AddLine(("  " + to_string(sensor_name)).c_str());
+    macro->AddLine("\n[Sensor Names]");
+    vector<string> names;
+    for (const auto &name: sensor_name)
+        names.push_back("\"" + name + "\"");
+    macro->AddLine(("Names = [" + to_string(names) + "]").c_str());
     stringstream ss;
     ss << "Summary of RUN " << runnumber << "\n";
     long entries = m_ttree->GetEntries();

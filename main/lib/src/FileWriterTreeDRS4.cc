@@ -473,7 +473,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 FileWriterTreeDRS4::~FileWriterTreeDRS4() {
     macro->AddLine("\n[Sensor Names]");
     vector<string> names;
-    for (auto name: sensor_name)
+    for (const auto &name: sensor_name)
       names.push_back("\"" + name + "\"");
     macro->AddLine(("Names = [" + to_string(names) + "]").c_str());
     stringstream ss;
