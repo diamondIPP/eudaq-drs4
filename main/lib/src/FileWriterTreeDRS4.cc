@@ -136,12 +136,12 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
 void FileWriterTreeDRS4::Configure(){
 
     // do some assertions
-    if (!this->m_config){
+    if (this->m_config == nullptr){
         EUDAQ_WARN("Configuration class instance m_config does not exist!");
         return;
     }
     m_config->SetSection("Converter.drs4tree");
-    if (m_config->NSections()==0){
+    if (m_config->NSections() == 0){
         EUDAQ_WARN("Config file has no sections!");
         return;
     }
@@ -164,7 +164,7 @@ void FileWriterTreeDRS4::Configure(){
     peak_finding_roi = m_config->Get("peak_finding_roi", make_pair(0.0, 0.0));
 
     // channels
-    pulser_threshold = m_config->Get("pulser_drs4_threshold", 80);
+    pulser_threshold = m_config->Get("pulser_channel_threshold", 80);
     pulser_channel = uint8_t(m_config->Get("pulser_channel", 1));
     trigger_channel = uint8_t(m_config->Get("trigger_channel", 2));
 
@@ -196,7 +196,7 @@ void FileWriterTreeDRS4::Configure(){
         if (UseWaveForm(active_regions, i)) (*regions)[i] = new WaveformSignalRegions(i, polarities.at(i), pulser_polarities.at(i));
 
     // read the peak integral ranges from the config file
-    pulser_range = m_config->Get("pulser_range_drs4", make_pair(800, 1000));
+    pulser_region = m_config->Get("pulser_channel_region", make_pair(800, 1000));
     ReadIntegralRanges();
     for (auto ch: ranges) {
       macro->AddLine(TString::Format("\n[Integral Ranges %d]", ch.first));
@@ -825,7 +825,7 @@ void FileWriterTreeDRS4::UpdateWaveforms(uint8_t iwf){
 } // end UpdateWaveforms()
 
 inline int FileWriterTreeDRS4::IsPulserEvent(const StandardWaveform *wf){
-    float pulser_int = wf->getIntegral(pulser_range.first, pulser_range.second, true);
+    float pulser_int = wf->getIntegral(pulser_region.first, pulser_region.second, true);
     return pulser_int > pulser_threshold;
 } //end IsPulserEvent
 
@@ -945,6 +945,7 @@ void FileWriterTreeDRS4::ReadIntegralRegions() {
 
   for (const auto &i_key: m_config->GetKeys()){
     if (i_key.find("active_regions") != string::npos) continue;
+    if (i_key.find("pulser_channel") != string::npos) continue;
     size_t found = i_key.find("_region");
     if (found == string::npos) continue;
     string name = i_key.substr(0, found);

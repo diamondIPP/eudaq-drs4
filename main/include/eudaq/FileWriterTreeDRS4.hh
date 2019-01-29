@@ -127,7 +127,7 @@ namespace eudaq {
 
         uint16_t spectrum_waveforms;
         uint16_t fft_waveforms;
-        std::pair<uint16_t, uint16_t> pulser_range;
+        std::pair<uint16_t, uint16_t> pulser_region;
         int pulser_threshold;
         uint8_t pulser_channel;
         uint8_t trigger_channel;
