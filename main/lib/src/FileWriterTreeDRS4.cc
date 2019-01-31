@@ -151,7 +151,7 @@ void FileWriterTreeDRS4::Configure(){
     max_event_number = m_config->Get("max_event_number", 0);
 
     // spectrum and fft
-    peak_noise_pos = m_config->Get("peak_noise_pos", unsigned(0));
+    peak_noise_pos = m_config->Get("peak_noise_pos", m_config->Get("pedestal_ab_region", make_pair(20, 20)).first);
     spec_sigma = m_config->Get("spectrum_sigma", 5);
     spec_decon_iter = m_config->Get("spectrum_deconIterations", 3);
     spec_aver_win = m_config->Get("spectrum_averageWindow", 5);
