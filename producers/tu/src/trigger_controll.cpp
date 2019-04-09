@@ -1,7 +1,4 @@
 
-
-
-
 #include "trigger_controll.h"
 #include "TUDEFS.h"
 #include <stdio.h>
@@ -13,6 +10,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "iostream"
 
 //#define HOST "128.146.33.69"
 using namespace std;
@@ -375,94 +373,40 @@ using namespace libconfig;
         return this->ip_adr;
     }
 
-    int trigger_controll::load_from_file(char *fname)
-    {
-        Config *cfg;
+    int trigger_controll::load_from_file(char *fname) {
+
+        Config * cfg;
         cfg = new Config();
-        // Read the file. If there is an error, market and contunue on.
-        try
-        {
+        // Read the file. If there is an error, mark it and continue on.
+        try {
           cfg->readFile(fname);
-        }
-        catch(const FileIOException &fioex)
-        {
-            printf("I/O error while reading config file.\n");
+        } catch(const FileIOException & fioex) {
+            cout << "I/O error while reading config file." << endl;
             return 1;
+        } catch(const ParseException & pex) {
+            cout << "Error parsing config file. " << endl;
         }
-        catch(const ParseException &pex)
-        {
-            std::string str;
-            printf("Error parsing config file: " );//+ pex.getLine() + " - " + pex.getError();
 
-    //      return;
+        libconfig::Setting & root = cfg->getRoot();
+        try {
+          root.lookupValue("ip_adr", ip_adr);
+        } catch(const SettingNotFoundException & nfex) {
+          ip_adr = "192.168.1.120";
         }
-        Setting &root = cfg->getRoot();
-        if( root.exists("ip_adr")) //make a default config file if settings donot exists
-        {
-            std::string str;
-            root.lookupValue("ip_adr",str);
-           ip_adr = str;
-        }else{
-            ip_adr = "192.168.1.120";
-        }
-        if( root.exists("delays")) //make a default config file if settings donot exists
-        {
-            int i;
-            Setting &delays = root["delays"];
-
-            if(delays.exists("scintillator"))
-            {
-                delays.lookupValue("scintillator",i);
-                set_scintillator_delay(i);
-            }
-            if(delays.exists("plane1"))
-            {
-                delays.lookupValue("plane1",i);
-                set_plane_1_delay(i);
-            }
-            if(delays.exists("plane2"))
-            {
-                delays.lookupValue("plane2",i);
-                set_plane_2_delay(i);
-            }
-            if(delays.exists("plane3"))
-            {
-                delays.lookupValue("plane3",i);
-                set_plane_3_delay(i);
-            }
-            if(delays.exists("plane4"))
-            {
-                delays.lookupValue("plane4",i);
-                set_plane_4_delay(i);
-            }
-            if(delays.exists("plane5"))
-            {
-                delays.lookupValue("plane5",i);
-                set_plane_5_delay(i);
-            }
-            if(delays.exists("plane6"))
-            {
-                delays.lookupValue("plane6",i);
-                set_plane_6_delay(i);
-            }
-            if(delays.exists("plane7"))
-            {
-                delays.lookupValue("plane7",i);
-                set_plane_7_delay(i);
-            }
-            if(delays.exists("plane8"))
-            {
-                delays.lookupValue("plane8",i);
-                set_plane_8_delay(i);
-            }
-            if(delays.exists("pad"))
-            {
-                delays.lookupValue("pad",i);
-                set_pad_delay(i);
-            }
-            if(set_delays())
-            {
-                printf("Error setting delays: %s\n",this->error_str);
+        if( root.exists("delays") ) {
+            Setting & delays = root["delays"];
+            if (delays.exists("scintillator")) { delays.lookupValue("scintillator", scintillator_delay); }
+            if(delays.exists("plane1")) { delays.lookupValue("plane1", plane_1_delay); }
+            if(delays.exists("plane2")) { delays.lookupValue("plane2", plane_2_delay); }
+            if(delays.exists("plane3")) { delays.lookupValue("plane3", plane_3_delay); }
+            if(delays.exists("plane4")) { delays.lookupValue("plane4", plane_4_delay); }
+            if(delays.exists("plane5")) { delays.lookupValue("plane5", plane_5_delay); }
+            if(delays.exists("plane6")) { delays.lookupValue("plane6", plane_6_delay); }
+            if(delays.exists("plane7")) { delays.lookupValue("plane7", plane_7_delay); }
+            if(delays.exists("plane8")) { delays.lookupValue("plane8", plane_8_delay); }
+            if(delays.exists("pad")) { delays.lookupValue("pad", pad_delay); }
+            if (set_delays() > 0) {
+                cout << "Error setting delays: %s\n" << error_str << endl;
                 return 1;
             }
         }
