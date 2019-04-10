@@ -2,6 +2,7 @@
 #define TRIGGER_CONTROLL_H
 #include<stdio.h>
 #include<string.h>    //strlen
+#include <vector>
 #include<sys/socket.h>
 #include<arpa/inet.h> //inet_addr
 #include "http_responce_pars.h"
@@ -18,132 +19,28 @@
  *  requires: libconfig
  *  @see Triger_Logic_tpc_Stream for read out. 
  **************************************************************************/
-class trigger_controll
-{
+class trigger_controll{
+
 public:
     trigger_controll();
-    
+
+    unsigned short n_planes;
     /*********************************************************************//*!
-     * sets the scintillator delay localy set_delays must be caled to send
-     * all deays to the trigger box
+     * set the delays locally, set_delays must be called to send all deays to the trigger box
      * @param d the input delay for the scintillator -  
      * @see set_delays()
      ************************************************************************/
-    void set_scintillator_delay(int d);  //sets the delays in the class but does not
-    /********************************************************************//*!
-     * sets the plane 1 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 1 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_1_delay(int d);      //wrigtht them to the fpga.  must call
-    /********************************************************************//*!
-     * sets the plane 2 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 2 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_2_delay(int d);      //set_delays to load it to the fpga
-    /*******************************************************************//*!
-     * sets the plane 3 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 3 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_3_delay(int d);
-    /*******************************************************************//*!
-     * sets the plane 4 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 4 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_4_delay(int d);
-    /*******************************************************************//*!
-     * sets the plane 5 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 5 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_5_delay(int d);
-    /*******************************************************************//*!
-     * sets the plane 6 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 6 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_6_delay(int d);
-    /*******************************************************************//*!
-     * sets the plane 7 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 7 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_7_delay(int d);
-    /*******************************************************************//*!
-     * sets the plane 8 delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for  plane 8 
-     * @see set_delays()
-     ************************************************************************/
-    void set_plane_8_delay(int d);
-    /*******************************************************************//*!
-     * sets the pad delay localy set_delays must be caled to send
-     * all deays to the trigger box
-     * @param d the input delay for pad 
-     * @see set_delays()
-     ************************************************************************/
-    void set_pad_delay(int d);
+    void set_scintillator_delay(unsigned d) { scintillator_delay =d; }
+    void set_plane_delay(size_t i_plane, unsigned d) { plane_delays.at(i_plane) = d; }
+    void set_pad_delay(unsigned d) { pad_delay = d; };
 
     /*******************************************************************//*!
-     * @return the scintillator delay stored in the class. set by  set_scintillator_delay()
+     * @return the delay stored in the class. set by @set
      * @see set_scintillator_delay()
      ************************************************************************/
-    int get_scintillator_delay();
-    /*******************************************************************//*!
-     * @return the plane 1 delay stored in the class. set by set_plane_1_delay()
-     * @see set_plane_1_delay()
-     ************************************************************************/
-    int get_plane_1_delay();
-    /*******************************************************************//*!
-     * @return the plane 2 delay stored in the class. set by set_plane_2_delay()
-     * @see set_plane_2_delay()
-     ************************************************************************/
-    int get_plane_2_delay();
-    /*******************************************************************//*!
-     * @return the plane 3 delay stored in the class. set by set_plane_3_delay()
-     * @see set_plane_3_delay()
-     ************************************************************************/
-    int get_plane_3_delay();
-    /*******************************************************************//*!
-     * @return the plane 4 delay stored in the class. set by set_plane_4_delay()
-     * @see set_plane_4_delay()
-     ************************************************************************/
-    int get_plane_4_delay();
-    /*******************************************************************//*!
-     * @return the plane 5 delay stored in the class. set by set_plane_5_delay()
-     * @see set_plane_5_delay()
-     ************************************************************************/
-    int get_plane_5_delay();
-    /*******************************************************************//*!
-     * @return the plane 6 delay stored in the class. set by set_plane_6_delay()
-     * @see set_plane_6_delay()
-     ************************************************************************/
-    int get_plane_6_delay();
-    /*******************************************************************//*!
-     * @return the plane 7 delay stored in the class. set by set_plane_7_delay()
-     * @see set_plane_7_delay()
-     ************************************************************************/
-    int get_plane_7_delay();
-    /*******************************************************************//*!
-     * @return the plane 8 delay stored in the class. set by set_plane_8_delay()
-     * @see set_plane_8_delay()
-     ************************************************************************/
-    int get_plane_8_delay();
-    /*******************************************************************//*!
-     * @return the pad delay stored in the class. set by set_pad_delay()
-     * @see set_pad_delay()
-     ************************************************************************/
-    int get_pad_delay();
+    unsigned get_scintillator_delay() { return scintillator_delay; }
+    unsigned get_plane_delay(size_t i_plane) { return plane_delays.at(i_plane); }
+    unsigned get_pad_delay() { return pad_delay; }
 
     /*******************************************************************//*!
      * sends the set dellays stored in the class to the triger box 
@@ -397,14 +294,7 @@ public:
 private:
     int http_backend(char * command);
     int scintillator_delay;
-    int plane_1_delay;
-    int plane_2_delay;
-    int plane_3_delay;
-    int plane_4_delay;
-    int plane_5_delay;
-    int plane_6_delay;
-    int plane_7_delay;
-    int plane_8_delay;
+    std::vector<unsigned> plane_delays;
     int pad_delay;
     http_responce_pars * parser;
     char error_str[255];

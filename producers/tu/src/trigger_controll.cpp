@@ -17,34 +17,11 @@ using namespace std;
 #include <libconfig.h++>
 using namespace libconfig;
 
-    trigger_controll::trigger_controll(){
+    trigger_controll::trigger_controll(): n_planes(8) {
+        plane_delays.resize(n_planes, 0);
         parser = new(http_responce_pars);
-        this->ip_adr = "192.168.1.120";
     }
 
-    void trigger_controll::set_scintillator_delay(int d){this->scintillator_delay =d;}
-    void trigger_controll::set_plane_1_delay(int d){this->plane_1_delay=d;}
-    void trigger_controll::set_plane_2_delay(int d){this->plane_2_delay=d;}
-    void trigger_controll::set_plane_3_delay(int d){this->plane_3_delay=d;}
-    void trigger_controll::set_plane_4_delay(int d){this->plane_4_delay=d;}
-    void trigger_controll::set_plane_5_delay(int d){this->plane_5_delay=d;}
-    void trigger_controll::set_plane_6_delay(int d){this->plane_6_delay=d;}
-    void trigger_controll::set_plane_7_delay(int d){this->plane_7_delay=d;}
-    void trigger_controll::set_plane_8_delay(int d){this->plane_8_delay=d;}
-    void trigger_controll::set_pad_delay(int d){this->pad_delay=d;}
-
-
-
-    int trigger_controll::get_scintillator_delay(){return this->scintillator_delay;}
-    int trigger_controll::get_plane_1_delay(){return this->plane_1_delay;}
-    int trigger_controll::get_plane_2_delay(){return this->plane_2_delay;}
-    int trigger_controll::get_plane_3_delay(){return this->plane_3_delay;}
-    int trigger_controll::get_plane_4_delay(){return this->plane_4_delay;}
-    int trigger_controll::get_plane_5_delay(){return this->plane_5_delay;}
-    int trigger_controll::get_plane_6_delay(){return this->plane_6_delay;}
-    int trigger_controll::get_plane_7_delay(){return this->plane_7_delay;}
-    int trigger_controll::get_plane_8_delay(){return this->plane_8_delay;}
-    int trigger_controll::get_pad_delay(){return this->pad_delay;}
     int trigger_controll::get_coincidence_pulse_width(){return coincidence_pulse_width;}
     int trigger_controll::get_coincidence_edge_width(){return coincidence_edge_width;}
     int trigger_controll::get_clk40_phase1(){return this->clk40_phase1;}
@@ -53,25 +30,19 @@ using namespace libconfig;
 
 
     int trigger_controll::set_delays(){
-        char cmd_str[128];
-        sprintf(cmd_str,"/a?a0=%d&a1=%d&a2=%d&a3=%d&a4=%d&a5=%d&a6=%d&a7=%d&a8=%d&a9=%d",scintillator_delay,
-                plane_1_delay,plane_2_delay,plane_3_delay,plane_4_delay,
-                plane_5_delay,plane_6_delay,plane_7_delay,plane_8_delay,pad_delay);
-        return this->http_backend(cmd_str);
+        string cmd_str = "/a?";
+        cmd_str += "a0=" + to_string(scintillator_delay);
+        for (auto i_d(0); i_d < n_planes; i_d++) {
+            cmd_str += "a" + to_string(i_d + 1) + "=" + to_string(plane_delays.at(i_d));
+        }
+        cmd_str += "a" + to_string(n_planes) + "=" + to_string(pad_delay);
+        return this->http_backend(const_cast<char *>(cmd_str.c_str()));
     }
 
-    int trigger_controll::enable(bool state){
-        char cmd_str[128];
-        if(state)
-            sprintf(cmd_str,"/a?k=7");
-        else
-            sprintf(cmd_str,"/a?k=0");
-
-        return this->http_backend(cmd_str);
+    int trigger_controll::enable(bool state) {
+        string cmd_str = state ? "/a?k=7" : "/a?k=0";
+        return this->http_backend(const_cast<char *>(cmd_str.c_str()));
     }
-    
-
-
 
     int trigger_controll::set_coincidence_pulse_width(int width){
         char cmd_str[128];
@@ -396,14 +367,10 @@ using namespace libconfig;
         if( root.exists("delays") ) {
             Setting & delays = root["delays"];
             if (delays.exists("scintillator")) { delays.lookupValue("scintillator", scintillator_delay); }
-            if(delays.exists("plane1")) { delays.lookupValue("plane1", plane_1_delay); }
-            if(delays.exists("plane2")) { delays.lookupValue("plane2", plane_2_delay); }
-            if(delays.exists("plane3")) { delays.lookupValue("plane3", plane_3_delay); }
-            if(delays.exists("plane4")) { delays.lookupValue("plane4", plane_4_delay); }
-            if(delays.exists("plane5")) { delays.lookupValue("plane5", plane_5_delay); }
-            if(delays.exists("plane6")) { delays.lookupValue("plane6", plane_6_delay); }
-            if(delays.exists("plane7")) { delays.lookupValue("plane7", plane_7_delay); }
-            if(delays.exists("plane8")) { delays.lookupValue("plane8", plane_8_delay); }
+            for (auto i_plane(0); i_plane < n_planes; i_plane++){
+                string key = "plane" + to_string(i_plane + 1);
+                if (delays.exists(key)) { delays.lookupValue(key, plane_delays.at(i_plane)); }
+            }
             if(delays.exists("pad")) { delays.lookupValue("pad", pad_delay); }
             if (set_delays() > 0) {
                 cout << "Error setting delays: %s\n" << error_str << endl;

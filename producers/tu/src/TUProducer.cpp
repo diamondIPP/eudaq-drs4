@@ -30,13 +30,15 @@
 #define BOLDGREEN "\33[1m\033[32m"
 #define CLEAR "\033[0m\n"
 
+using namespace std;
+
 static const std::string EVENT_TYPE = "TU";
 
 TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity):eudaq::Producer(name, runcontrol),
 	event_type(EVENT_TYPE),
 	m_run(0), m_ev(0),
 	done(false), TUStarted(false), TUJustStopped(false),
-	tc(NULL), stream(NULL){
+	tc(nullptr), stream(nullptr){
 
   try{
     std::fill_n(trigger_counts, 10, 0);
@@ -56,11 +58,10 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
 
     tc = new trigger_controll(); //does not talk to the box
     stream = new Trigger_logic_tpc_Stream(); //neither this
-    if (tc->enable(false) != 0){throw(-1);}
 
     //TUServer = new Server(8889);
-  }catch (...){
-    std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU!" << CLEAR;
+  } catch (...) {
+    std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU with ip " << tc->get_ip_adr() << CLEAR;
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");
   }
@@ -339,34 +340,27 @@ void TUProducer::OnStatus(){
 
 
 void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
-	try {
 
+	try {
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
 
 		std::string ip_adr = conf.Get("ip_adr", "192.168.1.120");
+		tc->set_ip_adr(ip_adr);
 		const char *ip = ip_adr.c_str();
 		if(tc->enable(false) != 0){throw(-1);}
-
-
 		stream->set_ip_adr(ip);
-   		std::cout << "Opening connection to TU @ " << ip << " ..";
-   		if(stream->open() != 0){throw(-1);}
+    std::cout << "Opening connection to TU @ " << ip << " ..";
+    if(stream->open() != 0){throw(-1);}
+    std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
-   		std::cout << BOLDGREEN << " [OK] " << CLEAR;
-
-
-   		std::cout << "Configuring (" << conf.Name() << "), please wait." << std::endl;			
-  		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
-  		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad..";
+    std::cout << "Configuring (" << conf.Name() << "), please wait." << std::endl;
+    //enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
+    std::cout << "--> Setting delays for scintillator, planes 1-8 and pad...";
 		tc->set_scintillator_delay(conf.Get("scintillator_delay", 100));
-		tc->set_plane_1_delay(conf.Get("plane1del", 100));
-		tc->set_plane_2_delay(conf.Get("plane2del", 100));
-		tc->set_plane_3_delay(conf.Get("plane3del", 100));
-		tc->set_plane_4_delay(conf.Get("plane4del", 100));
-		tc->set_plane_5_delay(conf.Get("plane5del", 100));
-		tc->set_plane_6_delay(conf.Get("plane6del", 100));
-		tc->set_plane_7_delay(conf.Get("plane7del", 100));
-		tc->set_plane_8_delay(conf.Get("plane8del", 100));
+		for (auto i_plane(0); i_plane < tc->n_planes; i_plane++){
+		  std::string key = "plane" + to_string(i_plane + 1) + "del";
+		  tc->set_plane_delay(i_plane, conf.Get(key, 100));
+		}
 		tc->set_pad_delay(conf.Get("pad_delay", 100));
 		if(tc->set_delays() != 0){throw(-1);}
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
@@ -455,17 +449,13 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		eudaq::mSleep(1000);
 		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
+		float delay_width = 2.5;
 		std::cout << "################### Readback ###################" << std::endl;
-		std::cout << "Scintillator delay [ns]: " << tc->get_scintillator_delay()*2.5 << std::endl;
-		std::cout << "Plane 1 delay [ns]: " << tc->get_plane_1_delay()*2.5 << std::endl;
-		std::cout << "Plane 2 delay [ns]: " << tc->get_plane_2_delay()*2.5 << std::endl;
-		std::cout << "Plane 3 delay [ns]: " << tc->get_plane_3_delay()*2.5 << std::endl;
-		std::cout << "Plane 4 delay [ns]: " << tc->get_plane_4_delay()*2.5 << std::endl;
-		std::cout << "Plane 5 delay [ns]: " << tc->get_plane_5_delay()*2.5 << std::endl;
-		std::cout << "Plane 6 delay [ns]: " << tc->get_plane_6_delay()*2.5 << std::endl;
-		std::cout << "Plane 7 delay [ns]: " << tc->get_plane_7_delay()*2.5 << std::endl;
-		std::cout << "Plane 8 delay [ns]: " << tc->get_plane_8_delay()*2.5 << std::endl;
-		std::cout << "Pad delay [ns]: " << tc->get_pad_delay()*2.5 << std::endl << std::endl;
+		std::cout << "Scintillator delay [ns]: " << tc->get_scintillator_delay() * delay_width << std::endl;
+		for (auto i_delay(0); i_delay < tc->n_planes; i_delay++) {
+		  std::cout << "Plane " << i_delay + 1 << " delay [ns]: " << tc->get_plane_delay(i_delay) * delay_width << std::endl;
+		}
+		std::cout << "Pad delay [ns]: " << tc->get_pad_delay() * delay_width << std::endl << std::endl;
 
 		std::cout << "Handshake delay [ns]: " << tc->get_handshake_delay()*2.5 << std::endl;
 		std::cout << "Handshake mask: " << tc->get_handshake_mask() << std::endl << std::endl;
@@ -487,7 +477,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 
 	}catch (...){
-		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU, try again." << CLEAR;
+		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU with ip " << tc->get_ip_adr() << ", try again." << CLEAR;
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
 	}
 }
