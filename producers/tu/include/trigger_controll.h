@@ -8,6 +8,7 @@
 #include "http_responce_pars.h"
 #include "trigger_logic_tpc_stream.h"
 #include <libconfig.h++>
+#include <exception>
 /************************************************************************//**
  *  trigger_controll cllass 
  *  a class for contraling the trigger box. 
@@ -307,6 +308,14 @@ private:
     int pulser_polarity;
     std::string ip_adr;
 };
+class tu_program_exception: public std::exception {
 
+  const std::string _msg;
+
+public:
+  explicit
+  tu_program_exception(std::string msg=""): _msg("TUProgramError: " +  std::move(msg)) { }
+  const char* what() const noexcept override { return _msg.c_str(); }
+};
 
 #endif // TRIGGER_CONTROLL_H
