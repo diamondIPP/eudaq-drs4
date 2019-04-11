@@ -67,8 +67,8 @@ class EudaqStart:
     def protect_data(self):
         if self.DataPC is None:
             data_dir = join(dirname(self.Dir), 'data')
-            if glob(join(data_dir, 'run*raw')):
-                chmod(join(data_dir, 'run*raw'), 0444)
+            for name in glob(join(data_dir, 'run*raw')):
+                chmod(join(data_dir, name), 0444)
         else:
             home_dir = join('/home', get_user(self.DataPC))
             data_dir = join(home_dir, self.Config.get('DIR', 'data'), 'data')
@@ -99,7 +99,7 @@ class EudaqStart:
     def get_script_cmd(self, name, script_dir='scripts'):
         ssh_cmd = '' if self.BeamPC is None else 'ssh -tY {} '.format(self.BeamPC)
         script_path = join('~', script_dir) if self.BeamPC is None else join('/home', get_user(self.BeamPC), script_dir)
-        return '{}{}'.format(ssh_cmd, join(script_path, name) if name is not None else '')
+        return '"{}{}"'.format(ssh_cmd, join(script_path, name) if name is not None else '')
 
     def start_beam_device(self, name, device, script_name=None, script_dir='scripts'):
         if self.Config.getboolean('DEVICE', device):
