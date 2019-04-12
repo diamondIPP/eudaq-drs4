@@ -300,16 +300,14 @@ using namespace libconfig;
         sprintf(str,"/a?j=%d",delay);
         return this->http_backend(str);
     }
-    /* the phase ctl of the 40MHz clk is set by 2 4bit numbers packed in to one 8bit int*/
-    int trigger_controll::set_clk40_phases(int phase1, int phase2)
-    {   
-        this->clk40_phase1 = phase1;
-        this->clk40_phase2 = phase2;
-        int phases = (phase2<<4) | phase1;
+    /** the phase shift of the 40MHz clk is set by 2 4bit numbers packed in to one 8bit int*/
+    int trigger_controll::set_clk40_phases(int phase1, int phase2) {
+        clk40_phase1 = phase1;
+        clk40_phase2 = phase2;
+        int phases = (phase2 << 4) | phase1;
         if (phases > 255) {return -1;}
-        char str[32];
-        sprintf(str,"/a?u=%d",phases);
-        return this->http_backend(str);
+        string cmd = "/a?u=" + to_string(phases);
+        return this->http_backend(cmd);
     }
 
     /** delay 1 & 2 are packed in to a 32: bit 0-11 = delay 1, bit 12-23 = delay 2 */
