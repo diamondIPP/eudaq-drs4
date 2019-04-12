@@ -391,16 +391,17 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		double freq = conf.Get("pulser_freq", 0);
 		int width = conf.Get("pulser_width", 0);
 		int puldel = conf.Get("pulser_delay", 5); //must be > 4
-		int pol_pulser1 = conf.Get("pulser1_polarity", 0);
-		int pol_pulser2 = conf.Get("pulser2_polarity", 1);
+		bool pol_pulser1 = conf.Get("pulser1_polarity", false);
+		bool pol_pulser2 = conf.Get("pulser2_polarity", true);
 		std::cout << "     Frequency: " << freq << std::endl;
 		std::cout << "     Width: " << width << std::endl;
 		std::cout << "     Delay: " << freq << std::endl;
-		std::cout << "	   Pulser 1/2 Polarities: " << pol_pulser1 << "/" << pol_pulser2 << " (0=negative/1=positive)" << std::endl;
+		std::cout << "     Pulser 1/2 Polarities: " << pol_pulser1 << "/" << pol_pulser2 << " (0=negative/1=positive)" << std::endl;
 
-		if(tc->set_Pulser_width(freq, width) != 0){throw(-1);}
-		if(tc->set_pulser_delay(puldel) != 0){throw(-1);}
-		std::cout << BOLDGREEN << " ... [OK] " << CLEAR;
+		if (tc->set_Pulser_width(freq, width) != 0) { throw(tu_program_exception("Could not set pulser frequency and width!")); }
+		if (tc->set_pulser_delay(puldel) != 0) { throw(tu_program_exception("Could not set pulser delay!")); }
+		if (tc->set_pulser_polarity(pol_pulser1, pol_pulser2) != 0) { throw(tu_program_exception("Could not set pulser polarities!")); }
+		std::cout << BOLDGREEN << "... [OK] " << CLEAR;
 
 
 		std::cout << "--> Setting coincidence pulse and edge width..";
