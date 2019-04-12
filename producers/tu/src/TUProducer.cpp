@@ -103,7 +103,7 @@ void TUProducer::MainLoop(){
 				time_stamps[0] = time_stamps[1]; //save old timestamp for frequency calculations
 				time_stamps[1] = rd->time_stamp; //save new
 
-				beam_curr = CorrectBeamCurrent(1000*(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0]))));
+				beam_curr = CalculateBeamCurrent();
 				cal_beam_current = SlidingWindow(beam_curr);
 				
 
@@ -331,10 +331,7 @@ void TUProducer::OnStatus(){
 			m_status.SetTag("SCALER" + std::to_string(i), std::to_string(avg_input_frequencies[i]));
 		}
 
-		if(cal_beam_current > 0)
-			m_status.SetTag("BEAM_CURR", std::to_string(cal_beam_current));
-		else
-			m_status.SetTag("BEAM_CURR", std::to_string(0));
+    m_status.SetTag("BEAM_CURR", std::to_string(cal_beam_current));
 	}
 }
 
@@ -520,8 +517,9 @@ float TUProducer::SlidingWindow(float val){
 }
 
 //values from laboratory measurement with pulser
-float TUProducer::CorrectBeamCurrent(float uncorr){
-	return (3.01077 + 1.06746*uncorr);
+float TUProducer::CalculateBeamCurrent(){
+  float rate = 10 * ((beam_current[1] - beam_current[0]) / float(time_stamps[1] - time_stamps[0]));
+	return rate > 0 ? 3.01077 + 1.06746 * rate : 0;
 }
 
 
