@@ -288,6 +288,7 @@ public:
 
 private:
     int http_backend(char * command);
+    int http_backend(const std::string & cmd) { return http_backend(const_cast<char *>(cmd.c_str())); }
     int scintillator_delay;
     std::vector<unsigned> plane_delays;
     std::vector<unsigned short> trigger_delays;

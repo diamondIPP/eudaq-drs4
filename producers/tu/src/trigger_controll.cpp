@@ -40,12 +40,12 @@ using namespace libconfig;
             cmd_str += "a" + to_string(i_d + 1) + "=" + to_string(plane_delays.at(i_d));
         }
         cmd_str += "a" + to_string(n_planes) + "=" + to_string(pad_delay);
-        return this->http_backend(const_cast<char *>(cmd_str.c_str()));
+        return this->http_backend(cmd_str);
     }
 
     int trigger_controll::enable(bool state) {
         string cmd_str = state ? "/a?k=7" : "/a?k=0";
-        return this->http_backend(const_cast<char *>(cmd_str.c_str()));
+        return this->http_backend(cmd_str);
     }
 
     int trigger_controll::set_coincidence_pulse_width(int width){
