@@ -10,7 +10,7 @@
 
 //TU includes
 #include "TUProducer.hh"
-#include "trigger_controll.h"
+#include "trigger_control.h"
 #include "TUDEFS.h"
 
 //EUDAQ includes
@@ -56,7 +56,7 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     for (auto i = scaler_deques.begin(); i != scaler_deques.end(); i++)
         i->assign(20,0);
 
-    tc = new trigger_controll(); //does not talk to the box
+    tc = new trigger_control(); //does not talk to the box
     stream = new Trigger_logic_tpc_Stream(); //neither this
 
     //TUServer = new Server(8889);
@@ -398,7 +398,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << "     Delay: " << freq << std::endl;
 		std::cout << "     Pulser 1/2 Polarities: " << pol_pulser1 << "/" << pol_pulser2 << " (0=negative/1=positive)" << std::endl;
 
-		if (tc->set_Pulser_width(freq, width) != 0) { throw(tu_program_exception("Could not set pulser frequency and width!")); }
+    if (tc->set_pulser(freq, width) != 0) { throw(tu_program_exception("Could not set pulser frequency or pulse width!")); }
 		if (tc->set_pulser_delay(puldel) != 0) { throw(tu_program_exception("Could not set pulser delay!")); }
 		if (tc->set_pulser_polarity(pol_pulser1, pol_pulser2) != 0) { throw(tu_program_exception("Could not set pulser polarities!")); }
 		std::cout << BOLDGREEN << "... [OK] " << CLEAR;

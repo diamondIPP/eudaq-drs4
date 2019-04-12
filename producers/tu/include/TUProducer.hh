@@ -20,7 +20,7 @@
 #include <vector>
 
 class Configuration;
-class trigger_controll;
+class trigger_control;
 
 
 class TUProducer:public eudaq::Producer{
@@ -42,7 +42,7 @@ private:
 	std::string event_type;
 	unsigned int m_run, m_ev, m_ev_prev, prev_handshake_count; //run & event number
 	bool done, TUStarted, TUJustStopped;
-	trigger_controll *tc; //class for TU control from trigger_controll.h
+	trigger_control *tc; //class for TU control from trigger_control.h
 	Trigger_logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
 	unsigned int error_code;
 	int trg_mask;

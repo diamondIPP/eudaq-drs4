@@ -1,5 +1,5 @@
-#ifndef TRIGGER_CONTROLL_H
-#define TRIGGER_CONTROLL_H
+#ifndef TRIGGER_CONTROL_H
+#define TRIGGER_CONTROL_H
 #include<stdio.h>
 #include<string.h>    //strlen
 #include <vector>
@@ -20,12 +20,16 @@
  *  requires: libconfig
  *  @see Triger_Logic_tpc_Stream for read out. 
  **************************************************************************/
-class trigger_controll{
+class trigger_control{
 
 public:
-    trigger_controll();
+    trigger_control();
 
     unsigned short n_planes;
+    template <typename T>
+    int set_value(const std::string& cmd, T value, T & field);
+    template <typename T, typename Q=int>
+    int set_value(const std::string& cmd, T value, const std::string & cmd2="", Q value2=0);
     /*********************************************************************//*!
      * set the delays locally, set_delays must be called to send all deays to the trigger box
      * @param d the input delay for the scintillator -  
@@ -51,25 +55,6 @@ public:
      ************************************************************************/
     int set_delays();   //loads all delays to the fpga must set all indivdualy first
     /*******************************************************************//*!
-     * coincidence pulse width is the nuber of 2.5 nS clk cyces to hold 
-     * coincidence out high.  this is also used internaly fof setting 
-     * the scaler output pulse width.
-     * @return the coincidence pulse width stored in the class. set by \
-     *         set_coincidence_pulse_width()
-     * @see set_coincidence_pulse_width()
-     ************************************************************************/
-    int get_coincidence_pulse_width();
-    /*******************************************************************//*!
-     * coincidence edge width is how many clk cycles to hold a rising edge of 
-     * the input signals for detecting a coincidence.  i.e. if coincidence 
-     * edge width is set to 3 their can be a riseing edges on inputs within a 
-     * 3 clk cycle window and a coincidence pulse will be generated.
-     * @return the coincidence edge stored in the class. set by \
-     *         set_coincidence_pulse_width()
-     * @see set_coincidence_pulse_width()
-     ************************************************************************/
-    int get_coincidence_edge_width();
-    /*******************************************************************//*!
      * send the stored coincidence edge width to the trigger box;
      * @return 0 on sucess 1 on error
      * @see set_coincidence_pulse_width()
@@ -89,7 +74,7 @@ public:
      * this must be called on starup after enable has been set
      * @return 0 on sucess 1 on error
      ************************************************************************/
-    int clear_triggercounts();
+//    int clear_triggercounts();
 
     /*******************************************************************//*!
      * Set the delay for trigger output 1 + 2 and 3
@@ -103,19 +88,19 @@ public:
     /*******************************************************************//*!
      * @return 0 on sucess 1 on error
      ************************************************************************/
-    int current_reset();
-    int clear_coni_disable(int mask);
+//    int current_reset();
+//    int clear_coni_disable(int mask);
     /*******************************************************************//*!
      * DONOT USE 
      *
      * Use Triger_Logic_tpc_Stream class for readback. 
      ************************************************************************/
-    tuc::Readout_Data* read_back(); //DO NOT USE use stream readout
+//    tuc::Readout_Data* read_back(); //DO NOT USE use stream readout
     /*******************************************************************//*!
      * Get the error string form the last send command .
      * @return pointer to a string describing the last error
      ************************************************************************/
-    char * get_error_str();
+//    char * get_error_str() { return error_str; }
     /*******************************************************************//*!
      * Reset all counters on the triger box. This must be called during setup.
      * @return 0 on sucess 1 on error
@@ -132,35 +117,25 @@ public:
      * pulse_width is stored localy and sent to the trigger box
      * @param width - the nuber of 2.5 ns perids to hold coincidence out high
      * @return 0 on sucess 1 an error 
-     * @see send_coincidence_pulse_width()
-     ************************************************************************/
+     * @see send_coincidence_pulse_width() */
     int set_coincidence_pulse_width(int width);
+    int get_coincidence_pulse_width() { return coincidence_pulse_width; }
     /*******************************************************************//*!
-     * Sets the coincidence input edge width in 2.5 ns divisons 
-     * edge width  is stored localy and sent to the trigger box
-     * @param width - the nuber of 2.5 ns perids to hold trigger edges high
-     *                going in to the  coincidence unit
-     * @return 0 on sucess 1 an error 
-     * @see send_coincidence_pulse_width()
-     ************************************************************************/
+     * Sets the coincidence input edge width locally and sents it to the trigger box
+     * coincidence edge width is how many clk cycles to hold a rising edge of
+     * the input signals for detecting a coincidence.  i.e. if coincidence
+     * edge width is set to 3 their can be a riseing edges on inputs within a
+     * 3 clk cycle window and a coincidence pulse will be generated.
+     * @param width - the nuber of 2.5 ns perids to hold trigger edges high going in to the coincidence unit
+     * @return 0 on sucess 1 an error */
     int set_coincidence_edge_width(int width);
-
+    int get_coincidence_edge_width() { return coincidence_edge_width; }
     /*******************************************************************//*!
-     * Sets the pulser frequancy in Hz 
+     * Sets the pulser frequency and pulse width
      * @param freq - pulser frequancy in Hz
-     * @return 0 on sucess 1 an error 
-     * @see set_Pulser_width()
-     ************************************************************************/
-    int set_Pulser_freq(double freq);
-    /*******************************************************************//*!
-     * Sets the pulser frequancy and the pulse width
-     * max imim midth is 20000! 
-     * @param freq - pulser frequancy in Hz
-     * @param width- the nuber of 2.5 ns clk cyles to hold pulse high max 20000
-     * @return 0 on sucess 1 an error 
-     * @see set_Pulser_freq()
-     ************************************************************************/
-    int set_Pulser_width(double freq,int width);
+     * @param width- the number of 2.5 ns clk cycles to hold pulse high, max 20000
+     * @return 0 on sucess 1 an error */
+    int set_pulser(double freq, int width);
     /*******************************************************************//*!
      * Sets the mask of which inputs to use for determing a coincidence
      * mask bits are as follows:
@@ -188,7 +163,7 @@ public:
     /*******************************************************************//*!
      * Un implimented do not use 
      *************************************************************************/
-    int set_mux(int mux_comand); // not iwplimented do not use 
+//    int set_mux(int mux_comand); // not iwplimented do not use
     /*******************************************************************//*!
      * @param delay - the prescaler delay  must be > 4
      ************************************************************************/
@@ -203,10 +178,10 @@ public:
      * time beond the end of a busy pulse.  
      * the time of the deay is in units of 2.5 nS clock pulses
      * @return 0 on sucess 1 on error
-     * @see get_handshake_delay()
      * @see send_handshake_delay()
      ************************************************************************/
     int set_handshake_delay(int delay);
+    int get_handshake_delay() { return handshake_delay; }
 
     /*******************************************************************//*!
      * Send the two phase settings packed in one int
@@ -214,8 +189,8 @@ public:
      * @return 0 on sucess 1 on error
      ************************************************************************/
     int set_clk40_phases(int phase1, int phase2);
-    int get_clk40_phase1();
-    int get_clk40_phase2();
+    int get_clk40_phase1() { return clk40_phase1; }
+    int get_clk40_phase2() { return clk40_phase2; }
     
     /*******************************************************************//*!
      * @param: 0=negative polarity/1=positive polarity, LSB of an int
@@ -226,17 +201,6 @@ public:
      ************************************************************************/
     int set_pulser_polarity(bool pol_pulser1, bool pol_pulser2);
     unsigned short get_pulser_polarities() { return pulser_polarity; };
-
-    /*******************************************************************//*!
-     * @return the stored handshake delay 
-     * @see set_handshake_delay(int mask)
-     ************************************************************************/
-    int get_handshake_delay();
-    /*******************************************************************//*!
-     * Send the stored handshake delay to the trigger box.
-     * @return 0 on sucess 1 on error
-     * @see set_handshake_delay(int delay)
-     ************************************************************************/
     int send_handshake_delay();
     /*******************************************************************//*!
      * Set the handshake mask and send it to the trigger box.
@@ -245,27 +209,14 @@ public:
      * @see send_handshake_mask()
      * @see get_handshake_mask()
      ************************************************************************/
-   int set_handshake_mask(int mask);
-    /*******************************************************************//*!
-     * @return the handshake mask stored localy
-     * @see send_handshake_mask()
-     * @see get_handshake_mask()
-     ************************************************************************/
-    int get_handshake_mask();
-    /*******************************************************************//*!
-     * send the localy stored handshake mask
-     * @return 0 on sucess 1 on error
-     * @see send_handshake_mask()
-     * @see get_handshake_mask()
-     ************************************************************************/
+    int set_handshake_mask(int mask);
+    int get_handshake_mask() { return handshake_mask; }
     int send_handshake_mask();
     /*******************************************************************//*!
-     * Sset the current time in the trigger box.  This sends the current 
+     * Set the current time in the trigger box.  This sends the current
      * unix  time stamp * 1000 to the triger box. 
      * Time on the trigger box is a mS counter stored as a 64 bit unsigned intiger 
-     * @return 0 on sucess 1 on error
-     * @see 
-     ************************************************************************/
+     * @return 0 on sucess 1 on error */
     int set_time();
     /**********************************************************************//*!
      * loads all saved setting to the trigger box form a settings file.
@@ -273,18 +224,13 @@ public:
      *         trigger box
      * @return 0 on sucess
      *************************************************************************/
-    int load_from_file(char *fname);
+//    int load_from_file(char *fname);
     /**********************************************************************//*!
      * set the ip adress of the trigger controll box
      * @param ip_address - the ip address of the trigger controll box
      *************************************************************************/
-    void set_ip_adr(std::string);
-    /**********************************************************************//*!
-     * gets the ip adress of the trigger controll box
-     * @return std::string contiaining the ip address.
-     *************************************************************************/
-
-    std::string get_ip_adr();
+    void set_ip_adr(std::string ip_address) { ip_adr = std::move(ip_address); }
+    std::string get_ip_adr() { return ip_adr; }
 
 private:
     int http_backend(char * command);
@@ -314,4 +260,4 @@ public:
   const char* what() const noexcept override { return _msg.c_str(); }
 };
 
-#endif // TRIGGER_CONTROLL_H
+#endif // TRIGGER_CONTROL_H
