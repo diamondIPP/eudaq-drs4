@@ -60,8 +60,8 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     stream = new Trigger_logic_tpc_Stream(); //neither this
 
     //TUServer = new Server(8889);
-  } catch (...) {
-    std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU with ip " << tc->get_ip_adr() << CLEAR;
+  } catch (exception & e) {
+    std::cout << BOLDRED << "TUProducer::" << e.what() << CLEAR;
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");
   }
@@ -431,12 +431,13 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		if (tc->set_trigger_3_delay(trigdel3) != 0) { throw(tu_program_exception("Trigger 3 Delay")); }
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
-		std::cout << "--> Set 40MHz clock phases..";
+		cout << "--> Set 40MHz clock phases ... " << endl;
 		int clk40_phase1 = conf.Get("clk40_phase1", 0);
 		int clk40_phase2 = conf.Get("clk40_phase2", 0);
-		std::cout << "     CLK 1 Phase: " << clk40_phase1 << " [clk cycles]" << std::endl;
-		std::cout << "     CLK 2 Phase: " << clk40_phase2 << " [clk cycles]" << std::endl;
-		if(tc->set_clk40_phases(clk40_phase1, clk40_phase2)!=0){throw(-1);}
+		cout << "     CLK 1 Phase: " << clk40_phase1 << " [clk cycles]" << endl;
+		cout << "     CLK 2 Phase: " << clk40_phase2 << " [clk cycles]" << endl;
+    if (tc->set_clk40_phases(clk40_phase1, clk40_phase2) !=0 ) { throw(tu_program_exception("Clock Phases")); }
+    cout << BOLDGREEN << "... [OK] " << CLEAR;
 
 
 		//set current UNIX timestamp
@@ -459,20 +460,23 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
 		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl;
 
-		std::cout << "CLK 1 Phase: [ns]:" << tc->get_clk40_phase1()*2.5 << std::endl;
-		std::cout << "CLK 2 Phase: [ns]:" << tc->get_clk40_phase2()*2.5 << std::endl;
+		std::cout << "CLK 1 Phase: [ns]: " << tc->get_clk40_phase1() * delay_width << std::endl;
+		std::cout << "CLK 2 Phase: [ns]: " << tc->get_clk40_phase2() * delay_width << std::endl;
 
-		std::string pol1 = (tc->get_pulser_polarities()&0x1 == 1) ? "positive" : "negative";
-		std::string pol2 = (tc->get_pulser_polarities()&0x2 == 1) ? "positive" : "negative";
+		std::string pol1 = ((tc->get_pulser_polarities() & 0b01) != 0) ? "positive" : "negative";
+		std::string pol2 = ((tc->get_pulser_polarities() & 0b10) != 0) ? "positive" : "negative";
 		std::cout << "Pulser 1 Polarity: " << pol1 << std::endl;
 		std::cout << "Pulser 2 Polarity: " << pol2 << std::endl;
-
+		auto trigger_delays = tc->get_trigger_delays();
+		for (auto i_trig(0); i_trig < trigger_delays.size(); i_trig++) {
+		    cout << "Trigger " << i_trig + 1 << " Delay: " << trigger_delays.at(i_trig) << endl;
+		}
 
 		std::cout << BOLDGREEN <<  "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << CLEAR;
 
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 
-	}catch (...){
+	} catch (...){
 		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU with ip " << tc->get_ip_adr() << ", try again." << CLEAR;
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
 	}
