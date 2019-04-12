@@ -17,7 +17,10 @@ using namespace std;
 #include <libconfig.h++>
 using namespace libconfig;
 
-    trigger_controll::trigger_controll(): n_planes(8) {
+    trigger_controll::trigger_controll():
+        n_planes(8),
+        clk40_phase1(0),
+        clk40_phase2(0) {
         plane_delays.resize(n_planes, 0);
         trigger_delays.resize(3, 40);
         parser = new(http_responce_pars);
