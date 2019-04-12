@@ -423,14 +423,12 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		if(tc->send_handshake_mask() != 0){throw(-1);}
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
-		std::cout << "--> Set trigger delays..";
-		int trigdel1 = conf.Get("trig_1_delay", 100);
-		int trigdel2 = conf.Get("trig_2_delay", 100);
-		int trigdel12 = (trigdel1<<12) | trigdel2;
-		if(tc->set_trigger_12_delay(trigdel12) != 0){throw(-1);}
-		int trigdel3 = conf.Get("trig_3_delay", 100);
-		if(tc->set_trigger_3_delay(trigdel3) != 0){throw(-1);}
-		if(tc->set_delays() != 0){throw(-1);}
+		std::cout << "--> Set trigger delays ... ";
+		int trigdel1 = conf.Get("trig_1_delay", 40);
+		int trigdel2 = conf.Get("trig_2_delay", 40);
+    unsigned short trigdel3 = conf.Get("trig_3_delay", 40);
+    if (tc->set_trigger_12_delay((trigdel2 << 12) | trigdel1) != 0) { throw(tu_program_exception("Trigger 1/2 Delay")); }
+		if (tc->set_trigger_3_delay(trigdel3) != 0) { throw(tu_program_exception("Trigger 3 Delay")); }
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 		std::cout << "--> Set 40MHz clock phases..";
