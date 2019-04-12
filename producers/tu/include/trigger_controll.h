@@ -92,20 +92,14 @@ public:
     int clear_triggercounts();
 
     /*******************************************************************//*!
-     * Set the delay for trigger output 1 and 2
-     * trigger out 1 = CANDIG
-     * trigger out 2 = DRS4_TRIG_IN_CH2
+     * Set the delay for trigger output 1 + 2 and 3
      * the delay is 12 bits. trig 1 is stored in 11 downto 0
      * trig 2 delay is stored in 23 downto 12
      * @return 0 on sucess 1 on error
      ************************************************************************/
     int set_trigger_12_delay(int delay);
-    /*******************************************************************//*!
-     * Set the delay for trigger output 3 PSI46_ATB_DTB
-     * the delay is 12 bits stored in 11 downto 0
-     * @return 0 on sucess 1 on error
-     ************************************************************************/
-    int set_trigger_3_delay(int delay);
+    int set_trigger_3_delay(unsigned short delay);
+    std::vector<unsigned short> get_trigger_delays() { return trigger_delays; }
     /*******************************************************************//*!
      * @return 0 on sucess 1 on error
      ************************************************************************/
@@ -296,6 +290,7 @@ private:
     int http_backend(char * command);
     int scintillator_delay;
     std::vector<unsigned> plane_delays;
+    std::vector<unsigned short> trigger_delays;
     int pad_delay;
     http_responce_pars * parser;
     char error_str[255];

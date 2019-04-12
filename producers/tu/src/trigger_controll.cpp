@@ -19,6 +19,7 @@ using namespace libconfig;
 
     trigger_controll::trigger_controll(): n_planes(8) {
         plane_delays.resize(n_planes, 0);
+        trigger_delays.resize(3, 40);
         parser = new(http_responce_pars);
     }
 
@@ -310,33 +311,18 @@ using namespace libconfig;
         return this->http_backend(str);
     }
 
-    /* bit0: pulser1, bit1: pulser2; 0=neg/1=pos; eg. selector=2--> pulser2=pos & pulser1=neg */
-    int trigger_controll::set_pulser_polarity(int pol_pulser1, int pol_pulser2)
-    {
-        int selector = (pol_pulser2<<1) | pol_pulser1;
-        this->pulser_polarity = selector;
-        if (selector > 2) {return -1;}
-        char str[32];
-        sprintf(str,"/x?u=%d",selector);
-        return this->http_backend(str);
+    /** delay 1 & 2 are packed in to a 32: bit 0-11 = delay 1, bit 12-23 = delay 2 */
+    int trigger_controll::set_trigger_12_delay(int delay) {
+        trigger_delays.at(0) = delay & 0xfff;
+        trigger_delays.at(1) = delay >> 12;
+        string cmd = "/a?v=" + to_string(delay);
+        return this->http_backend(cmd);
     }
-    /*delay 1 & 2 are packed in to a 32 bit int 11 downto 0 = delay 1
-     * bit 23 downto 12 = delay 2 */
-    int trigger_controll::set_trigger_12_delay(int delay)
-    {
-        char str[32];
-        sprintf(str,"/a?v=%d",delay);
-        return this->http_backend(str);
-    }
-    int trigger_controll::set_trigger_3_delay(int delay)
-    {
-        char str[32];
-        sprintf(str,"/a?w=%d",delay);
-        return this->http_backend(str);
-    }
-    void trigger_controll::set_ip_adr(std::string ip_address)
-    {
-        this->ip_adr = ip_address;
+
+    int trigger_controll::set_trigger_3_delay(unsigned short delay) {
+        trigger_delays.at(2) = delay;
+        string cmd = "/a?w=" + to_string(delay);
+        return this->http_backend(cmd);
     }
 
     std::string trigger_controll::get_ip_adr()
