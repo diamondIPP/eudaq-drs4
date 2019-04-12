@@ -30,8 +30,6 @@ using namespace libconfig;
     int trigger_controll::get_coincidence_edge_width(){return coincidence_edge_width;}
     int trigger_controll::get_clk40_phase1(){return this->clk40_phase1;}
     int trigger_controll::get_clk40_phase2(){return this->clk40_phase2;}
-    int trigger_controll::get_pulser_polarities(){return this->pulser_polarity;}
-
 
     int trigger_controll::set_delays(){
         string cmd_str = "/a?";
@@ -328,9 +326,12 @@ using namespace libconfig;
         return this->http_backend(cmd);
     }
 
-    std::string trigger_controll::get_ip_adr()
-    {
-        return this->ip_adr;
+    /** bit0: pulser1, bit1: pulser2; 0=neg/1=pos; eg. selector=2--> pulser2=pos & pulser1=neg */
+    int trigger_controll::set_pulser_polarity(bool pol_pulser1, bool pol_pulser2) {
+        unsigned short selector = (unsigned(pol_pulser2) << 1u) | unsigned(pol_pulser1);
+        pulser_polarity = selector;
+        string cmd = "/a?x=" + to_string(selector);
+        return this->http_backend(cmd);
     }
 
     int trigger_controll::load_from_file(char *fname) {

@@ -224,8 +224,8 @@ public:
                eg: 000000000000000010 means positive pulser 2, negative pulser1
      * @return 0 on sucess 1 on error
      ************************************************************************/
-    int set_pulser_polarity(int pol_pulser1, int pol_pulser2);
-    int get_pulser_polarities();
+    int set_pulser_polarity(bool pol_pulser1, bool pol_pulser2);
+    unsigned short get_pulser_polarities() { return pulser_polarity; };
 
     /*******************************************************************//*!
      * @return the stored handshake delay 
@@ -301,7 +301,7 @@ private:
     int handshake_delay;
     int clk40_phase1;
     int clk40_phase2;
-    int pulser_polarity;
+    unsigned short pulser_polarity;
     std::string ip_adr;
 };
 class tu_program_exception: public std::exception {
