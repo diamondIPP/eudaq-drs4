@@ -7,37 +7,9 @@
 #include "Colours.hh"
 #include "config.h" // for version symbols
 
-static const char * statuses[] = {
-  "RUN",        "Run Number",
-  "FILEBYTES",  "File Size",
-  "EVENT",      "Events Built",
-  "TUSTAT",     "TU Status",
-  "COINCCOUNT", "Coincidence Count",
-  "COINCRATE",   "Coincidence Rate",
-  "BEAMCURR",       "Beam Current",
-  0
-};
-
-//for layout reasons:
-static const char * scalers[] = {
-  "SC0",      "Scintillator",
-  "SC5",        "Plane 5",
-  "SC1",        "Plane 1",
-  "SC6",        "Plane 6",
-  "SC2",        "Plane 2",
-  "SC7",        "Plane 7",
-  "SC3",        "Plane 3",
-  "SC8",        "Plane 8",
-  "SC4",        "Plane 4",
-  "SC9",        "Pad",
-  0
-};
-
 
 euRunApplication::euRunApplication(int& argc, char** argv) :
     QApplication(argc, argv) {}
-    
-  
 
 bool euRunApplication::notify(QObject* receiver, QEvent* event) {
     bool done = true;
@@ -57,14 +29,11 @@ bool euRunApplication::notify(QObject* receiver, QEvent* event) {
 } 
 
 
-
 int main(int argc, char ** argv) {
   euRunApplication app(argc, argv);
   eudaq::OptionParser op("EUDAQ Run Control", PACKAGE_VERSION, "A Qt version of the Run Control");
-  eudaq::Option<std::string>  addr(op, "a", "listen-address", "tcp://44000", "address",
-      "The address on which to listen for connections");
-  eudaq::Option<std::string> level(op, "l", "log-level", "NONE", "level",
-      "The minimum level for displaying log messages locally");
+  eudaq::Option<std::string>  addr(op, "a", "listen-address", "tcp://44000", "address",  "The address on which to listen for connections");
+  eudaq::Option<std::string> level(op, "l", "log-level", "NONE", "level", "The minimum level for displaying log messages locally");
   eudaq::Option<int>             x(op, "x", "left",   0, "pos");
   eudaq::Option<int>             y(op, "y", "top",    0, "pos");
   eudaq::Option<int>             w(op, "w", "width",  150, "pos");
@@ -75,29 +44,19 @@ int main(int argc, char ** argv) {
     QRect rect(x.Value(), y.Value(), w.Value(), h.Value());
     RunControlGUI gui(addr.Value(), rect);
     gui.show();
-    return app.exec();
+    return euRunApplication::exec();
   } catch (...) {
     std::cout << "euRun exception handler" << std::endl;
     std::ostringstream err;
     int result = op.HandleMainException(err);
-    if (err.str() != "") {
-      QMessageBox::warning(0, "Exception", err.str().c_str());
+    if (!err.str().empty()) {
+      QMessageBox::warning(nullptr, "Exception", err.str().c_str());
     }
     return result;
   }
-  return 0;
 }
-
-namespace {
-  static const char * GEOID_FILE = "GeoID.dat";
-}
-
-
 
 RunConnectionDelegate::RunConnectionDelegate(RunControlModel * model) : m_model(model) {}
-
-
-
 
 void RunConnectionDelegate::paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const {
   //std::cout << __FUNCTION__ << std::endl;
@@ -108,53 +67,64 @@ void RunConnectionDelegate::paint(QPainter * painter, const QStyleOptionViewItem
   //painter->restore();
 }
 
-
-
-
 RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWidget *parent, Qt::WindowFlags flags):
-  QMainWindow(parent, flags), eudaq::RunControl(listenaddress), m_delegate(&m_run), m_prevcoinc(0), m_prevtime(0.0), m_runstarttime(0.0),m_filebytes(0),dostatus(false){
+  QMainWindow(parent, flags),
+  eudaq::RunControl(listenaddress),
+  m_delegate(&m_run),
+  m_prevcoinc(0),
+  m_prevtime(0.0),
+  m_runstarttime(0.0),
+  m_filebytes(0),
+  dostatus(false),
+  m_event_number(0) {
+
+  status_labels.push_back(std::make_pair<std::string, std::string>("RUN", "Run Number"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("FILEBYTES", "File Size"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("EVENT", "Events Built"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("TUSTAT", "TU Status"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("COINCCOUNT", "Coincidence Count"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("COINCRATE", "Coincidence Rate"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("BEAMCURR", "Beam Current"));
+
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC1", "Plane 1"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC5", "Plane 5"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC2", "Plane 2"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC6", "Plane 6"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC3", "Plane 3"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC7", "Plane 7"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC4", "Plane 4"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC8", "Plane 8"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC0", "Scintillator"));
+  scaler_labels.push_back(std::make_pair<std::string, std::string>("SC9", "DUT"));
 
   setupUi(this);
 
-  if (!grpStatus->layout()) grpStatus->setLayout(new QGridLayout(grpStatus));
-  QGridLayout * layout = dynamic_cast<QGridLayout *>(grpStatus->layout());
-  int row = 0, col = 0;
-  for (const char **st = statuses; st[0] && st[1]; st += 2){
-
-      QLabel *lblname = new QLabel(grpStatus);
-      lblname->setObjectName(QString("lbl_st_") + st[0]);
-      lblname->setText((std::string(st[1]) + ": ").c_str());
-      QLabel *lblvalue = new QLabel(grpStatus);
-      lblvalue->setObjectName(QString("txt_st_") + st[0]);
-      //lblvalue->setText("");
-      layout->addWidget(lblname, row, col*2);
-      layout->addWidget(lblvalue, row, col*2+1);
-      m_status[st[0]] = lblvalue;
-      if (++col > 1) {
-        ++row;
-        col = 0;
-      }
+  if (grpStatus->layout() == nullptr) { grpStatus->setLayout(new QGridLayout(grpStatus)); }
+  auto * layout = dynamic_cast<QGridLayout *>(grpStatus->layout());
+  int row(0), col(0);
+  for (const auto & i_status: status_labels) {
+    QLabel * lblname = new QLabel(grpStatus);
+    lblname->setObjectName(QString("lbl_st_") + i_status.first.c_str());
+    lblname->setText((i_status.second + ":").c_str());
+    QLabel * lblvalue = new QLabel(grpStatus);
+    lblvalue->setObjectName(QString("txt_st_") + i_status.first.c_str());
+    layout->addWidget(lblname, row / 2, (col % 2) * 2);
+    layout->addWidget(lblvalue, row++ / 2, (col++ % 2) * 2 + 1);
+    m_status[i_status.first] = lblvalue;
   }
 
-  //added by cdorfer
-  if (!scalerStatus->layout()) scalerStatus->setLayout(new QGridLayout(scalerStatus));
-  QGridLayout *scaler_layout = dynamic_cast<QGridLayout *>(scalerStatus->layout());
-  int srow = 0, scol = 0;
-  for (const char ** st = scalers; st[0] && st[1]; st += 2) {
+  if (scalerStatus->layout() == nullptr) { scalerStatus->setLayout(new QGridLayout(scalerStatus)); }
+  auto * scaler_layout = dynamic_cast<QGridLayout *>(scalerStatus->layout());
+  row = 0; col = 0;
+  for (const auto & i_scaler: scaler_labels) {
     QLabel * lblname = new QLabel(scalerStatus);
-    lblname->setObjectName(QString("lbl_st_") + st[0]);
-    //lblname->setTextFormat(Qt::PlainText);
-    lblname->setText((std::string(st[1]) + ": ").c_str());
+    lblname->setObjectName(QString("lbl_st_") + i_scaler.first.c_str());
+    lblname->setText((i_scaler.second + ":").c_str());
     QLabel * lblvalue = new QLabel(scalerStatus);
-    lblvalue->setObjectName(QString("txt_st_") + st[0]);
-    //lblvalue->setText("");
-    scaler_layout->addWidget(lblname, srow, scol*2);
-    scaler_layout->addWidget(lblvalue, srow, scol*2+1);
-    m_status[st[0]] = lblvalue;
-    if (++scol > 1) {
-      ++srow;
-      scol = 0;
-    }
+    lblvalue->setObjectName(QString("txt_st_") + i_scaler.first.c_str());
+    scaler_layout->addWidget(lblname, row / 2, (col % 2) * 2);
+    scaler_layout->addWidget(lblvalue, row++ / 2, (col++ % 2) * 2 + 1);
+    m_status[i_scaler.first] = lblvalue;
   }
   //end added
 
@@ -164,26 +134,28 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
   QDir dir("../conf/", "*.conf");
   for (size_t i = 0; i < dir.count(); ++i) {
     QString item = dir[i];
-    if (item.toStdString().find("converter") != std::string::npos)  //exclude the converter config files
+    if (item.toStdString().find("converter") != std::string::npos) {  //exclude the converter config files
       continue;
+    }
     item.chop(5);
     cmbConfig->addItem(item);
   }
   cmbConfig->setEditText(cmbConfig->itemText(0));
   QSettings flux_settings("../conf/flux.ini", QSettings::IniFormat);
   std::vector<int> fluxes;
-  for (auto iflux: flux_settings.childGroups())
+  for (const auto & iflux: flux_settings.childGroups()) {
     fluxes.push_back(iflux.toInt());
+  }
   std::sort(fluxes.begin(), fluxes.end());
-  for (auto iflux: fluxes)
+  for (auto iflux: fluxes) {
     cmbFlux->addItem(QString(std::to_string(iflux).c_str()));
+  }
   cmbFlux->setEditText(QString(std::to_string(fluxes.at(0)).c_str()));
   QSize fsize = frameGeometry().size();
-  if (geom.x() == -1) geom.setX(x());
-  if (geom.y() == -1) geom.setY(y());
-  else geom.setY(geom.y() + MAGIC_NUMBER);
-  if (geom.width() == -1) geom.setWidth(fsize.width());
-  if (geom.height() == -1) geom.setHeight(fsize.height());
+  if (geom.x() == -1) { geom.setX(x()); }
+  geom.setY(geom.y() == -1 ? y() : geom.y() + MAGIC_NUMBER);
+  if (geom.width() == -1) { geom.setWidth(fsize.width()); }
+  if (geom.height() == -1) { geom.setHeight(fsize.height()); }
   //else geom.setHeight(geom.height() - MAGIC_NUMBER);
   move(geom.topLeft());
   resize(geom.size());
@@ -215,16 +187,14 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
   else if (id.GetType() == "Producer" && id.GetName() == "TU"){
     EmitStatus("TUSTAT", status->GetTag("STATUS"));
     std::string beam_current = status->GetTag("BEAM_CURR");
-    beam_current.resize (5,'0');
-    EmitStatus("BEAMCURR", beam_current + " uA");
+    EmitStatus("BEAMCURR", (beam_current.empty() ? "" : QString("%1 µA").arg(std::stof(beam_current), 3, 'f', 1).toStdString()));
     EmitStatus("COINCCOUNT", status->GetTag("COINC_COUNT"));
 
     //update Scaler Status
     std::string scalers;
     for (int i = 0; i < 10; ++i) {
       std::string s = status->GetTag("SCALER" + to_string(i));
-      if (s == "") 
-        break;
+      if (s.empty()) { break; }
       std::string s_name = "SC"+to_string(i);
       EmitStatus(s_name.c_str(), s);
       }
@@ -233,7 +203,7 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
     int c_counts = from_string(status->GetTag("COINC_COUNT"), -1);
     double last_ts = from_string(status->GetTag("LASTTIME"), 0.0);
     double ts = from_string(status->GetTag("TIMESTAMP"), 0.0);
-    if(c_counts > 0) m_runstarttime = ts; //start timing
+    if (c_counts > 0) { m_runstarttime = ts; } //start timing
     double coinc_rate = (c_counts-m_prevcoinc)/(ts-last_ts);
     m_prevcoinc = c_counts;
     if (coinc_rate > 1){ //not to display too small numbers
@@ -266,6 +236,11 @@ void RunControlGUI::OnConnect(const eudaq::ConnectionInfo & id) {
   if (id.GetType() == "LogCollector") {
      btnLogSetStatus(true);
   }
+}
+
+void RunControlGUI::EmitStatus(const char * name, const std::string & val) {
+  if (val.empty()) { return; }
+  emit StatusChanged(name, val.c_str());
 }
 
 

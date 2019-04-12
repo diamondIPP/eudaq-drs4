@@ -49,14 +49,9 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
   private:
     enum state_t { ST_NONE, ST_READY, ST_RUNNING };
     virtual void OnConnect(const eudaq::ConnectionInfo & id);
-    virtual void OnDisconnect(const eudaq::ConnectionInfo & id) {
-      m_run.disconnected(id);
-    }
+    virtual void OnDisconnect(const eudaq::ConnectionInfo & id) { m_run.disconnected(id); }
     virtual void OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<eudaq::Status> status);
-    void EmitStatus(const char * name, const std::string & val) {
-      if (val == "") return;
-      emit StatusChanged(name, val.c_str());
-    }
+    void EmitStatus(const char * name, const std::string & val);
 
     void closeEvent(QCloseEvent * event) {
       if (m_run.rowCount() > 0 &&
@@ -176,4 +171,6 @@ signals:
     int64_t m_filebytes;
     uint32_t m_event_number;
     bool dostatus;
+    std::vector<std::pair<std::string, std::string>> status_labels;
+    std::vector<std::pair<std::string, std::string>> scaler_labels;
 };
