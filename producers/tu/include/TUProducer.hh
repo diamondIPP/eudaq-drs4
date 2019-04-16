@@ -19,7 +19,6 @@
 #include <deque>
 #include <vector>
 
-class Configuration;
 class trigger_control;
 
 
@@ -46,10 +45,11 @@ private:
 	Trigger_logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
 	unsigned int error_code;
 	int trg_mask;
-	float beam_curr;
-	float cal_beam_current;
-	std::deque<float> avg;
-	std::vector<std::deque<unsigned>> scaler_deques;
+	float beam_current_now;
+	std::deque<float> beam_currents;
+  float average_beam_current;
+  unsigned short n_scaler;
+  std::vector<std::deque<unsigned>> scaler_deques;
 
 	//data read back from TU
 	unsigned long trigger_counts[10];
@@ -59,16 +59,16 @@ private:
 	unsigned int trigger_counts_multiplicity[10];
 	unsigned int coincidence_count_no_sin;
 	unsigned int coincidence_count;
-	unsigned int beam_current[2]; //first entry = old, second entry = new
+	std::pair<unsigned, unsigned> beam_current_scaler; //first entry = old, second entry = new
+	std::pair<unsigned long, unsigned long> time_stamps; //first entry = old, second entry = new
 	unsigned int prescaler_count;
 	unsigned int prescaler_count_xor_pulser_count;
 	unsigned int accepted_pulser_events;
 	unsigned int accepted_prescaled_events;
 	unsigned int handshake_count;
-	unsigned long time_stamps[2]; //first entry = old, second entry = new timestamp
 
-protected:
-	Server * TUServer;
+//protected:
+//	Server * TUServer;
 
 };
 
