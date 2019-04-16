@@ -482,46 +482,18 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 	}
 }
 
+/** calculate the average of the provided deque */
+template <typename Q>
+float TUProducer::CalculateAverage(std::deque<Q> & d, Q value, unsigned short max_size){
 
-
-unsigned TUProducer::ScalerDeque(unsigned nr, unsigned rate){
-	scaler_deques.at(nr).pop_back();
-	scaler_deques.at(nr).push_front(rate);
-
-
-	int len = 0;
-	unsigned temp = 0;
-	for (std::deque<unsigned>::iterator itr=scaler_deques.at(nr).begin(); itr!=scaler_deques.at(nr).end(); ++itr){
-		if (*itr != 0){			
-			temp += *itr;
-			len++;
-		}
-	}
-	if(len>0){
-		return (temp/len);}
-	return 0;
-}
-
-
-//for beam current, can be implemented in method above (fixme)
-float TUProducer::SlidingWindow(float val){
-	avg.pop_back();
-	avg.push_front(val);
-	
-	int len = 0;
-	float temp = 0;
-	for (std::deque<float>::iterator itr=avg.begin(); itr!=avg.end(); ++itr){
-		if (*itr != 0){			
-			temp += *itr;
-			len++;
-		}
-	}
-	return (1.0*temp/len);
+  if (handshake_count > 1) { d.push_back(value); } /** we need at least two events to calculate the rates */
+  if (d.size() > max_size) { d.pop_front(); } /** keep max_size values in the deque */
+  return std::accumulate(d.begin(), d.end(), 0.0) / d.size();
 }
 
 //values from laboratory measurement with pulser
 float TUProducer::CalculateBeamCurrent(){
-  float rate = 10 * ((beam_current[1] - beam_current[0]) / float(time_stamps[1] - time_stamps[0]));
+  float rate = 10 * ((beam_current_scaler.second - beam_current_scaler.first) / float(time_stamps.second - time_stamps.first));
 	return rate > 0 ? 3.01077 + 1.06746 * rate : 0;
 }
 

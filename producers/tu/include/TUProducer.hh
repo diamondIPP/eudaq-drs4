@@ -33,8 +33,8 @@ public:
 	virtual void OnTerminate();
 	virtual void OnReset();
 	virtual void OnStatus();
-	float SlidingWindow(float);
-	unsigned ScalerDeque(unsigned scaler_nr, unsigned rate);
+	template <typename Q>
+	float CalculateAverage(std::deque<Q> & d, Q value, unsigned short max_size=10);
 	float CalculateBeamCurrent();
 
 
