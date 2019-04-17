@@ -37,14 +37,19 @@ static const std::string EVENT_TYPE = "TU";
 TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity):
   eudaq::Producer(name, runcontrol),
   event_type(EVENT_TYPE),
-	m_run(0), m_ev(0),
+	m_run(0),
+	m_event(999, 0),
 	done(false),
 	TUStarted(false),
 	TUJustStopped(false),
 	tc(nullptr),
 	stream(nullptr),
 	beam_current_scaler(0, 0),
+	coincidence_count(0, 0),
+	handshake_count(0, 0),
 	average_beam_current(0),
+	average_coincidence_rate(0),
+	average_handshake_rate(0),
 	n_scaler(10),
   time_stamps(0, 0) {
 
@@ -54,7 +59,7 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
 		std::fill_n(input_frequencies, 10, 0);
 		std::fill_n(avg_input_frequencies, 10, 0);
     std::fill_n(trigger_counts_multiplicity, 10, 0);
-    error_code = 0;
+//    error_code = 0;
     scaler_deques.resize(n_scaler);
 
     tc = new trigger_control(); //does not talk to the box
@@ -91,17 +96,19 @@ void TUProducer::MainLoop(){
 
         /******************************************** start get all the data ********************************************/
 				coincidence_count_no_sin = rd->coincidence_count_no_sin;
-				coincidence_count = rd->coincidence_count;
+				coincidence_count = make_pair(coincidence_count.second, rd->coincidence_count); /** move old and save new */
+        handshake_count = make_pair(handshake_count.second, rd->handshake_count); /** move old and save new. equivalent to event count */
 				prescaler_count = rd->prescaler_count;
 				prescaler_count_xor_pulser_count = rd->prescaler_count_xor_pulser_count;
 				accepted_prescaled_events = rd->prescaler_xor_pulser_and_prescaler_delayed_count;
 				accepted_pulser_events = rd->pulser_delay_and_xor_pulser_count;
-				handshake_count = rd->handshake_count; //equivalent to event count
 				beam_current_scaler = make_pair(beam_current_scaler.second, rd->beam_curent); /** move old and save new */
 				time_stamps = std::make_pair(time_stamps.second, rd->time_stamp); /** move old and save new */
 
 				beam_current_now = CalculateBeamCurrent();
 				average_beam_current = CalculateAverage(beam_currents, beam_current_now);
+				average_coincidence_rate = unsigned(round(CalculateAverage(coincidence_rate, (coincidence_count.second - coincidence_count.first) / TimeDiff())));
+				average_handshake_rate = unsigned(round(CalculateAverage(handshake_rate, (handshake_count.second - handshake_count.first) / TimeDiff())));
 
         for (auto idx(0); idx < n_scaler; idx++) {
           unsigned int new_tc = rd->trigger_counts[idx]; //data from readout
@@ -111,13 +118,13 @@ void TUProducer::MainLoop(){
           prev_trigger_counts[idx] = trigger_counts[idx];
           trigger_counts[idx] = trigger_counts_multiplicity[idx] * bit_28 + new_tc;
 
-          input_frequencies[idx] = (1000 * (trigger_counts[idx] - prev_trigger_counts[idx]) / (time_stamps.second - time_stamps.first));
-          avg_input_frequencies[idx] = unsigned(std::round(CalculateAverage(scaler_deques.at(idx), input_frequencies[idx])));
+          input_frequencies[idx] = unsigned(round((trigger_counts[idx] - prev_trigger_counts[idx]) / TimeDiff()));
+          avg_input_frequencies[idx] = unsigned(round(CalculateAverage(scaler_deques.at(idx), input_frequencies[idx])));
         }
         /******************************************** end get all the data ********************************************/
 
         /** check if event number has changed since last readout: */
-        if (handshake_count != prev_handshake_count){
+        if (handshake_count.second != handshake_count.first){
           #ifdef DEBUG
           std::cout << "************************************************************************************" << std::endl;
                         std::cout << "time stamp: " << time_stamps[1] << std::endl;
@@ -132,8 +139,8 @@ void TUProducer::MainLoop(){
                         std::cout << "************************************************************************************" << std::endl;
           #endif
           /** send fake events for events we are missing out between readout cycles */
-          if (handshake_count > m_ev_prev) {
-            for (unsigned int id = m_ev_prev; id < handshake_count; id++){
+          if (handshake_count.second > m_event.first) {
+            for (unsigned int id = m_event.first; id < handshake_count.second; id++){
               eudaq::RawDataEvent f_ev(event_type, m_run, id);
               f_ev.SetTag("valid", std::to_string(0));
               SendEvent(f_ev);
@@ -141,30 +148,29 @@ void TUProducer::MainLoop(){
           }
 
           uint64_t ts = time_stamps.second;
-          m_ev = handshake_count;
+          m_event.second = handshake_count.second;
           //TUServer->writex(eudaq::to_string(m_ev));
 
           //real data event
           //std::cout << "m_run: " << m_run << std::endl;
-          eudaq::RawDataEvent ev(event_type, ((unsigned int) m_run), m_ev); //generate a raw event
+          eudaq::RawDataEvent ev(event_type, ((unsigned int) m_run), m_event.second); //generate a raw event
           ev.SetTag("valid", std::to_string(1));
 
           unsigned int block_no = 0;
           ev.AddBlock(block_no++, static_cast<const uint64_t*>(&ts), sizeof(uint64_t)); //timestamp
-          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&coincidence_count), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&coincidence_count.second), sizeof(uint32_t));
           ev.AddBlock(block_no++, static_cast<const uint32_t*>(&coincidence_count_no_sin), sizeof(uint32_t));
           ev.AddBlock(block_no++, static_cast<const uint32_t*>(&prescaler_count), sizeof(uint32_t));
           ev.AddBlock(block_no++, static_cast<const uint32_t*>(&prescaler_count_xor_pulser_count), sizeof(uint32_t));
           ev.AddBlock(block_no++, static_cast<const uint32_t*>(&accepted_prescaled_events), sizeof(uint32_t));
           ev.AddBlock(block_no++, static_cast<const uint32_t*>(&accepted_pulser_events), sizeof(uint32_t));
-          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&handshake_count), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&handshake_count.second), sizeof(uint32_t));
           ev.AddBlock(block_no++, static_cast<const float*>(&beam_current_now), sizeof(float));
           ev.AddBlock(block_no, reinterpret_cast<const char*>(&trigger_counts), 10 * sizeof(uint64_t));
           SendEvent(ev);
 
-          m_ev_prev = m_ev + 1;
-          prev_handshake_count = handshake_count;
-          std::cout << "Event number TUProducer: " << handshake_count << std::endl;
+          m_event.first = m_event.second + 1;
+          cout << "Event number TUProducer: " << handshake_count.second << endl;
 
         } //end if (prev event count)
       } //end if(rd)
@@ -173,83 +179,72 @@ void TUProducer::MainLoop(){
     } //end if(TUStarted)
 
     if(TUJustStopped){
-      SendEvent(eudaq::RawDataEvent::EORE(event_type, m_run, m_ev));
+      SendEvent(eudaq::RawDataEvent::EORE(event_type, m_run, m_event.second));
       OnStatus();
       TUJustStopped = false;
     }
 	} while (!done);
 }
 
-
-
-
 void TUProducer::OnStartRun(unsigned run_nr) {
-	try{
-		SetStatus(eudaq::Status::LVL_OK, "Wait");
-		std::cout << "--> Starting TU Run " << run_nr << std::endl;
-		eudaq::mSleep(5000);
-		m_run = run_nr;
-		m_ev = 0;
 
-		
+  try{
+    SetStatus(eudaq::Status::LVL_OK, "Wait");
+    cout << "--> Starting TU Run " << run_nr << endl;
+    eudaq::mSleep(5000);
+    m_run = run_nr;
+    m_event.second = 0;
+    eudaq::RawDataEvent ev(eudaq::RawDataEvent::BORE(event_type, m_run));
+    ev.SetTag("FirmwareID", "not given"); //FIXME!
+    ev.SetTag("TriggerMask", "0x" + eudaq::to_hex(trg_mask));
+    ev.SetTimeStampToNow();
+    SendEvent(ev);
+    cout << "Sent BORE event." << endl;
 
-		eudaq::RawDataEvent ev(eudaq::RawDataEvent::BORE(event_type, m_run));
-		ev.SetTag("FirmwareID", "not given"); //FIXME!
-		ev.SetTag("TriggerMask", "0x" + eudaq::to_hex(trg_mask));
-		ev.SetTimeStampToNow();
-		SendEvent(ev);
-
-		std::cout << "Sent BORE event." << std::endl;
-
-		OnReset();
-		TUStarted = true;
-		if(tc->enable(true) != 0){throw(-1);}
-
-        EUDAQ_INFO("Triggers are now accepted");
-		SetStatus(eudaq::Status::LVL_OK, "Started");
-	}catch(...){
-		std::cout << BOLDRED << "TUProducer::OnStartRun: Could not start TU Producer." << CLEAR;
-		SetStatus(eudaq::Status::LVL_ERROR, "Start Error");
-	}
+    OnReset();
+    TUStarted = true;
+    if (tc->enable(true) != 0) { throw(tu_program_exception("Could not enable.")); }
+    EUDAQ_INFO("Triggers are now accepted");
+    SetStatus(eudaq::Status::LVL_OK, "Started");
+  } catch(exception & e) {
+    cout << BOLDRED << "TUProducer::OnStartRun: Could not start TU Producer. " << e.what() << CLEAR << endl;
+    SetStatus(eudaq::Status::LVL_ERROR, "Start Error");
+  }
 }
-
-
 
 void TUProducer::OnStopRun(){
-	std::cout << "--> Stopping TU Run." << std::endl;	
-	try{
-		if(tc->enable(false) != 0){throw(-1);}
-		TUStarted = false;
-		TUJustStopped = true;
-		eudaq::mSleep(2000);
-		OnReset();
-		SetStatus(eudaq::Status::LVL_OK, "Stopped");
 
-	} catch (...) {
-	    std::cout << BOLDRED << "TUProducer::OnStopRun: Could not stop TU Producer." << CLEAR;
-		SetStatus(eudaq::Status::LVL_ERROR, "Stop Error");
-		}
+  cout << "--> Stopping TU Run." << endl;
+  try{
+    if (tc->enable(false) != 0) {throw(tu_program_exception("Could not disable."));}
+    TUStarted = false;
+    TUJustStopped = true;
+    eudaq::mSleep(2000);
+    OnReset();
+    SetStatus(eudaq::Status::LVL_OK, "Stopped");
+    OnStatus();
+  } catch(exception & e) {
+    std::cout << BOLDRED << "TUProducer::OnStopRun: Could not stop TU Producer. " << e.what() << CLEAR << endl;
+    SetStatus(eudaq::Status::LVL_ERROR, "Stop Error");
+  }
 }
-
-
 
 void TUProducer::OnTerminate(){
-		try{
-		std::cout << "--> Terminate (press enter)" << std::endl;
-		if(tc->enable(false) != 0){throw(-1);}
-		if(tc->reset_counts() != 0){throw(-1);}
-		done = true;
-		delete tc; //clean up
-		delete stream;
-        //delete TUServer;
-		eudaq::mSleep(1000);
-		}catch(...){
-		    std::cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer." << CLEAR;
-			SetStatus(eudaq::Status::LVL_ERROR, "Terminate Error");
-		}
+
+  try{
+    cout << "--> Terminate" << endl;
+    if (tc->enable(false) != 0) { throw(tu_program_exception("Could not disable.")); }
+    if (tc->reset_counts() != 0) { throw(tu_program_exception("Could not reset counts.")); }
+    done = true;
+    delete tc; //clean up
+    delete stream;
+    //delete TUServer;
+    eudaq::mSleep(1000);
+  } catch(exception & e) {
+    cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer. " << e.what() << CLEAR << endl;
+    SetStatus(eudaq::Status::LVL_ERROR, "Terminate Error");
+  }
 }
-
-
 
 void TUProducer::OnReset(){
   try{
@@ -259,17 +254,24 @@ void TUProducer::OnReset(){
     std::fill_n(prev_trigger_counts, n_scaler, 0);
     std::fill_n(input_frequencies, n_scaler, 0);
     std::fill_n(trigger_counts_multiplicity, n_scaler, 0);
-    time_stamps = std::make_pair(0, 0);
-    beam_current_scaler = std::make_pair(0, 0);
+    std::fill_n(avg_input_frequencies, n_scaler, 0);
+    time_stamps = make_pair(0, 0);
+    beam_current_scaler = make_pair(0, 0);
+    coincidence_count = make_pair(0, 0);
+    handshake_count = make_pair(99999, 0);
     coincidence_count_no_sin = 0;
-    coincidence_count = 0;
     prescaler_count = 0;
     prescaler_count_xor_pulser_count = 0;
     accepted_pulser_events = 0;
-    handshake_count = 0;
-    prev_handshake_count = 99999;
-    m_ev_prev = 0;
+    m_event.first = 0;
     average_beam_current = 0;
+    average_coincidence_rate = 0;
+    beam_currents.clear();
+    coincidence_rate.clear();
+    handshake_rate.clear();
+    for (auto i_scaler: scaler_deques) {
+      i_scaler.clear();
+    }
     SetStatus(eudaq::Status::LVL_OK);
   } catch(...){
     std::cout << BOLDRED << "TUProducer::OnReset: Could not reset TU Producer." << CLEAR;
@@ -277,28 +279,26 @@ void TUProducer::OnReset(){
   }
 }
 
-
-
 void TUProducer::OnStatus(){
-	if(TUStarted && handshake_count > 0)
-		m_status.SetTag("COINC_COUNT", std::to_string(handshake_count));
-	else 
-		m_status.SetTag("TRIG", std::to_string(0));
+
+  if (TUStarted && handshake_count.second > 0) {
+    m_status.SetTag("HANDSHAKE_COUNT", to_string(handshake_count.second));
+  } else {
+    m_status.SetTag("TRIG", std::to_string(0));
+  }
 
 	if (tc != nullptr){
+	  m_status.SetTag("COINC_RATE", to_string(average_coincidence_rate));
+	  m_status.SetTag("HANDSHAKE_RATE", to_string(average_handshake_rate));
 		m_status.SetTag("TIMESTAMP", std::to_string(time_stamps.second / 1000.0));
 		m_status.SetTag("LASTTIME", std::to_string(time_stamps.first / 1000.0));
-
     m_status.SetTag("STATUS", TUStarted ? "OK" : "IDLE");
-
 		for (int i = 0; i < n_scaler; ++i) {
 			m_status.SetTag("SCALER" + std::to_string(i), std::to_string(avg_input_frequencies[i]));
 		}
-
     m_status.SetTag("BEAM_CURR", TUStarted ? std::to_string(average_beam_current) : "");
 	}
 }
-
 
 void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
@@ -406,7 +406,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
 		//set current UNIX timestamp
 		std::cout << "--> Set current UNIX time to TU..";
-   		if(tc->set_time() != 0){throw(-1);}
+    if (tc->set_time() != 0) { throw(tu_program_exception("Could not set time!")); }
 		eudaq::mSleep(1000);
 		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
@@ -450,12 +450,12 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 template <typename Q>
 float TUProducer::CalculateAverage(std::deque<Q> & d, Q value, unsigned short max_size){
 
-  if (handshake_count > 1) { d.push_back(value); } /** we need at least two events to calculate the rates */
+  if (coincidence_count.second > 1) { d.push_back(value); } /** we need at least two events to calculate the rates */
   if (d.size() > max_size) { d.pop_front(); } /** keep max_size values in the deque */
   return std::accumulate(d.begin(), d.end(), 0.0) / d.size();
 }
 
-//values from laboratory measurement with pulser
+/** values from laboratory measurement with pulser */
 float TUProducer::CalculateBeamCurrent(){
   float rate = 10 * ((beam_current_scaler.second - beam_current_scaler.first) / float(time_stamps.second - time_stamps.first));
 	return rate > 0 ? 3.01077 + 1.06746 * rate : 0;
