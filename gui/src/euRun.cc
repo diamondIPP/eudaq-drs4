@@ -71,8 +71,6 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
   QMainWindow(parent, flags),
   eudaq::RunControl(listenaddress),
   m_delegate(&m_run),
-  m_prevcoinc(0),
-  m_prevtime(0.0),
   m_runstarttime(0.0),
   m_filebytes(0),
   dostatus(false),
@@ -82,9 +80,10 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
   status_labels.push_back(std::make_pair<std::string, std::string>("FILEBYTES", "File Size"));
   status_labels.push_back(std::make_pair<std::string, std::string>("EVENT", "Events Built"));
   status_labels.push_back(std::make_pair<std::string, std::string>("TUSTAT", "TU Status"));
-  status_labels.push_back(std::make_pair<std::string, std::string>("COINCCOUNT", "Coincidence Count"));
-  status_labels.push_back(std::make_pair<std::string, std::string>("COINCRATE", "Coincidence Rate"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("HSCOUNT", "Handshake Count"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("HSRATE", "Handshake Rate"));
   status_labels.push_back(std::make_pair<std::string, std::string>("BEAMCURR", "Beam Current"));
+  status_labels.push_back(std::make_pair<std::string, std::string>("COINCRATE", "Coincidence Rate"));
 
   scaler_labels.push_back(std::make_pair<std::string, std::string>("SC1", "Plane 1"));
   scaler_labels.push_back(std::make_pair<std::string, std::string>("SC5", "Plane 5"));
@@ -182,37 +181,24 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
     m_filebytes = from_string(status->GetTag("FILEBYTES"), 0LL);
     EmitStatus("EVENT", status->GetTag("EVENT"));
     EmitStatus("FILEBYTES", to_bytes(status->GetTag("FILEBYTES")));} 
-  
 
   else if (id.GetType() == "Producer" && id.GetName() == "TU"){
     EmitStatus("TUSTAT", status->GetTag("STATUS"));
     std::string beam_current = status->GetTag("BEAM_CURR");
     EmitStatus("BEAMCURR", (beam_current.empty() ? "" : QString("%1 µA").arg(std::stof(beam_current), 3, 'f', 1).toStdString()));
-    EmitStatus("COINCCOUNT", status->GetTag("COINC_COUNT"));
+    EmitStatus("HSCOUNT", status->GetTag("HANDSHAKE_COUNT"));
+    EmitStatus("HSRATE", (m_event_number > 1 ? status->GetTag("HANDSHAKE_RATE") + " Hz" : ""));
+    EmitStatus("COINCRATE", status->GetTag("COINC_RATE") + " Hz");
 
     //update Scaler Status
     std::string scalers;
     for (int i = 0; i < 10; ++i) {
       std::string s = status->GetTag("SCALER" + to_string(i));
       if (s.empty()) { break; }
-      std::string s_name = "SC"+to_string(i);
+      std::string s_name = "SC" + to_string(i);
       EmitStatus(s_name.c_str(), s);
-      }
-
-
-    int c_counts = from_string(status->GetTag("COINC_COUNT"), -1);
-    double last_ts = from_string(status->GetTag("LASTTIME"), 0.0);
-    double ts = from_string(status->GetTag("TIMESTAMP"), 0.0);
-    if (c_counts > 0) { m_runstarttime = ts; } //start timing
-    double coinc_rate = (c_counts-m_prevcoinc)/(ts-last_ts);
-    m_prevcoinc = c_counts;
-    if (coinc_rate > 1){ //not to display too small numbers
-      EmitStatus("COINCRATE", to_string(coinc_rate)+ " Hz");
-    }else{
-      EmitStatus("COINCRATE", "0 Hz");
     }
-
-  }//end if producer=tu
+  } //end if producer=tu
 
     m_run.SetStatus(id, *status);
     
