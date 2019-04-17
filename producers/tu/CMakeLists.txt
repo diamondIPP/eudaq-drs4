@@ -29,7 +29,7 @@ ELSE(CONFIG++_FOUND)
 ENDIF (CONFIG++_FOUND)
 
 
-add_executable(TUProducer.exe src/TUProducer.cpp src/trigger_controll.cpp src/trigger_logic_tpc_stream.cpp src/http_responce_pars.cpp src/Server.cpp)
+add_executable(TUProducer.exe src/TUProducer.cpp src/trigger_control.cpp src/trigger_logic_tpc_stream.cpp src/http_responce_pars.cpp src/Server.cpp)
 include_directories(include ${CONFIG++_INCLUDE_DIR})
 target_link_libraries(TUProducer.exe EUDAQ ${EUDAQ_THREADS_LIB} ${CONFIG++_LIBRARY})
 
