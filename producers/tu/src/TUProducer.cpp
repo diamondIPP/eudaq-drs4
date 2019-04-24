@@ -450,7 +450,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 template <typename Q>
 float TUProducer::CalculateAverage(std::deque<Q> & d, Q value, unsigned short max_size){
 
-  if (coincidence_count.second > 1) { d.push_back(value); } /** we need at least two events to calculate the rates */
+  if (coincidence_count.second > 1 or handshake_count.second > 1) { d.push_back(value); } /** we need at least two events to calculate the rates */
   if (d.size() > max_size) { d.pop_front(); } /** keep max_size values in the deque */
   return std::accumulate(d.begin(), d.end(), 0.0) / d.size();
 }
