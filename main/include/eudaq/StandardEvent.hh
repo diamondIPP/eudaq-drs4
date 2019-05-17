@@ -90,6 +90,7 @@ public:
     float getWFStartTime(uint16_t bin_low, uint16_t bin_high, float noise, float max_value) const;
     std::pair<float, float> fitMaximum(uint16_t bin_low, uint16_t bin_high) const;
     float interpolateTime(uint16_t ibin, float value) const;
+    float interpolateVoltage(uint16_t ibin, float time) const;
     float getBinWidth(uint16_t ibin) const { return m_times.at(ibin) - m_times.at(uint16_t(ibin - 1)); }
 
 private:
