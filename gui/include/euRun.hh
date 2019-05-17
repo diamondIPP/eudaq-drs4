@@ -49,14 +49,9 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
   private:
     enum state_t { ST_NONE, ST_READY, ST_RUNNING };
     virtual void OnConnect(const eudaq::ConnectionInfo & id);
-    virtual void OnDisconnect(const eudaq::ConnectionInfo & id) {
-      m_run.disconnected(id);
-    }
+    virtual void OnDisconnect(const eudaq::ConnectionInfo & id) { m_run.disconnected(id); }
     virtual void OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<eudaq::Status> status);
-    void EmitStatus(const char * name, const std::string & val) {
-      if (val == "") return;
-      emit StatusChanged(name, val.c_str());
-    }
+    void EmitStatus(const char * name, const std::string & val);
 
     void closeEvent(QCloseEvent * event) {
       if (m_run.rowCount() > 0 &&
@@ -107,8 +102,6 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
     //  Reset();
     //}
     void on_btnStart_clicked(bool cont = false) {
-      m_prevcoinc = 0;
-      m_prevtime = 0.0;
       m_runstarttime = 0.0;
       StartRun(cont ? "Continued" : txtRunmsg->displayText().toStdString());
       EmitStatus("RUN", to_string(m_runnumber));
@@ -130,7 +123,7 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
     }
     void timer() {
       if (!m_stopping) {
-        if (m_event_number >= m_max_event and m_event_number){
+        if (m_event_number >= m_max_event and m_event_number > 0){
           EUDAQ_INFO("Max event number reached! Stopping run!");
           std::cout << '\a';
           std::cout << '\a';
@@ -171,9 +164,10 @@ signals:
     QTimer m_statustimer;
     typedef std::map<std::string, QLabel *> status_t;
     status_t m_status;
-    int m_prevcoinc;
-    double m_prevtime, m_runstarttime;
+    double m_runstarttime;
     int64_t m_filebytes;
     uint32_t m_event_number;
     bool dostatus;
+    std::vector<std::pair<std::string, std::string>> status_labels;
+    std::vector<std::pair<std::string, std::string>> scaler_labels;
 };
