@@ -280,7 +280,7 @@ std::vector<uint16_t> * StandardWaveform::getAllPeaksAbove(uint16_t min, uint16_
 float StandardWaveform::getMedian(uint32_t min, uint32_t max) const
 {
     float median;
-    int n = abs(max - min + 1);
+    int n = max >= min ? max - min + 1 : min - max + 1;
     median = (float)TMath::Median(n, &m_samples.at(min));
     return median;
 }
