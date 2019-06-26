@@ -85,13 +85,15 @@ float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_
   uint16_t ibin(peak_pos);
   while (low_length <= max_low_length - 0.001) {
     float width = min(getBinWidth(--ibin), max_low_length - low_length);  // take the diff between max und current length if it gets smaller than bin width
-    integral += width * (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2;
+    bool full_int = width < max_low_length - low_length; // full integral if rest of the total width is bigger than the actual bin width
+    integral += width * (full_int ? (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2 : interpolateVoltage(ibin + 1, m_times.at(ibin + 1) - width));
     low_length += width;
   }
   ibin = uint16_t(peak_pos - 1);
   while (high_length <= max_high_length - 0.001) {
     float width = min(getBinWidth(++ibin), max_high_length - high_length);  // take the diff between max und current length if it gets smaller than bin width
-    integral += width * (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2;
+    bool full_int = width < max_high_length - high_length; // full integral if rest of the total width is bigger than the actual bin width
+    integral += width * (full_int ? (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2 : interpolateVoltage(ibin + 1, m_times.at(ibin) + width));
     high_length += width;
   }
   return integral / (max_high_length + max_low_length);
@@ -154,6 +156,14 @@ float StandardWaveform::interpolateTime(uint16_t ibin, float value) const {
   float a = m_samples.at(ibin) - m * m_times.at(ibin);
 	return (value - a) / m;
 }
+
+  float StandardWaveform::interpolateVoltage(uint16_t ibin, float time) const {
+
+    /** v = mt + a */
+    float m = (m_samples.at(ibin) - m_samples.at(uint16_t(ibin - 1))) / (m_times.at(ibin) - m_times.at(uint16_t(ibin - 1)));
+    float a = m_samples.at(ibin) - m * m_times.at(ibin);
+    return m * time + a;
+  }
 
 float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, float noise) const {
 
