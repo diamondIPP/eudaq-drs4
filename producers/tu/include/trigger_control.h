@@ -35,17 +35,17 @@ public:
      * @param d the input delay for the scintillator -  
      * @see set_delays()
      ************************************************************************/
-    void set_scintillator_delay(unsigned d) { scintillator_delay =d; }
-    void set_plane_delay(size_t i_plane, unsigned d) { plane_delays.at(i_plane) = d; }
-    void set_pad_delay(unsigned d) { pad_delay = d; };
+    void set_scintillator_delay(int d) { scintillator_delay =d; }
+    void set_plane_delay(size_t i_plane, int d) { plane_delays.at(i_plane) = d; }
+    void set_pad_delay(int d) { pad_delay = d; };
 
     /*******************************************************************//*!
      * @return the delay stored in the class. set by @set
      * @see set_scintillator_delay()
      ************************************************************************/
-    unsigned get_scintillator_delay() { return scintillator_delay; }
-    unsigned get_plane_delay(size_t i_plane) { return plane_delays.at(i_plane); }
-    unsigned get_pad_delay() { return pad_delay; }
+    int get_scintillator_delay() { return scintillator_delay; }
+    int get_plane_delay(size_t i_plane) { return plane_delays.at(i_plane); }
+    int get_pad_delay() { return pad_delay; }
 
     /*******************************************************************//*!
      * sends the set dellays stored in the class to the triger box 
@@ -236,7 +236,7 @@ private:
     int http_backend(char * command);
     int http_backend(const std::string & cmd) { return http_backend(const_cast<char *>(cmd.c_str())); }
     int scintillator_delay;
-    std::vector<unsigned> plane_delays;
+    std::vector<int> plane_delays;
     std::vector<unsigned short> trigger_delays;
     int pad_delay;
     http_responce_pars * parser;

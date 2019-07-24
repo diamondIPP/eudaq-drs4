@@ -41,13 +41,21 @@ using namespace libconfig;
   }
 
   int trigger_control::set_delays() {
+    /*
     string cmd_str = "/a?";
     cmd_str += "a0=" + to_string(scintillator_delay);
     for (auto i_d(0); i_d < n_planes; i_d++) {
       cmd_str += "a" + to_string(i_d + 1) + "=" + to_string(plane_delays.at(i_d));
     }
     cmd_str += "a" + to_string(n_planes) + "=" + to_string(pad_delay);
-    return this->http_backend(cmd_str);
+    */
+    
+    char cmd_str[128];
+    sprintf(cmd_str,"/a?a0=%d&a1=%d&a2=%d&a3=%d&a4=%d&a5=%d&a6=%d&a7=%d&a8=%d&a9=%d",scintillator_delay,
+            plane_delays.at(0),plane_delays.at(1),plane_delays.at(2),plane_delays.at(3),
+            plane_delays.at(4),plane_delays.at(5),plane_delays.at(6),plane_delays.at(7),pad_delay);
+    std:cout << cmd_str << std::endl;
+    return http_backend(cmd_str);
   }
 
   int trigger_control::reset_counts()                          { return set_value("c", 0); }
