@@ -626,7 +626,7 @@ void CMSPixelProducer::ReadoutLoop() {
 	ev.AddBlock(0, reinterpret_cast<const char*>(&daqEvent.data[0]), sizeof(daqEvent.data[0])*daqEvent.data.size());
 
 	SendEvent(ev);
-    std::cout << "Pixel events: " << m_ev << ", Event size: " << (daqEvent.GetSize() - 4 - m_nplanes * 2) / 6 << std::endl;
+    std::cout << "Pixel event: " << m_ev + 1 << ", hits: " << (daqEvent.GetSize() - 4 - m_nplanes * 2) / 6 << std::endl;
 	m_ev++;
 	// Events with pixel data have more than 4 words for TBM header/trailer and 1 for each ROC header:
 	if (daqEvent.data.size() > (4 + 3 * m_nplanes)) { m_ev_filled++; m_ev_runningavg_filled++; }
