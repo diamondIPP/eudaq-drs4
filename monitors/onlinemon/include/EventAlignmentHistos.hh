@@ -19,7 +19,6 @@ class SimpleStandardEvent;
 class RootMonitor;
 class TString;
 class TGraph;
-class TProfile2D;
 class TText;
 
 #include <cstdint>
@@ -34,15 +33,15 @@ class TText;
 class EventAlignmentHistos {
 
 protected:
-    std::map<int, TH1 *> _Alignment;
+    std::vector<std::map<int, TProfile *> > _PadAlignment;
     TH1 *_PulserRate;
     TText * _PulserLegend;
-    TH2I *_IsAligned;
+    std::vector<TH2I *>_IsAligned;
     std::vector<TH1 *> _PixelCorrelations;
-    std::deque<uint8_t> _lastNClusters;
+    std::vector<std::deque<uint8_t> > _lastNClusters;
     TH2F * _PixelIsAligned;
     std::vector<std::vector<size_t> > eventNumbers;
-    std::vector<std::vector<uint8_t> > * rowAna1, * rowAna2;
+    std::vector<std::vector<uint8_t> > * rowAna1;
     std::vector<std::vector<uint8_t > > * rowDig;
     TGraph * _Corr;
 
@@ -57,36 +56,40 @@ public:
 
     void Reset();
 
-    TProfile *getAlignmentHisto() { return (TProfile *) _Alignment.at(0); }
-    TProfile *getPulserRate() { return (TProfile *) _PulserRate; }
+    TProfile * getAlignmentHisto(uint8_t idev) { return (TProfile *) _PadAlignment.at(idev).at(0); }
+    TProfile * getPulserRate() { return (TProfile *) _PulserRate; }
     TProfile * getPixelCorrelation(uint8_t icor) { return (TProfile *)_PixelCorrelations.at(icor); }
-    TH2I *getIsAlignedHisto() { return _IsAligned; }
+    TH2I *getIsAlignedHisto(uint8_t idev) { return _IsAligned.at(idev); }
     TH2F *getPixelIsAlignedHisto(const SimpleStandardEvent &);
     uint8_t getNDigPlanes() { return _n_dig_planes; }
     uint8_t getNAnaPlanes() { return _n_analogue_planes; }
     bool hasWaveForm;
+    void init(const SimpleStandardEvent &);
 
 private:
     const uint8_t _nOffsets;
     const uint16_t _bin_size;
     const uint32_t max_event_number;
-    const uint8_t _n_analogue_planes;
+    uint8_t _n_analogue_planes;
     uint8_t _n_dig_planes;
+    uint8_t _n_devices;
+    std::map< std::string, uint8_t> _device_names;
 
     bool foundPulser;
     uint8_t count;
 
-    TProfile *init_profile(std::string, std::string, uint16_t bin_size = 0, std::string ytit = "Fraction of Hits @ Pulser Events [%]", Color_t fill_color = 0);
-    TH2I *init_th2i(std::string, std::string);
+    TProfile *init_profile(const std::string&, const std::string&, uint16_t bin_size = 0, const std::string& ytit = "Fraction of Hits @ Pulser Events [%]", Color_t fill_color = 0);
+    TH2I *init_th2i(const std::string&, const std::string&);
     TH2F * init_pix_align(uint16_t);
 
-    void FillIsAligned();
+    void FillIsAligned(uint8_t);
 
     void FillCorrelationVectors(const SimpleStandardEvent &);
     void BuildCorrelation();
 
     void ResizeObjects(uint32_t);
     void InitVectors();
+    void InitPadAlignment();
 
     const Color_t fillColor;
 

@@ -18,30 +18,29 @@
 using namespace std;
 
 
-EventAlignmentHistos::EventAlignmentHistos(): hasWaveForm(true), _nOffsets(5), _bin_size(1000), max_event_number(uint32_t(5e7)), _n_analogue_planes(4), _n_dig_planes(0), foundPulser(false),
-                                              count(0), _lastNClusters(0), fillColor(821)
+EventAlignmentHistos::EventAlignmentHistos(): hasWaveForm(true), _nOffsets(10), _bin_size(1000), max_event_number(uint32_t(5e7)), _n_analogue_planes(4),
+                                              _n_dig_planes(0),  _n_devices(1), foundPulser(false), count(0), _lastNClusters(0), fillColor(821), _PixelIsAligned(nullptr)
 {
-    for (int ioff(-_nOffsets); ioff <= _nOffsets; ioff++)
-      _Alignment[ioff] = init_profile(string(TString::Format("p_al%d", ioff)), "Fraction of Hits at Pulser Events", _bin_size, "Fraction of Hits @ Pulser Events [%]", fillColor);
     _PulserRate = init_profile("p_pu", "Pulser Rate", 200, "Fraction of Pulser Events [%]", fillColor);
     _PulserLegend = new TText(.7, .8, "Mean: ?");
     _PulserRate->GetListOfFunctions()->Add(_PulserLegend);
     for (uint8_t i(7); i < 18; i++)
       _PixelCorrelations.push_back(init_profile(string(TString::Format("p_pc%d", i)), string(TString::Format("Pixel Correlation - REF %d", i)), _bin_size, "Correlation Factor", fillColor));
-    _IsAligned = init_th2i("h_al", "Event Alignment");
     _Corr = new TGraph();
     rowAna1 = new vector<vector<uint8_t> >;
     rowDig = new vector<vector<uint8_t> >;
 }
 
-EventAlignmentHistos::~EventAlignmentHistos(){}
+EventAlignmentHistos::~EventAlignmentHistos() = default;
 
 void EventAlignmentHistos::Write(){
 
-    for (auto h:_Alignment)
-      h.second->Write();
+    for (const auto & d:_PadAlignment)
+      for (auto h:d)
+        h.second->Write();
     _PulserRate->Write();
-    _IsAligned->Write();
+    for (auto h:_IsAligned)
+      h->Write();
     _PixelIsAligned->Write();
     for (auto icor:_PixelCorrelations)
       icor->Write();
@@ -99,11 +98,6 @@ double EventAlignmentHistos::pearsoncoeff(std::vector<T> X, std::vector<T> Y) {
 void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
 
 
-  if (_n_dig_planes == 0u){
-    _n_dig_planes = uint8_t(sev.getNPlanes() - _n_analogue_planes);
-    hasWaveForm = _n_analogue_planes == sev.getNPlanes();
-    InitVectors();
-  }
   uint32_t event_no = sev.getEvent_number();
   ResizeObjects(event_no);
 
@@ -115,14 +109,15 @@ void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
   }
 
   SimpleStandardWaveform wf = sev.getWaveform(0);
-  uint16_t n_clusters = 0;
-  for (uint8_t i_pl = 0; i_pl < sev.getNPlanes(); i_pl++){
-      SimpleStandardPlane pl = sev.getPlane(i_pl);
-      n_clusters += pl.getNClusters();
+  for (auto idev(0); idev < _n_devices; idev++){
+    _lastNClusters.at(idev).push_back(0);
+    if (_lastNClusters.at(idev).size() > _nOffsets * 2 + 1)
+      _lastNClusters.at(idev).pop_front();
   }
-  _lastNClusters.push_back(n_clusters);
-  if (_lastNClusters.size() > _nOffsets * 2 + 1)
-    _lastNClusters.pop_front();
+  for (auto ipl(0); ipl < sev.getNPlanes(); ipl++){
+    uint8_t idev = _device_names.at(sev.getPlane(ipl).getName());
+    _lastNClusters.at(idev).back() += sev.getPlane(ipl).getNClusters();
+  }
 
   _PulserRate->Fill(event_no, 100 * wf.isPulserEvent());
   foundPulser = wf.isPulserEvent() or foundPulser;
@@ -131,19 +126,24 @@ void EventAlignmentHistos::Fill(const SimpleStandardEvent & sev){
   if (count == _nOffsets + 1 and _PulserRate->GetBinContent(_PulserRate->GetNbinsX() - 1) < 30){
     foundPulser = false;
     count = 0;
-    for (int ioff(-_nOffsets); ioff <= _nOffsets; ioff++)
-      if (_lastNClusters.size() > ioff + _nOffsets)
-        _Alignment.at(ioff)->Fill(event_no, _lastNClusters.at(uint8_t(ioff + _nOffsets)) ? 100 : .1);
+    for (int ioff(-_nOffsets); ioff <= _nOffsets; ioff++) {
+      if (_lastNClusters.at(0).size() > ioff + _nOffsets) {
+        for (auto idev(0); idev < _n_devices; idev++) {
+          _PadAlignment.at(idev).at(ioff)->Fill(event_no, _lastNClusters.at(idev).at(uint8_t(ioff + _nOffsets)) ? 100 : .1);
+        }
+      }
+    }
 
-    FillIsAligned();
+    for (auto idev(0); idev < _n_devices; idev++)
+      FillIsAligned(idev);
   }
 
 }
 
-TProfile * EventAlignmentHistos::init_profile(std::string name, std::string title, uint16_t bin_size, string ytit, Color_t fill_color) {
+TProfile * EventAlignmentHistos::init_profile(const std::string & name, const std::string & title, uint16_t bin_size, const string & ytit, Color_t fill_color) {
 
     bin_size = bin_size ? bin_size : _bin_size;
-    TProfile * prof = new TProfile(name.c_str(), title.c_str(), 1, 0, bin_size);
+    auto * prof = new TProfile(name.c_str(), title.c_str(), 1, 0, bin_size);
     prof->SetStats(false);
     prof->GetYaxis()->SetRangeUser(-10, 110);
     prof->GetXaxis()->SetTitle("Event Number");
@@ -155,14 +155,14 @@ TProfile * EventAlignmentHistos::init_profile(std::string name, std::string titl
     return prof;
 }
 
-TH2I * EventAlignmentHistos::init_th2i(std::string name, std::string title){
-    uint8_t ybins = uint8_t(_nOffsets * 2 + 1);
+TH2I * EventAlignmentHistos::init_th2i(const std::string & name, const std::string & title){
+    auto ybins = uint8_t(_nOffsets * 2 + 1);
     TH2I * histo = new TH2I(name.c_str(), title.c_str(), max_event_number / _bin_size, 0, max_event_number, ybins + 2, 0, ybins + 2);
     histo->SetStats(false);
     histo->GetZaxis()->SetRangeUser(0, 5);
     histo->GetXaxis()->SetRangeUser(0, _bin_size);
-    for (auto h:_Alignment)
-      histo->GetYaxis()->SetBinLabel(h.first + _nOffsets + 2, TString::Format("%d", h.first));
+    for (int ioff(-_nOffsets); ioff <= _nOffsets; ioff++)
+      histo->GetYaxis()->SetBinLabel(ioff + _nOffsets + 2, TString::Format("%d", ioff));
     histo->GetYaxis()->SetLabelSize(0.06);
     histo->GetXaxis()->SetTitle("Event Number");
     return histo;
@@ -181,57 +181,61 @@ TH2F * EventAlignmentHistos::init_pix_align(uint16_t n_planes){
   return histo;
 }
 
-void EventAlignmentHistos::FillIsAligned() {
+void EventAlignmentHistos::FillIsAligned(uint8_t idev) {
 
     // check if all are aligned (may happen at interruptions)
-    uint16_t last_bin = uint16_t(_Alignment.at(0)->GetNbinsX() - 1);
+    uint16_t last_bin = uint16_t(_PadAlignment.at(idev).at(0)->GetNbinsX() - 1);
     uint8_t all = 0;
-    for (auto h:_Alignment)
+    for (auto h:_PadAlignment.at(idev))
       if (h.second->GetBinContent(last_bin) < 20)
         all++;
     // don't fill if already set
-    if (_IsAligned->GetBinContent(last_bin) > 0 or all > _nOffsets)
+    if (_IsAligned.at(idev)->GetBinContent(last_bin) > 0 or all > _nOffsets)
         return;
-    for (uint8_t i(0); i < _Alignment.size(); i++){
-      _IsAligned->SetBinContent(last_bin, i + 2, _Alignment.at(i - _nOffsets)->GetBinContent(last_bin) < 30 ? 3 : 5);
+    for (uint8_t i(0); i < _PadAlignment.at(idev).size(); i++){
+      _IsAligned.at(idev)->SetBinContent(last_bin, i + 2, _PadAlignment.at(idev).at(i - _nOffsets)->GetBinContent(last_bin) < 30 ? 3 : 5);
     }
 }
 
 void EventAlignmentHistos::ResizeObjects(uint32_t ev_no) {
 
-    if (_Alignment.at(0)->GetXaxis()->GetXmax() < ev_no) {
-        uint32_t bins = (ev_no + _bin_size) / _bin_size;
-        uint32_t max = bins * _bin_size;
-        for (auto h:_Alignment)
-          h.second->SetBins(bins, 0, max);
-        _IsAligned->GetXaxis()->SetRangeUser(0, max);
-        if (not hasWaveForm){
-          _PixelIsAligned->GetXaxis()->SetRangeUser(0, max);
-          for (uint8_t iplane(0); iplane < _n_dig_planes; iplane++)
-            _PixelCorrelations.at(iplane)->SetBins(bins, 0, max);
-        }
+  for (auto idev(0); idev < _n_devices; idev++){
+    if (_PadAlignment.at(idev).at(0)->GetXaxis()->GetXmax() < ev_no) {
+      uint32_t bins = (ev_no + _bin_size) / _bin_size;
+      uint32_t max = bins * _bin_size;
+      for (auto h:_PadAlignment.at(idev))
+        h.second->SetBins(bins, 0, max);
+      _IsAligned.at(idev)->GetXaxis()->SetRangeUser(0, max);
+      if (not hasWaveForm){
+        _PixelIsAligned->GetXaxis()->SetRangeUser(0, max);
+        for (uint8_t iplane(0); iplane < _n_dig_planes; iplane++)
+          _PixelCorrelations.at(iplane)->SetBins(bins, 0, max);
+      }
     }
 
     if (_PulserRate->GetXaxis()->GetXmax() < ev_no) {
-        vector<float> values;
-        for (uint16_t ibin(0); ibin < _PulserRate->GetNbinsX(); ibin++){
-          float x = float(_PulserRate->GetBinContent(ibin));
-          if (x < 30)
-            values.push_back(x);
-        }
-        _PulserLegend->SetText(.7, .8, TString::Format("Mean: %.1f", mean(values)));
-        uint16_t bin_size = uint16_t(_PulserRate->GetBinWidth(0));
-        uint32_t bins = (ev_no + bin_size) / bin_size;
-        uint32_t max = bins * bin_size;
-        _PulserRate->SetBins(bins, 0, max);
+      vector<float> values;
+      for (uint16_t ibin(0); ibin < _PulserRate->GetNbinsX(); ibin++){
+        auto x = float(_PulserRate->GetBinContent(ibin));
+        if (x < 30)
+          values.push_back(x);
+      }
+      _PulserLegend->SetText(.7, .8, TString::Format("Mean: %.1f", mean(values)));
+      auto bin_size = uint16_t(_PulserRate->GetBinWidth(0));
+      uint32_t bins = (ev_no + bin_size) / bin_size;
+      uint32_t max = bins * bin_size;
+      _PulserRate->SetBins(bins, 0, max);
     }
+  }
 }
 
 void EventAlignmentHistos::Reset(){
 
-    for (auto h:_Alignment)
-      h.second->Reset();
-    _IsAligned->Reset();
+    for (const auto & d: _PadAlignment)
+        for (auto h:d)
+          h.second->Reset();
+    for (auto h:_IsAligned)
+      h->Reset();
     _PulserRate->Reset();
 }
 
@@ -248,4 +252,30 @@ TH2F* EventAlignmentHistos::getPixelIsAlignedHisto(const SimpleStandardEvent & s
   return _PixelIsAligned;
 
 }
+
+void EventAlignmentHistos::InitPadAlignment() {
+
+  for (auto idev(0); idev < _n_devices; idev++){
+    map<int, TProfile *> temp;
+    for (int ioff(-_nOffsets); ioff <= _nOffsets; ioff++) {
+      string title = string(TString::Format("Hits @ Pulser DUT-%d", idev));
+      temp[ioff] = init_profile(string(TString::Format("p_al%d-%d", ioff, idev)), title, _bin_size, "Fraction of Hits @ Pulser Events [%]", fillColor);
+    }
+    _PadAlignment.push_back(temp);
+    _IsAligned.push_back(init_th2i(string(TString::Format("hal%d", idev)), string(TString::Format("Event Alignment DUT %d", idev))));
+  }
+}
+
+void EventAlignmentHistos::init(const SimpleStandardEvent & sev) {
+
+  _n_devices = sev.getNDevices();
+  _device_names = sev.getDeviceNames();
+  _lastNClusters.resize(_n_devices);
+  _n_analogue_planes = sev.getNPlanes() < _n_analogue_planes ? sev.getNPlanes() : _n_analogue_planes;
+  _n_dig_planes = uint8_t(sev.getNPlanes() - _n_analogue_planes);
+  hasWaveForm = _n_analogue_planes == sev.getNPlanes();
+  InitVectors();
+  InitPadAlignment();
+}
+
 

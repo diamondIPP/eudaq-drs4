@@ -468,23 +468,28 @@ void CorrelationCollection::registerPlaneCorrelations(const SimpleStandardPlane&
 
 void CorrelationCollection::registerEventAlignment(const SimpleStandardEvent &simpev) {
 
-  if (_mon == NULL)
+  if (_mon == nullptr)
     return;
   string tree;
+  _evAlign->init(simpev);
   if (simpev.getNWaveforms()) {
-    tree = "Correlations/PadCorrelation/Is Aligned";
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedHisto(), "COL", 0);
-
     tree = "Correlations/PadCorrelation/Pulser Rate";
     _mon->getOnlineMon()->registerTreeItem(tree);
     _mon->getOnlineMon()->registerHisto(tree, _evAlign->getPulserRate(), "hist", 0);
 
+    for (auto idev(0); idev < simpev.getNDevices(); idev++){
+      tree = string(TString::Format("Correlations/PadCorrelation/DUT %d is aligned", idev));
+      _mon->getOnlineMon()->registerTreeItem(tree);
+      _mon->getOnlineMon()->registerHisto(tree, _evAlign->getIsAlignedHisto(idev), "COL", 0);
+    }
+
     _mon->getOnlineMon()->makeTreeItemSummary("Correlations/PadCorrelation"); //make summary page
 
-    tree = "Correlations/PadCorrelation/HitFraction at Pulser Events";
-    _mon->getOnlineMon()->registerTreeItem(tree);
-    _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentHisto(), "histe", 0);
+    for (auto idev(0); idev < simpev.getNDevices(); idev++){
+      tree = string(TString::Format("Correlations/PadCorrelation/HitFraction at Pulser Events DUT %d", idev));
+      _mon->getOnlineMon()->registerTreeItem(tree);
+      _mon->getOnlineMon()->registerHisto(tree, _evAlign->getAlignmentHisto(idev), "histe", 0);
+    }
   }
   else{
     for (uint8_t idig(0); idig < simpev.getNPlanes() - _evAlign->getNAnaPlanes(); idig++){
