@@ -170,7 +170,7 @@ void TUProducer::MainLoop(){
           SendEvent(ev);
 
           m_event.first = m_event.second + 1;
-          cout << "Event number TUProducer: " << handshake_count.second << endl;
+          cout << "TU events: " << handshake_count.second << endl;
 
         } //end if (prev event count)
       } //end if(rd)
