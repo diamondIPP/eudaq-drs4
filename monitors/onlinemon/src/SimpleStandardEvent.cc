@@ -124,3 +124,23 @@ void SimpleStandardEvent::setEvent_number(unsigned int event_number)
 	this->event_number = event_number;
 }
 
+uint8_t SimpleStandardEvent::getNDevices() const {
+
+  uint8_t n(1);
+  for (auto ipl(1); ipl < getNPlanes(); ipl++)
+    if (getPlane(ipl).getName() != getPlane(ipl - 1).getName())
+      n++;
+  return n;
+}
+
+std::map<std::string, uint8_t> SimpleStandardEvent::getDeviceNames() const {
+
+  uint8_t n(0);
+  std::map<std::string, uint8_t> temp;
+  temp[getPlane(0).getName()] = n++;
+  for (auto ipl(1); ipl < getNPlanes(); ipl++)
+    if (getPlane(ipl).getName() != getPlane(ipl - 1).getName())
+      temp[getPlane(ipl).getName()] = n++;
+  return temp;
+}
+
