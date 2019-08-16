@@ -85,7 +85,7 @@ using namespace libconfig;
   int trigger_control::set_pulser_polarity(bool pol_pulser1, bool pol_pulser2) {
     unsigned short selector = (unsigned(pol_pulser2) << 1u) | unsigned(pol_pulser1);
     pulser_polarity = selector;
-    return set_value("v", selector);
+    return set_value("x", selector);
   }
 
 
