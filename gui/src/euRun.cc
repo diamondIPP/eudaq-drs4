@@ -185,7 +185,7 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
   else if (id.GetType() == "Producer" && id.GetName() == "TU"){
     EmitStatus("TUSTAT", status->GetTag("STATUS"));
     std::string beam_current = status->GetTag("BEAM_CURR");
-    EmitStatus("BEAMCURR", (beam_current.empty() ? "" : QString("%1 µA").arg(std::stof(beam_current), 3, 'f', 1).toStdString()));
+    EmitStatus("BEAMCURR", (beam_current.empty() ? "" : QString("%1 mA").arg(std::stof(beam_current) / 1000., 3, 'f', 2).toStdString()));
     EmitStatus("HSCOUNT", status->GetTag("HANDSHAKE_COUNT"));
     EmitStatus("HSRATE", (m_event_number > 1 ? status->GetTag("HANDSHAKE_RATE") + " Hz" : ""));
     EmitStatus("COINCRATE", status->GetTag("COINC_RATE") + " Hz");
