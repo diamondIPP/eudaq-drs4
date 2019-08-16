@@ -102,7 +102,7 @@ class EudaqStart:
         return '"{}{}"'.format(ssh_cmd, join(script_path, name) if name is not None else '')
 
     def start_beam_device(self, name, device, script_name=None, script_dir='scripts'):
-        if self.Config.getboolean('DEVICE', device):
+        if device in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', device):
             self.start_xterm(name, self.get_script_cmd(script_name, script_dir))
 
     def start_xterm(self, tit, cmd):
