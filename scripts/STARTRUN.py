@@ -10,10 +10,11 @@ from KILLRUN import *
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser
 from glob import glob
+from datetime import datetime
 
 
 class EudaqStart:
-    def __init__(self, config='psi', sub_config=None):
+    def __init__(self, config='psi', mask=False):
 
         # DIRS
         self.Dir = dirname(realpath(__file__))
@@ -24,24 +25,25 @@ class EudaqStart:
         self.protect_data()
 
         # KILL
-        self.Kill = EudaqKill(self.BeamPC, self.DataPC)
-        self.Kill.all()
+        if not mask:
+            self.Kill = EudaqKill(self.BeamPC, self.DataPC)
+            self.Kill.all()
 
-        # PORTS
-        self.Hostname = self.get_ip()
-        self.RCPort = self.Config.get('PORT', 'rc')
-        self.Port = 'tcp://{}:{}'.format(self.Hostname, self.RCPort)
+            # PORTS
+            self.Hostname = self.get_ip()
+            self.RCPort = self.Config.get('PORT', 'rc')
+            self.Port = 'tcp://{}:{}'.format(self.Hostname, self.RCPort)
 
-        # WINDOWS
-        self.NWindows = self.load_n_windows()
-        self.MonitorNumber = self.Config.getint('WINDOW', 'monitor number')
-        self.MaxW = get_monitors()[self.MonitorNumber].width
-        self.MaxH = get_monitors()[self.MonitorNumber].height
-        self.XMax, self.YMax = self.get_max_pos()
-        self.Spacing = self.Config.getint('WINDOW', 'spacing')
-        self.W = int((self.XMax - (self.NWindows - 1) * self.XMax * self.Spacing / self.MaxH) / self.NWindows) - 4
-        self.H = self.Config.getint('WINDOW', 'height')
-        self.XPos = 0
+            # WINDOWS
+            self.NWindows = self.load_n_windows()
+            self.MonitorNumber = self.Config.getint('WINDOW', 'monitor number')
+            self.MaxW = get_monitors()[self.MonitorNumber].width
+            self.MaxH = get_monitors()[self.MonitorNumber].height
+            self.XMax, self.YMax = self.get_max_pos()
+            self.Spacing = self.Config.getint('WINDOW', 'spacing')
+            self.W = int((self.XMax - (self.NWindows - 1) * self.XMax * self.Spacing / self.MaxH) / self.NWindows) - 4
+            self.H = self.Config.getint('WINDOW', 'height')
+            self.XPos = 0
 
     def load_host(self, name):
         host = self.Config.get('HOST', name)
@@ -61,7 +63,7 @@ class EudaqStart:
 
     def get_max_pos(self):
         system('xterm -xrm "XTerm.vt100.allowTitleOps: false" -geom 100x30+0+0 -T "Max Pos" &')
-        sleep(.1)
+        sleep(.5)
         h, w = get_height('Max Pos'), get_width('Max Pos')
         self.Kill.xterms()
         return self.MaxW * 100 / w, self.MaxH * 30 / h
@@ -98,14 +100,14 @@ class EudaqStart:
     def start_tu(self):
         self.start_xterm('TU', '{d} -r {p}'.format(d=join(self.EUDAQDir, 'bin', 'TUProducer.exe'), p=self.Port))
 
-    def get_script_cmd(self, name, script_dir='scripts'):
+    def get_script_cmd(self, name, script_dir='scripts', src=False):
         ssh_cmd = '' if self.BeamPC is None else 'ssh -tY {} '.format(self.BeamPC)
         script_path = join('~', script_dir) if self.BeamPC is None else join('/home', get_user(self.BeamPC), script_dir)
-        return '"{}{}"'.format(ssh_cmd, join(script_path, name) if name is not None else '')
+        return '"{}{}{}"'.format('source etc/profile; ' if src else '', ssh_cmd, join(script_path, name) if name is not None else '')
 
-    def start_beam_device(self, name, device, script_name=None, script_dir='scripts'):
+    def start_beam_device(self, name, device, script_name=None, script_dir='scripts', src=False):
         if device in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', device):
-            self.start_xterm(name, self.get_script_cmd(script_name, script_dir))
+            self.start_xterm(name, self.get_script_cmd(script_name, script_dir, src))
 
     def start_xterm(self, tit, cmd):
         warning('  Starting {}'.format(tit))
@@ -122,21 +124,35 @@ class EudaqStart:
         self.start_beam_device('CMS Pixel Telescope', 'cmstel', 'StartCMSPixel.sh')
         self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDig.sh')
         self.start_beam_device('Clock Generator', 'clock', 'clockgen.sh')
-        self.start_beam_device('WBC Scan', 'wbc')
+        self.start_beam_device('WBC Scan', 'wbc', 'wbcScan.sh', src=True)
         self.start_beam_device('DRS4 Producer', 'drs4', 'StartDRS4.sh')
         self.start_beam_device('DRS4 Osci', 'drsgui', 'drsosc', script_dir=join('software', 'DRS4'))
         self.start_beam_device('CAEN Producer', 'caen', 'StartVME.sh')
         finished('Starting EUDAQ complete!')
+
+    def make_mask(self):
+        now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        file_name = '{}_{}.msk'.format(raw_input('Enter the name of the detectors with a "-": '), now)
+        file_path = join('/home', get_user(self.BeamPC), self.Config.get('DIR', 'telescope'), file_name)
+        x1 = raw_input('Enter the x-range for plane 1 (x1 x2): ').split()
+        y1 = raw_input('Enter the y-range for plane 1 (y1 y2): ').split()
+        x2 = raw_input('Enter the x-range for plane 2 (x1 x2): ').split()
+        y2 = raw_input('Enter the y-range for plane 2 (y1 y2): ').split()
+        string = 'cornBot 1 {} {}\ncornTop 1 {} {}\n\n'.format(x1[0].rjust(2), y1[0].rjust(2), x1[1].rjust(2), y1[1].rjust(2))
+        string += 'cornBot 2 {} {}\ncornTop 2 {} {}\n\n'.format(x2[0].rjust(2), y2[0].rjust(2), x2[1].rjust(2), y2[1].rjust(2))
+        system('ssh -tY {} "echo \'{}\' > {}"'.format(self.BeamPC, string, file_path))
 
 
 if __name__ == '__main__':
     
     p = ArgumentParser()
     p.add_argument('-t', '--test', action='store_true', help='test mode without running the processes')
+    p.add_argument('-m', '--mask', action='store_true', help='create mask')
     p.add_argument('config', nargs='?', default='psi', help='main config file name (without .ini)')
-    p.add_argument('subconfig', nargs='?', default=None, help='auxiliary config file to overwrite single settings from the main config (optional)')
     args = p.parse_args()
 
-    z = EudaqStart(args.config, args.subconfig)
-    if not args.test:
+    z = EudaqStart(args.config, mask=args.mask)
+    if args.mask:
+        z.make_mask()
+    elif not args.test:
         z.run()
