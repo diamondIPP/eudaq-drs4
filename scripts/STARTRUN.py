@@ -18,7 +18,7 @@ class EudaqStart:
         # DIRS
         self.Dir = dirname(realpath(__file__))
         self.EUDAQDir = dirname(self.Dir)
-        self.Config = self.load_config(config, sub_config)
+        self.Config = self.load_config(config)
         self.DataPC = self.load_host('data')
         self.BeamPC = self.load_host('beam')
         self.protect_data()
@@ -47,11 +47,13 @@ class EudaqStart:
         host = self.Config.get('HOST', name)
         return None if host.lower() == 'none' else host
 
-    def load_config(self, file_name, sub_file_name):
+    def load_config(self, file_name):
         config = ConfigParser()
-        config.read(join(self.Dir, 'config', '{}.ini'.format(file_name)))
-        if sub_file_name is not None:
-            config.read(join(self.Dir, 'config', '{}.ini'.format(sub_file_name)))  # only overwrites different settings
+        file_name = file_name.replace('.ini', '')
+        main_config = file_name.split('-')[0]
+        config.read(join(self.Dir, 'config', '{}.ini'.format(main_config)))
+        if '-' in file_name:
+            config.read(join(self.Dir, 'config', '{}.ini'.format(file_name)))  # only overwrites different settings
         return config
 
     def load_n_windows(self):
