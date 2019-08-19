@@ -5,7 +5,7 @@
 # -------------------------------------------------------
 from screeninfo import get_monitors
 from os.path import dirname, realpath, join
-from os import chmod
+from os import chmod, chdir
 from KILLRUN import *
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser
@@ -83,6 +83,7 @@ class EudaqStart:
 
     def start_runcontrol(self):
         warning('  starting RunControl')
+        chdir(join(self.EUDAQDir, 'bin'))
         port = 'tcp://{}'.format(self.RCPort)
         system('{d} -x 0 -y -0 -w {w} -g {h} -a {p} &'.format(d=join(self.EUDAQDir, 'bin', 'euRun.exe'), w=int(self.MaxW / 3.), h=int(self.MaxH * 2 / 3.), p=port))
         sleep(1)
