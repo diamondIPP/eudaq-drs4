@@ -11,11 +11,12 @@ from time import sleep
 
 class Eudaq(Mouse, Keys):
 
-    def __init__(self, config_file='eudaq.ini'):
+    def __init__(self, config_file='eudaq.ini', prog_config='psi'):
         self.EudaqDir = dirname(dirname(realpath(__file__)))
         Keys.__init__(self)
         Mouse.__init__(self)
         self.ConfigFileName = join(self.EudaqDir, 'shifterBot', 'config', config_file)
+        self.EudaqConfig = prog_config
 
     @staticmethod
     def idle():
@@ -27,6 +28,7 @@ class Eudaq(Mouse, Keys):
         return p.get(section, option)
 
     def configure(self):
+        self.set_config()
         self.click(*loads(self.get_from_config('EUDAQ', 'config')))
 
     def start(self):
@@ -35,18 +37,14 @@ class Eudaq(Mouse, Keys):
     def stop(self):
         self.click(*loads(self.get_from_config('EUDAQ', 'stop')))
 
+    def set_config(self):
+        x, y = loads(self.get_from_config('EUDAQ', 'config'))
+        self.enter_text(self.EudaqConfig, x - 200, y)
+
     def set_flux(self, sheet, row):
         flux = sheet.col_values(col2num('G'))[row - 1]
         flux = '10000' if flux == 'MAX' else flux
-        print flux
-        self.click(*loads(self.get_from_config('EUDAQ', 'flux')))
-        self.idle()
-        self.press_ctrl_and('a')
-        self.idle()
-        self.type(flux)
-        self.idle()
-        self.press_enter()
-        self.idle()
+        self.enter_text(flux, *loads(self.get_from_config('EUDAQ', 'flux')))
 
     def start_onlinemon(self, run):
         self.click(*loads(self.get_from_config('EUDAQ', 'online monitor window')))
@@ -59,4 +57,14 @@ class Eudaq(Mouse, Keys):
         self.idle()
         self.press_enter()
 
-
+    def enter_text(self, text, x, y):
+        self.click(x, y)
+        self.idle()
+        self.press_ctrl_and('a')
+        self.idle()
+        self.type(text)
+        self.idle()
+        self.press_del()
+        self.idle()
+        self.press_enter()
+        self.idle()
