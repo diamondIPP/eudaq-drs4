@@ -149,7 +149,7 @@ if __name__ == '__main__':
     p = ArgumentParser()
     p.add_argument('-t', '--test', action='store_true', help='test mode without running the processes')
     p.add_argument('-m', '--mask', action='store_true', help='create mask')
-    p.add_argument('config', nargs='?', default='psi', help='main config file name (without .ini)')
+    p.add_argument('config', nargs='?', default='psi-pad', help='main config file name (without .ini)')
     args = p.parse_args()
 
     z = EudaqStart(args.config, mask=args.mask)
