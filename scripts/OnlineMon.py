@@ -10,6 +10,7 @@ from os.path import join, isfile
 
 parser = ArgumentParser()
 parser.add_argument('-tc', nargs='?', default='201908')
+parser.add_argument('-x', nargs='?', default='0')
 parser.add_argument('run')
 args = parser.parse_args()
 
@@ -29,7 +30,7 @@ if not isfile(run_file_path):
     exit()
 
 prog = join(eudaq_dir, 'bin', 'OnlineMon.exe')
-cmd = '{} -sc 1 -u 500 -f {p} -c {c}'.format(prog, p=run_file_path, c=conf_file)
+cmd = '{} -sc 1 -u 500 -f {p} -c {c} -x {x}'.format(prog, p=run_file_path, c=conf_file, x=args.x)
 print cmd
 print
 system(cmd)
