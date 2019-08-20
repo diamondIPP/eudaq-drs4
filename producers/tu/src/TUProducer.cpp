@@ -10,7 +10,7 @@
 
 //TU includes
 #include "TUProducer.hh"
-#include "trigger_controll.h"
+#include "trigger_control.h"
 #include "TUDEFS.h"
 
 //EUDAQ includes
@@ -30,13 +30,28 @@
 #define BOLDGREEN "\33[1m\033[32m"
 #define CLEAR "\033[0m\n"
 
+using namespace std;
+
 static const std::string EVENT_TYPE = "TU";
 
-TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity):eudaq::Producer(name, runcontrol),
-	event_type(EVENT_TYPE),
-	m_run(0), m_ev(0),
-	done(false), TUStarted(false), TUJustStopped(false),
-	tc(NULL), stream(NULL){
+TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity):
+  eudaq::Producer(name, runcontrol),
+  event_type(EVENT_TYPE),
+	m_run(0),
+	m_event(999, 0),
+	done(false),
+	TUStarted(false),
+	TUJustStopped(false),
+	tc(nullptr),
+	stream(nullptr),
+	beam_current_scaler(0, 0),
+	coincidence_count(0, 0),
+	handshake_count(0, 0),
+	average_beam_current(0),
+	average_coincidence_rate(0),
+	average_handshake_rate(0),
+	n_scaler(10),
+  time_stamps(0, 0) {
 
   try{
     std::fill_n(trigger_counts, 10, 0);
@@ -44,23 +59,15 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
 		std::fill_n(input_frequencies, 10, 0);
 		std::fill_n(avg_input_frequencies, 10, 0);
     std::fill_n(trigger_counts_multiplicity, 10, 0);
-    std::fill_n(time_stamps, 2, 0);
-    std::fill_n(beam_current, 2, 0);
-    avg.assign(20,0); //allow the average for the beam current to hold 20 values
-    error_code = 0;
+//    error_code = 0;
+    scaler_deques.resize(n_scaler);
 
-    //average for the scaler inputs - 10 values here
-    scaler_deques.resize(10);
-    for (auto i = scaler_deques.begin(); i != scaler_deques.end(); i++)
-        i->assign(20,0);
-
-    tc = new trigger_controll(); //does not talk to the box
+    tc = new trigger_control(); //does not talk to the box
     stream = new Trigger_logic_tpc_Stream(); //neither this
-    if (tc->enable(false) != 0){throw(-1);}
 
     //TUServer = new Server(8889);
-  }catch (...){
-    std::cout << BOLDRED << "TUProducer::TUProducer: Could not connect to TU!" << CLEAR;
+  } catch (exception & e) {
+    std::cout << BOLDRED << "TUProducer::" << e.what() << CLEAR;
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");
   }
@@ -73,64 +80,53 @@ void TUProducer::MainLoop(){
 	const unsigned int limit = bit_28/2;
 
 	do{
-	  	if(!tc){
-			eudaq::mSleep(500);
-			continue;}
+    if (tc == nullptr) {
+      eudaq::mSleep(500);
+      continue;}
 
-		if(TUJustStopped){
-			tc->enable(false);
-			eudaq::mSleep(1000);
-		}
-			    	
-		if(TUStarted || TUJustStopped){
-			
+    if (TUJustStopped) {
+      tc->enable(false);
+      eudaq::mSleep(1000);
+    }
 
-			tuc::Readout_Data *rd;
-			rd = stream->timer_handler();
-			if (rd){
+    if (TUStarted || TUJustStopped) {
+      tuc::Readout_Data *rd;
+      rd = stream->timer_handler();
+      if (rd != nullptr){
 
-				/******************************************** start get all the data ********************************************/
+        /******************************************** start get all the data ********************************************/
 				coincidence_count_no_sin = rd->coincidence_count_no_sin;
-				coincidence_count = rd->coincidence_count;
+				coincidence_count = make_pair(coincidence_count.second, rd->coincidence_count); /** move old and save new */
+        handshake_count = make_pair(handshake_count.second, rd->handshake_count); /** move old and save new. equivalent to event count */
 				prescaler_count = rd->prescaler_count;
 				prescaler_count_xor_pulser_count = rd->prescaler_count_xor_pulser_count;
 				accepted_prescaled_events = rd->prescaler_xor_pulser_and_prescaler_delayed_count;
 				accepted_pulser_events = rd->pulser_delay_and_xor_pulser_count;
-				handshake_count = rd->handshake_count; //equivalent to event count
-				beam_current[0] = beam_current[1]; //save old beam current monitor count for frequency calculations
-				beam_current[1] = rd->beam_curent; //save new
-				time_stamps[0] = time_stamps[1]; //save old timestamp for frequency calculations
-				time_stamps[1] = rd->time_stamp; //save new
+				beam_current_scaler = make_pair(beam_current_scaler.second, rd->beam_curent); /** move old and save new */
+				time_stamps = std::make_pair(time_stamps.second, rd->time_stamp); /** move old and save new */
 
-				beam_curr = CorrectBeamCurrent(1000*(0.01*((beam_current[1]-beam_current[0])/(time_stamps[1] - time_stamps[0]))));
-				cal_beam_current = SlidingWindow(beam_curr);
-				
+				beam_current_now = CalculateBeamCurrent();
+				average_beam_current = CalculateAverage(beam_currents, beam_current_now);
+				average_coincidence_rate = unsigned(round(CalculateAverage(coincidence_rate, (coincidence_count.second - coincidence_count.first) / TimeDiff())));
+				average_handshake_rate = unsigned(round(CalculateAverage(handshake_rate, (handshake_count.second - handshake_count.first) / TimeDiff())));
 
-				for(int idx=0; idx<10; idx++){
-					//check if there was a fallover
-					unsigned int new_tc = rd->trigger_counts[idx]; //data from readout
-					unsigned int old_tc = trigger_counts[idx]%bit_28; //data from previous readout	
+        for (auto idx(0); idx < n_scaler; idx++) {
+          unsigned int new_tc = rd->trigger_counts[idx]; //data from readout
+          unsigned int old_tc = trigger_counts[idx] % bit_28; //data from previous readout
+          if (old_tc > limit && new_tc < limit) { trigger_counts_multiplicity[idx]++; } //check for fall over
 
-					//check for fallover
-					if (old_tc > limit && new_tc < limit){
-						trigger_counts_multiplicity[idx]++;
-					}
+          prev_trigger_counts[idx] = trigger_counts[idx];
+          trigger_counts[idx] = trigger_counts_multiplicity[idx] * bit_28 + new_tc;
 
-					prev_trigger_counts[idx] = trigger_counts[idx];
-					trigger_counts[idx] = trigger_counts_multiplicity[idx]*bit_28 + new_tc;
-					//input_frequencies[idx] = 1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]);
+          input_frequencies[idx] = unsigned(round((trigger_counts[idx] - prev_trigger_counts[idx]) / TimeDiff()));
+          avg_input_frequencies[idx] = unsigned(round(CalculateAverage(scaler_deques.at(idx), input_frequencies[idx])));
+        }
+        /******************************************** end get all the data ********************************************/
 
-					input_frequencies[idx] = (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]));
-					avg_input_frequencies[idx] = this->ScalerDeque(idx, (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])));
-					//std::cout << "sending idx: " << idx << " rate: " << (1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0])) << std::endl;
-				}
-				/******************************************** end get all the data ********************************************/
-
-				//check if eventnumber has changed since last readout:
-				if(handshake_count != prev_handshake_count){
-				
-					#ifdef DEBUG
-                        std::cout << "************************************************************************************" << std::endl;
+        /** check if event number has changed since last readout: */
+        if (handshake_count.second != handshake_count.first){
+          #ifdef DEBUG
+          std::cout << "************************************************************************************" << std::endl;
                         std::cout << "time stamp: " << time_stamps[1] << std::endl;
                         std::cout << "coincidence_count: " << coincidence_count << std::endl;
                         std::cout << "coincidence_count_no_sin: " << coincidence_count_no_sin << std::endl;
@@ -141,232 +137,191 @@ void TUProducer::MainLoop(){
                         std::cout << "handshake_count: " << handshake_count << std::endl;
                         std::cout << "cal_beam_current: " << cal_beam_current << std::endl;
                         std::cout << "************************************************************************************" << std::endl;
-					#endif
-					
-					//send fake events for events we are missing out between readout cycles
-					if(handshake_count > m_ev_prev){
-						int tmp =0;
-						for (unsigned int id = m_ev_prev; id < handshake_count; id++){
-							eudaq::RawDataEvent f_ev(event_type, m_run, id);
-							f_ev.SetTag("valid", std::to_string(0));
-							SendEvent(f_ev);
-							tmp++;
-							//std::cout << "----- fake event " << id << " sent." << std::endl;
-						}
-					}
+          #endif
+          /** send fake events for events we are missing out between readout cycles */
+          if (handshake_count.second > m_event.first) {
+            for (unsigned int id = m_event.first; id < handshake_count.second; id++){
+              eudaq::RawDataEvent f_ev(event_type, m_run, id);
+              f_ev.SetTag("valid", std::to_string(0));
+              SendEvent(f_ev);
+            }
+          }
 
-					uint64_t ts = time_stamps[1];
-					m_ev = handshake_count;
-					//TUServer->writex(eudaq::to_string(m_ev));
-					
-					//real data event
-					//std::cout << "m_run: " << m_run << std::endl;
-					eudaq::RawDataEvent ev(event_type, ((unsigned int) m_run), m_ev); //generate a raw event
-					ev.SetTag("valid", std::to_string(1));
+          uint64_t ts = time_stamps.second;
+          m_event.second = handshake_count.second;
+          //TUServer->writex(eudaq::to_string(m_ev));
 
-        			unsigned int block_no = 0;
-        			ev.AddBlock(block_no, static_cast<const uint64_t*>(&ts), sizeof(uint64_t)); //timestamp
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const uint32_t*>(&coincidence_count), sizeof(uint32_t));
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const uint32_t*>(&coincidence_count_no_sin), sizeof(uint32_t));
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const uint32_t*>(&prescaler_count), sizeof(uint32_t));
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const uint32_t*>(&prescaler_count_xor_pulser_count), sizeof(uint32_t));
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const uint32_t*>(&accepted_prescaled_events), sizeof(uint32_t));
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const uint32_t*>(&accepted_pulser_events), sizeof(uint32_t));
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const uint32_t*>(&handshake_count), sizeof(uint32_t));
-        			block_no++;
-        			ev.AddBlock(block_no, static_cast<const float*>(&beam_curr), sizeof(float));
-        			block_no++;
+          //real data event
+          //std::cout << "m_run: " << m_run << std::endl;
+          eudaq::RawDataEvent ev(event_type, ((unsigned int) m_run), m_event.second); //generate a raw event
+          ev.SetTag("valid", std::to_string(1));
 
-        			//also send individual event scalers
-        			unsigned long *cnts = trigger_counts;
-        			ev.AddBlock(block_no, reinterpret_cast<const char*>(cnts), 10*sizeof(uint64_t));
+          unsigned int block_no = 0;
+          ev.AddBlock(block_no++, static_cast<const uint64_t*>(&ts), sizeof(uint64_t)); //timestamp
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&coincidence_count.second), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&coincidence_count_no_sin), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&prescaler_count), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&prescaler_count_xor_pulser_count), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&accepted_prescaled_events), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&accepted_pulser_events), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const uint32_t*>(&handshake_count.second), sizeof(uint32_t));
+          ev.AddBlock(block_no++, static_cast<const float*>(&beam_current_now), sizeof(float));
+          ev.AddBlock(block_no, reinterpret_cast<const char*>(&trigger_counts), 10 * sizeof(uint64_t));
+          SendEvent(ev);
 
-        			SendEvent(ev);
+          m_event.first = m_event.second + 1;
+          cout << "TU events: " << handshake_count.second << endl;
 
-        			m_ev_prev = m_ev+1;
-					prev_handshake_count = handshake_count;
-					std::cout << "Event number TUProducer: " << handshake_count << std::endl;
-				
-				}//end if (prev event count)
-			}//end if(rd)
-			eudaq::mSleep(500); //only read out every 1/2 second
+        } //end if (prev event count)
+      } //end if(rd)
+      eudaq::mSleep(500); //only read out every 1/2 second
 
-		//std::cout << BOLDRED << "TUProducer::MainLoop: One event readout returned nothing!" << CLEAR;
+    } //end if(TUStarted)
 
-		}//end if(TUStarted)
-
-
-		if(TUJustStopped){
-		    SendEvent(eudaq::RawDataEvent::EORE(event_type, m_run, m_ev));
-			OnStatus();
-			TUJustStopped = false;
-		}
-	}while (!done);
+    if(TUJustStopped){
+      SendEvent(eudaq::RawDataEvent::EORE(event_type, m_run, m_event.second));
+      OnStatus();
+      TUJustStopped = false;
+    }
+	} while (!done);
 }
-
-
-
 
 void TUProducer::OnStartRun(unsigned run_nr) {
-	try{
-		SetStatus(eudaq::Status::LVL_OK, "Wait");
-		std::cout << "--> Starting TU Run " << run_nr << std::endl;
-		eudaq::mSleep(5000);
-		m_run = run_nr;
-		m_ev = 0;
 
-		
+  try{
+    SetStatus(eudaq::Status::LVL_OK, "Wait");
+    cout << "--> Starting TU Run " << run_nr << endl;
+    eudaq::mSleep(5000);
+    m_run = run_nr;
+    m_event.second = 0;
+    eudaq::RawDataEvent ev(eudaq::RawDataEvent::BORE(event_type, m_run));
+    ev.SetTag("FirmwareID", "not given"); //FIXME!
+    ev.SetTag("TriggerMask", "0x" + eudaq::to_hex(trg_mask));
+    ev.SetTimeStampToNow();
+    SendEvent(ev);
+    cout << "Sent BORE event." << endl;
 
-		eudaq::RawDataEvent ev(eudaq::RawDataEvent::BORE(event_type, m_run));
-		ev.SetTag("FirmwareID", "not given"); //FIXME!
-		ev.SetTag("TriggerMask", "0x" + eudaq::to_hex(trg_mask));
-		ev.SetTimeStampToNow();
-		SendEvent(ev);
-
-		std::cout << "Sent BORE event." << std::endl;
-
-		OnReset();
-		TUStarted = true;
-		if(tc->enable(true) != 0){throw(-1);}
-
-        EUDAQ_INFO("Triggers are now accepted");
-		SetStatus(eudaq::Status::LVL_OK, "Started");
-	}catch(...){
-		std::cout << BOLDRED << "TUProducer::OnStartRun: Could not start TU Producer." << CLEAR;
-		SetStatus(eudaq::Status::LVL_ERROR, "Start Error");
-	}
+    OnReset();
+    TUStarted = true;
+    if (tc->enable(true) != 0) { throw(tu_program_exception("Could not enable.")); }
+    EUDAQ_INFO("Triggers are now accepted");
+    SetStatus(eudaq::Status::LVL_OK, "Started");
+  } catch(exception & e) {
+    cout << BOLDRED << "TUProducer::OnStartRun: Could not start TU Producer. " << e.what() << CLEAR << endl;
+    SetStatus(eudaq::Status::LVL_ERROR, "Start Error");
+  }
 }
-
-
 
 void TUProducer::OnStopRun(){
-	std::cout << "--> Stopping TU Run." << std::endl;	
-	try{
-		if(tc->enable(false) != 0){throw(-1);}
-		TUStarted = false;
-		TUJustStopped = true;
-		eudaq::mSleep(2000);
-		OnReset();
-		SetStatus(eudaq::Status::LVL_OK, "Stopped");
 
-	} catch (...) {
-	    std::cout << BOLDRED << "TUProducer::OnStopRun: Could not stop TU Producer." << CLEAR;
-		SetStatus(eudaq::Status::LVL_ERROR, "Stop Error");
-		}
+  cout << "--> Stopping TU Run." << endl;
+  try{
+    if (tc->enable(false) != 0) {throw(tu_program_exception("Could not disable."));}
+    TUStarted = false;
+    TUJustStopped = true;
+    eudaq::mSleep(2000);
+    OnReset();
+    SetStatus(eudaq::Status::LVL_OK, "Stopped");
+    OnStatus();
+  } catch(exception & e) {
+    std::cout << BOLDRED << "TUProducer::OnStopRun: Could not stop TU Producer. " << e.what() << CLEAR << endl;
+    SetStatus(eudaq::Status::LVL_ERROR, "Stop Error");
+  }
 }
-
-
 
 void TUProducer::OnTerminate(){
-		try{
-		std::cout << "--> Terminate (press enter)" << std::endl;
-		if(tc->enable(false) != 0){throw(-1);}
-		if(tc->reset_counts() != 0){throw(-1);}
-		done = true;
-		delete tc; //clean up
-		delete stream;
-        //delete TUServer;
-		eudaq::mSleep(1000);
-		}catch(...){
-		    std::cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer." << CLEAR;
-			SetStatus(eudaq::Status::LVL_ERROR, "Terminate Error");
-		}
+
+  try{
+    cout << "--> Terminate" << endl;
+    if (tc->enable(false) != 0) { throw(tu_program_exception("Could not disable.")); }
+    if (tc->reset_counts() != 0) { throw(tu_program_exception("Could not reset counts.")); }
+    done = true;
+    delete tc; //clean up
+    delete stream;
+    //delete TUServer;
+    eudaq::mSleep(1000);
+  } catch(exception & e) {
+    cout << BOLDRED << "TUProducer::OnTerminate: Could not terminate TU Producer. " << e.what() << CLEAR << endl;
+    SetStatus(eudaq::Status::LVL_ERROR, "Terminate Error");
+  }
 }
-
-
 
 void TUProducer::OnReset(){
-		try{
-			std::cout << "--> Resetting TU." << std::endl;
-			if(tc->reset_counts() != 0){throw(-1);}
-			std::fill_n(trigger_counts, 10, 0);
-			std::fill_n(prev_trigger_counts, 10, 0);
-			std::fill_n(input_frequencies, 10, 0);
-    		std::fill_n(trigger_counts_multiplicity, 10, 0);
-    		std::fill_n(time_stamps, 2, 0);
-    		std::fill_n(beam_current, 2, 0);
-    		avg.assign(20,0);
-			coincidence_count_no_sin = 0;
-			coincidence_count = 0;
-			cal_beam_current = 0;
-			prescaler_count = 0;
-			prescaler_count_xor_pulser_count = 0;
-			accepted_pulser_events = 0;
-			handshake_count = 0;
-			prev_handshake_count = 99999;
-			m_ev_prev = 0;
-			SetStatus(eudaq::Status::LVL_OK);
-		}catch(...){
-		    std::cout << BOLDRED << "TUProducer::OnReset: Could not reset TU Producer." << CLEAR;
-			SetStatus(eudaq::Status::LVL_ERROR, "Reset Error");
-		}
+  try{
+    std::cout << "--> Resetting TU." << std::endl;
+    if (tc->reset_counts() != 0) { throw(tu_program_exception()); }
+    std::fill_n(trigger_counts, n_scaler, 0);
+    std::fill_n(prev_trigger_counts, n_scaler, 0);
+    std::fill_n(input_frequencies, n_scaler, 0);
+    std::fill_n(trigger_counts_multiplicity, n_scaler, 0);
+    std::fill_n(avg_input_frequencies, n_scaler, 0);
+    time_stamps = make_pair(0, 0);
+    beam_current_scaler = make_pair(0, 0);
+    coincidence_count = make_pair(0, 0);
+    handshake_count = make_pair(99999, 0);
+    coincidence_count_no_sin = 0;
+    prescaler_count = 0;
+    prescaler_count_xor_pulser_count = 0;
+    accepted_pulser_events = 0;
+    m_event.first = 0;
+    average_beam_current = 0;
+    average_coincidence_rate = 0;
+    beam_currents.clear();
+    coincidence_rate.clear();
+    handshake_rate.clear();
+    for (auto i_scaler: scaler_deques) {
+      i_scaler.clear();
+    }
+    SetStatus(eudaq::Status::LVL_OK);
+  } catch(...){
+    std::cout << BOLDRED << "TUProducer::OnReset: Could not reset TU Producer." << CLEAR;
+    SetStatus(eudaq::Status::LVL_ERROR, "Reset Error");
+  }
 }
 
-
-
 void TUProducer::OnStatus(){
-	if(TUStarted && handshake_count > 0)
-		m_status.SetTag("COINC_COUNT", std::to_string(handshake_count));
-	else 
-		m_status.SetTag("TRIG", std::to_string(0));
 
-	if (tc){
-		m_status.SetTag("TIMESTAMP", std::to_string(time_stamps[1]/1000.0));
-		m_status.SetTag("LASTTIME", std::to_string((time_stamps[0])/1000.0));
+  if (TUStarted && handshake_count.second > 0) {
+    m_status.SetTag("HANDSHAKE_COUNT", to_string(handshake_count.second));
+  } else {
+    m_status.SetTag("TRIG", std::to_string(0));
+  }
 
-		if(TUStarted)
-			m_status.SetTag("STATUS", "OK");
-		else
-			m_status.SetTag("STATUS", "NOT RUNNING");
-
-		for (int i = 0; i < 10; ++i) {
+	if (tc != nullptr){
+	  m_status.SetTag("COINC_RATE", to_string(average_coincidence_rate));
+	  m_status.SetTag("HANDSHAKE_RATE", to_string(average_handshake_rate));
+		m_status.SetTag("TIMESTAMP", std::to_string(time_stamps.second / 1000.0));
+		m_status.SetTag("LASTTIME", std::to_string(time_stamps.first / 1000.0));
+    m_status.SetTag("STATUS", TUStarted ? "OK" : "IDLE");
+		for (int i = 0; i < n_scaler; ++i) {
 			m_status.SetTag("SCALER" + std::to_string(i), std::to_string(avg_input_frequencies[i]));
 		}
-
-		if(cal_beam_current > 0)
-			m_status.SetTag("BEAM_CURR", std::to_string(cal_beam_current));
-		else
-			m_status.SetTag("BEAM_CURR", std::to_string(0));
+    m_status.SetTag("BEAM_CURR", TUStarted ? std::to_string(average_beam_current) : "");
 	}
 }
 
-
 void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
-	try {
 
+	try {
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
 
 		std::string ip_adr = conf.Get("ip_adr", "192.168.1.120");
+		tc->set_ip_adr(ip_adr);
 		const char *ip = ip_adr.c_str();
 		if(tc->enable(false) != 0){throw(-1);}
-
-
 		stream->set_ip_adr(ip);
-   		std::cout << "Opening connection to TU @ " << ip << " ..";
-   		if(stream->open() != 0){throw(-1);}
+    std::cout << "Opening connection to TU @ " << ip << " ..";
+    if(stream->open() != 0){throw(-1);}
+    std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
-   		std::cout << BOLDGREEN << " [OK] " << CLEAR;
-
-
-   		std::cout << "Configuring (" << conf.Name() << "), please wait." << std::endl;			
-  		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
-  		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad..";
+    std::cout << "Configuring (" << conf.Name() << "), please wait." << std::endl;
+    //enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
+    std::cout << "--> Setting delays for scintillator, planes 1-8 and pad...";
 		tc->set_scintillator_delay(conf.Get("scintillator_delay", 100));
-		tc->set_plane_1_delay(conf.Get("plane1del", 100));
-		tc->set_plane_2_delay(conf.Get("plane2del", 100));
-		tc->set_plane_3_delay(conf.Get("plane3del", 100));
-		tc->set_plane_4_delay(conf.Get("plane4del", 100));
-		tc->set_plane_5_delay(conf.Get("plane5del", 100));
-		tc->set_plane_6_delay(conf.Get("plane6del", 100));
-		tc->set_plane_7_delay(conf.Get("plane7del", 100));
-		tc->set_plane_8_delay(conf.Get("plane8del", 100));
+		for (auto i_plane(0); i_plane < tc->n_planes; i_plane++){
+		  std::string key = "plane" + to_string(i_plane + 1) + "del";
+		  tc->set_plane_delay(i_plane, conf.Get(key, 100));
+		}
 		tc->set_pad_delay(conf.Get("pad_delay", 100));
 		if(tc->set_delays() != 0){throw(-1);}
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
@@ -396,17 +351,21 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << BOLDGREEN << "... [OK] " << CLEAR;
 
 
-		std::cout << "--> Setting pulser frequency, width and delay ... " << std::endl;
+		std::cout << "--> Setting pulser frequency, width, delay and polarity.. " << std::endl;
 		double freq = conf.Get("pulser_freq", 0);
 		int width = conf.Get("pulser_width", 0);
 		int puldel = conf.Get("pulser_delay", 5); //must be > 4
+		bool pol_pulser1 = conf.Get("pulser1_polarity", false);
+		bool pol_pulser2 = conf.Get("pulser2_polarity", true);
 		std::cout << "     Frequency: " << freq << std::endl;
 		std::cout << "     Width: " << width << std::endl;
 		std::cout << "     Delay: " << freq << std::endl;
+		std::cout << "     Pulser 1/2 Polarities: " << pol_pulser1 << "/" << pol_pulser2 << " (0=negative/1=positive)" << std::endl;
 
-		if(tc->set_Pulser_width(freq, width) != 0){throw(-1);}
-		if(tc->set_pulser_delay(puldel) != 0){throw(-1);}
-		std::cout << BOLDGREEN << " ... [OK] " << CLEAR;
+    if (tc->set_pulser(freq, width) != 0) { throw(tu_program_exception("Could not set pulser frequency or pulse width!")); }
+		if (tc->set_pulser_delay(puldel) != 0) { throw(tu_program_exception("Could not set pulser delay!")); }
+		if (tc->set_pulser_polarity(pol_pulser1, pol_pulser2) != 0) { throw(tu_program_exception("Could not set pulser polarities!")); }
+		std::cout << BOLDGREEN << "... [OK] " << CLEAR;
 
 
 		std::cout << "--> Setting coincidence pulse and edge width..";
@@ -428,90 +387,78 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		if(tc->send_handshake_mask() != 0){throw(-1);}
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
-		std::cout << "--> Set trigger delays..";
-		int trigdel1 = conf.Get("trig_1_delay", 100);
-		int trigdel2 = conf.Get("trig_2_delay", 100);
-		int trigdel12 = (trigdel1<<12) | trigdel2;
-		if(tc->set_trigger_12_delay(trigdel12) != 0){throw(-1);}
-		int trigdel3 = conf.Get("trig_3_delay", 100);
-		if(tc->set_trigger_3_delay(trigdel3) != 0){throw(-1);}
-		if(tc->set_delays() != 0){throw(-1);}
+		std::cout << "--> Set trigger delays ... ";
+		int trigdel1 = conf.Get("trig_1_delay", 40);
+		int trigdel2 = conf.Get("trig_2_delay", 40);
+    unsigned short trigdel3 = conf.Get("trig_3_delay", 40);
+    if (tc->set_trigger_12_delay((trigdel2 << 12) | trigdel1) != 0) { throw(tu_program_exception("Trigger 1/2 Delay")); }
+		if (tc->set_trigger_3_delay(trigdel3) != 0) { throw(tu_program_exception("Trigger 3 Delay")); }
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
+
+		cout << "--> Set 40MHz clock phases ... " << endl;
+		int clk40_phase1 = conf.Get("clk40_phase1", 0);
+		int clk40_phase2 = conf.Get("clk40_phase2", 0);
+		cout << "     CLK 1 Phase: " << clk40_phase1 << " [clk cycles]" << endl;
+		cout << "     CLK 2 Phase: " << clk40_phase2 << " [clk cycles]" << endl;
+    if (tc->set_clk40_phases(clk40_phase1, clk40_phase2) !=0 ) { throw(tu_program_exception("Clock Phases")); }
+    cout << BOLDGREEN << "... [OK] " << CLEAR;
+
 
 		//set current UNIX timestamp
 		std::cout << "--> Set current UNIX time to TU..";
-   		if(tc->set_time() != 0){throw(-1);}
+    if (tc->set_time() != 0) { throw(tu_program_exception("Could not set time!")); }
 		eudaq::mSleep(1000);
 		std::cout << BOLDGREEN << " [OK] " << CLEAR << std::endl;
 
+		float delay_width = 2.5;
 		std::cout << "################### Readback ###################" << std::endl;
-		std::cout << "Scintillator delay [ns]: " << tc->get_scintillator_delay()*2.5 << std::endl;
-		std::cout << "Plane 1 delay [ns]: " << tc->get_plane_1_delay()*2.5 << std::endl;
-		std::cout << "Plane 2 delay [ns]: " << tc->get_plane_2_delay()*2.5 << std::endl;
-		std::cout << "Plane 3 delay [ns]: " << tc->get_plane_3_delay()*2.5 << std::endl;
-		std::cout << "Plane 4 delay [ns]: " << tc->get_plane_4_delay()*2.5 << std::endl;
-		std::cout << "Plane 5 delay [ns]: " << tc->get_plane_5_delay()*2.5 << std::endl;
-		std::cout << "Plane 6 delay [ns]: " << tc->get_plane_6_delay()*2.5 << std::endl;
-		std::cout << "Plane 7 delay [ns]: " << tc->get_plane_7_delay()*2.5 << std::endl;
-		std::cout << "Plane 8 delay [ns]: " << tc->get_plane_8_delay()*2.5 << std::endl;
-		std::cout << "Pad delay [ns]: " << tc->get_pad_delay()*2.5 << std::endl << std::endl;
+		std::cout << "Scintillator delay [ns]: " << tc->get_scintillator_delay() * delay_width << std::endl;
+		for (auto i_delay(0); i_delay < tc->n_planes; i_delay++) {
+		  std::cout << "Plane " << i_delay + 1 << " delay [ns]: " << tc->get_plane_delay(i_delay) * delay_width << std::endl;
+		}
+		std::cout << "Pad delay [ns]: " << tc->get_pad_delay() * delay_width << std::endl << std::endl;
 
 		std::cout << "Handshake delay [ns]: " << tc->get_handshake_delay()*2.5 << std::endl;
 		std::cout << "Handshake mask: " << tc->get_handshake_mask() << std::endl << std::endl;
 
 		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
-		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl << std::endl;
+		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl;
+
+		std::cout << "CLK 1 Phase: [ns]: " << tc->get_clk40_phase1() * delay_width << std::endl;
+		std::cout << "CLK 2 Phase: [ns]: " << tc->get_clk40_phase2() * delay_width << std::endl;
+
+		std::string pol1 = ((tc->get_pulser_polarities() & 0b01) != 0) ? "positive" : "negative";
+		std::string pol2 = ((tc->get_pulser_polarities() & 0b10) != 0) ? "positive" : "negative";
+		std::cout << "Pulser 1 Polarity: " << pol1 << std::endl;
+		std::cout << "Pulser 2 Polarity: " << pol2 << std::endl;
+		auto trigger_delays = tc->get_trigger_delays();
+		for (auto i_trig(0); i_trig < trigger_delays.size(); i_trig++) {
+		    cout << "Trigger " << i_trig + 1 << " Delay: " << trigger_delays.at(i_trig) << endl;
+		}
 
 		std::cout << BOLDGREEN <<  "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << CLEAR;
 
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 
-	}catch (...){
-		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU, try again." << CLEAR;
+	} catch (...){
+		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU with ip " << tc->get_ip_adr() << ", try again." << CLEAR;
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
 	}
 }
 
+/** calculate the average of the provided deque */
+template <typename Q>
+float TUProducer::CalculateAverage(std::deque<Q> & d, Q value, unsigned short max_size){
 
-
-unsigned TUProducer::ScalerDeque(unsigned nr, unsigned rate){
-	scaler_deques.at(nr).pop_back();
-	scaler_deques.at(nr).push_front(rate);
-
-
-	int len = 0;
-	unsigned temp = 0;
-	for (std::deque<unsigned>::iterator itr=scaler_deques.at(nr).begin(); itr!=scaler_deques.at(nr).end(); ++itr){
-		if (*itr != 0){			
-			temp += *itr;
-			len++;
-		}
-	}
-	if(len>0){
-		return (temp/len);}
-	return 0;
+  if (coincidence_count.second > 1 or handshake_count.second > 1) { d.push_back(value); } /** we need at least two events to calculate the rates */
+  if (d.size() > max_size) { d.pop_front(); } /** keep max_size values in the deque */
+  return std::accumulate(d.begin(), d.end(), 0.0) / d.size();
 }
 
-
-//for beam current, can be implemented in method above (fixme)
-float TUProducer::SlidingWindow(float val){
-	avg.pop_back();
-	avg.push_front(val);
-	
-	int len = 0;
-	float temp = 0;
-	for (std::deque<float>::iterator itr=avg.begin(); itr!=avg.end(); ++itr){
-		if (*itr != 0){			
-			temp += *itr;
-			len++;
-		}
-	}
-	return (1.0*temp/len);
-}
-
-//values from laboratory measurement with pulser
-float TUProducer::CorrectBeamCurrent(float uncorr){
-	return (3.01077 + 1.06746*uncorr);
+/** values from laboratory measurement with pulser */
+float TUProducer::CalculateBeamCurrent(){
+  float rate = 10 * ((beam_current_scaler.second - beam_current_scaler.first) / float(time_stamps.second - time_stamps.first));
+	return rate > 0 ? 3.01077 + 1.06746 * rate : 0;
 }
 
 

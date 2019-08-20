@@ -1,2 +1,0 @@
-#! /bin/bash
-./STARTRUN.cern.py -cmstel -clk -cmsdig1 -cmsdig2
