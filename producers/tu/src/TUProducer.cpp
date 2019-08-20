@@ -24,11 +24,12 @@
 #include <iostream>
 #include <string>
 #include <cstdint>
-#include <math.h>
 
 #define BOLDRED "\33[1m\033[31m"
 #define BOLDGREEN "\33[1m\033[32m"
 #define CLEAR "\033[0m\n"
+#define BIT28 268435456
+#define LIMIT BIT28 / 2
 
 using namespace std;
 
@@ -42,6 +43,7 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
 	done(false),
 	TUStarted(false),
 	TUJustStopped(false),
+	TUConfigured(false),
 	tc(nullptr),
 	stream(nullptr),
 	beam_current_scaler(0, 0),
@@ -88,8 +90,16 @@ void TUProducer::MainLoop(){
       tc->enable(false);
       eudaq::mSleep(1000);
     }
+    if (TUConfigured and not TUStarted){
+      tuc::Readout_Data *rd;
+      rd = stream->timer_handler();
+      time_stamps = std::make_pair(time_stamps.second, rd->time_stamp); /** move old and save new */
+      UpdateBeamCurrent(rd);
+      UpdateScaler(rd);
+      eudaq::mSleep(100); //update faster if it's not running
+    }
 
-    if (TUStarted || TUJustStopped) {
+    else if (TUStarted or TUJustStopped) {
       tuc::Readout_Data *rd;
       rd = stream->timer_handler();
       if (rd != nullptr){
@@ -102,25 +112,13 @@ void TUProducer::MainLoop(){
 				prescaler_count_xor_pulser_count = rd->prescaler_count_xor_pulser_count;
 				accepted_prescaled_events = rd->prescaler_xor_pulser_and_prescaler_delayed_count;
 				accepted_pulser_events = rd->pulser_delay_and_xor_pulser_count;
-				beam_current_scaler = make_pair(beam_current_scaler.second, rd->beam_curent); /** move old and save new */
 				time_stamps = std::make_pair(time_stamps.second, rd->time_stamp); /** move old and save new */
 
-				beam_current_now = CalculateBeamCurrent();
-				average_beam_current = CalculateAverage(beam_currents, beam_current_now);
 				average_coincidence_rate = unsigned(round(CalculateAverage(coincidence_rate, (coincidence_count.second - coincidence_count.first) / TimeDiff())));
 				average_handshake_rate = unsigned(round(CalculateAverage(handshake_rate, (handshake_count.second - handshake_count.first) / TimeDiff())));
 
-        for (auto idx(0); idx < n_scaler; idx++) {
-          unsigned int new_tc = rd->trigger_counts[idx]; //data from readout
-          unsigned int old_tc = trigger_counts[idx] % bit_28; //data from previous readout
-          if (old_tc > limit && new_tc < limit) { trigger_counts_multiplicity[idx]++; } //check for fall over
-
-          prev_trigger_counts[idx] = trigger_counts[idx];
-          trigger_counts[idx] = trigger_counts_multiplicity[idx] * bit_28 + new_tc;
-
-          input_frequencies[idx] = unsigned(round((trigger_counts[idx] - prev_trigger_counts[idx]) / TimeDiff()));
-          avg_input_frequencies[idx] = unsigned(round(CalculateAverage(scaler_deques.at(idx), input_frequencies[idx])));
-        }
+				UpdateBeamCurrent(rd);
+				UpdateScaler(rd);
         /******************************************** end get all the data ********************************************/
 
         /** check if event number has changed since last readout: */
@@ -296,7 +294,7 @@ void TUProducer::OnStatus(){
 		for (int i = 0; i < n_scaler; ++i) {
 			m_status.SetTag("SCALER" + std::to_string(i), std::to_string(avg_input_frequencies[i]));
 		}
-    m_status.SetTag("BEAM_CURR", TUStarted ? std::to_string(average_beam_current) : "");
+    m_status.SetTag("BEAM_CURR", TUConfigured ? std::to_string(average_beam_current) : "");
 	}
 }
 
@@ -439,6 +437,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << BOLDGREEN <<  "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << CLEAR;
 
 		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
+		TUConfigured = true;
 
 	} catch (...){
 		std::cout << BOLDRED << "TUProducer::OnConfigure: Could not connect to TU with ip " << tc->get_ip_adr() << ", try again." << CLEAR;
@@ -448,9 +447,9 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 
 /** calculate the average of the provided deque */
 template <typename Q>
-float TUProducer::CalculateAverage(std::deque<Q> & d, Q value, unsigned short max_size){
+float TUProducer::CalculateAverage(std::deque<Q> & d, Q value, bool execute, unsigned short max_size){
 
-  if (coincidence_count.second > 1 or handshake_count.second > 1) { d.push_back(value); } /** we need at least two events to calculate the rates */
+  if (coincidence_count.second > 1 or handshake_count.second > 1 or execute) { d.push_back(value); } /** we need at least two events to calculate the rates */
   if (d.size() > max_size) { d.pop_front(); } /** keep max_size values in the deque */
   return std::accumulate(d.begin(), d.end(), 0.0) / d.size();
 }
@@ -458,7 +457,27 @@ float TUProducer::CalculateAverage(std::deque<Q> & d, Q value, unsigned short ma
 /** values from laboratory measurement with pulser */
 float TUProducer::CalculateBeamCurrent(){
   float rate = 10 * ((beam_current_scaler.second - beam_current_scaler.first) / float(time_stamps.second - time_stamps.first));
-	return rate > 0 ? 3.01077 + 1.06746 * rate : 0;
+	return rate > 0 ? float(3.01077 + 1.06746 * rate) : 0;
+}
+
+void TUProducer::UpdateBeamCurrent(tuc::Readout_Data * rd) {
+  beam_current_scaler = make_pair(beam_current_scaler.second, rd->beam_curent); /** move old and save new */
+  beam_current_now = CalculateBeamCurrent();
+  average_beam_current = CalculateAverage(beam_currents, beam_current_now, true);
+}
+
+void TUProducer::UpdateScaler(tuc::Readout_Data * rd){
+  for (auto idx(0); idx < n_scaler; idx++) {
+    unsigned int new_tc = rd->trigger_counts[idx]; //data from readout
+    unsigned int old_tc = trigger_counts[idx] % BIT28; //data from previous readout
+    if (old_tc > LIMIT && new_tc < LIMIT) { trigger_counts_multiplicity[idx]++; } //check for fall over
+
+    prev_trigger_counts[idx] = trigger_counts[idx];
+    trigger_counts[idx] = trigger_counts_multiplicity[idx] * BIT28 + new_tc;
+
+    input_frequencies[idx] = unsigned(round((trigger_counts[idx] - prev_trigger_counts[idx]) / TimeDiff()));
+    avg_input_frequencies[idx] = unsigned(round(CalculateAverage(scaler_deques.at(idx), input_frequencies[idx], true)));
+  }
 }
 
 
