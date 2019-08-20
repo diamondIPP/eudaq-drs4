@@ -33,7 +33,7 @@ class Eudaq(Mouse, Keys):
         self.click(*loads(self.get_from_config('EUDAQ', 'start')))
 
     def stop(self):
-        self.click(*loads(self.get_from_config('EUDAQ', 'start')))
+        self.click(*loads(self.get_from_config('EUDAQ', 'stop')))
 
     def set_flux(self, sheet, row):
         flux = sheet.col_values(col2num('G'))[row - 1]

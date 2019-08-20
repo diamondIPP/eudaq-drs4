@@ -12,7 +12,7 @@ from Email import Email
 
 
 class ShifterBot:
-    def __init__(self, log_dir='/data/psi_2018_10/logs_eudaq', hv_dir='~/sdvlp/HVClient'):
+    def __init__(self, log_dir='/data/psi_2019_08/logs_eudaq', hv_dir='~/sdvlp/HVClient'):
 
         self.TStart = time()
 
