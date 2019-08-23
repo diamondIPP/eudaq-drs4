@@ -31,6 +31,9 @@ class Keys:
     def press_enter(self):
         self.k.tap_key(self.k.enter_key)
 
+    def press_del(self):
+        self.k.tap_key(self.k.delete_key)
+
     def hold_key(self, key, t=1):
         self.k.press_key(key)
         sleep(t)

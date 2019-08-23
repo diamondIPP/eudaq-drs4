@@ -62,6 +62,8 @@ class SimpleStandardEvent {
     int getNPlanes() const {return _planes.size(); }
     int getNWaveforms() const {return _waveforms.size();}
     int getNTUEvent() const {return _tuev.size();}
+    uint8_t getNDevices() const;
+    std::map<std::string, uint8_t> getDeviceNames() const;
 
     void doClustering();
     double getMonitor_eventanalysistime() const;

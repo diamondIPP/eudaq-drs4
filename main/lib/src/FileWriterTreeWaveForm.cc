@@ -205,6 +205,9 @@ void FileWriterTreeWaveForm::WriteEvent(const DetectorEvent & ev) {
 
     //use different order of wfs in order to 'know' if its a pulser event or not.
     vector<uint8_t > wf_order = {2,1,0,3};
+    for (auto iwf : wf_order) {
+      sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
+    }
     ResizeVectors(sev.GetNWaveforms());
     for (auto iwf:wf_order){
 
@@ -356,7 +359,7 @@ void FileWriterTreeWaveForm::FillRegionIntegrals(uint8_t iwf, const StandardWave
             }
             else {
                 integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
-                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(iwf), 2.0);
+                time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, 2.0);
             }
             p->SetIntegral(integral);
             p->SetTimeIntegral(time_integral);
@@ -411,7 +414,7 @@ void FileWriterTreeWaveForm::FillPeaks(uint8_t iwf, const StandardWaveform *wf){
         if (peak.first < 1024 - uint16_t(ranges["int"]->second) and peak.first > uint16_t(ranges["int"]->first)) {
           uint16_t low_bin = peak.first - uint16_t(ranges["int"]->first);
           uint16_t high_bin = peak.first + uint16_t(ranges["int"]->second);
-          v_peak_integrals->at(iwf) = wf->getIntegral(low_bin, high_bin, peak.first, f_trigger_cell, &tcal.at(iwf), 2.0);
+          v_peak_integrals->at(iwf) = wf->getIntegral(low_bin, high_bin, peak.first, 2.0);
         } else v_peak_integrals->at(iwf) = -999;
     }
 }

@@ -19,57 +19,61 @@
 #include <deque>
 #include <vector>
 
-class Configuration;
-class trigger_controll;
+class trigger_control;
 
 
 class TUProducer:public eudaq::Producer{
+
 public:
 	TUProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity);
-	virtual void OnConfigure(const eudaq::Configuration &conf);
+	void OnConfigure(const eudaq::Configuration &conf) override;
 	virtual void MainLoop();
-	virtual void OnStartRun(unsigned param);
-	virtual void OnStopRun();
-	virtual void OnTerminate();
-	virtual void OnReset();
-	virtual void OnStatus();
-	float SlidingWindow(float);
-	unsigned ScalerDeque(unsigned scaler_nr, unsigned rate);
-	float CorrectBeamCurrent(float);
-
+	void OnStartRun(unsigned param) override;
+	void OnStopRun() override;
+	void OnTerminate() override;
+	void OnReset() override;
+	void OnStatus() override;
+	template <typename Q>
+	float CalculateAverage(std::deque<Q> & d, Q value, bool=false, unsigned short max_size=10);
+	void UpdateBeamCurrent(tuc::Readout_Data*);
+	void UpdateScaler(tuc::Readout_Data*);
+	float CalculateBeamCurrent();
+	float TimeDiff() { return (time_stamps.second - time_stamps.first) / 1000.; } /** time difference in seconds */
 
 private:
 	std::string event_type;
-	unsigned int m_run, m_ev, m_ev_prev, prev_handshake_count; //run & event number
-	bool done, TUStarted, TUJustStopped;
-	trigger_controll *tc; //class for TU control from trigger_controll.h
+	unsigned m_run;
+	std::pair<unsigned, unsigned> m_event;
+	bool done, TUStarted, TUJustStopped, TUConfigured;
+	trigger_control *tc; //class for TU control from trigger_control.h
 	Trigger_logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
-	unsigned int error_code;
+//	unsigned int error_code;
 	int trg_mask;
-	float beam_curr;
-	float cal_beam_current;
-	std::deque<float> avg;
-	std::vector<std::deque<unsigned>> scaler_deques;
+	float beam_current_now;
+	std::deque<float> beam_currents;
+  std::deque<float> coincidence_rate;
+  std::deque<float> handshake_rate;
+  float average_beam_current;
+  unsigned average_coincidence_rate;
+  unsigned average_handshake_rate;
+  unsigned short n_scaler;
+  std::vector<std::deque<unsigned>> scaler_deques;
 
-	//data read back from TU
+	/** TU DATA */
 	unsigned long trigger_counts[10];
 	unsigned int prev_trigger_counts[10];
 	unsigned int input_frequencies[10];
 	unsigned int avg_input_frequencies[10];
 	unsigned int trigger_counts_multiplicity[10];
 	unsigned int coincidence_count_no_sin;
-	unsigned int coincidence_count;
-	unsigned int beam_current[2]; //first entry = old, second entry = new
+	std::pair<unsigned, unsigned> beam_current_scaler; //first entry = old, second entry = new
+	std::pair<unsigned, unsigned> coincidence_count; //first entry = old, second entry = new
+	std::pair<unsigned, unsigned> handshake_count; //first entry = old, second entry = new
+	std::pair<unsigned long, unsigned long> time_stamps; //first entry = old, second entry = new
 	unsigned int prescaler_count;
 	unsigned int prescaler_count_xor_pulser_count;
 	unsigned int accepted_pulser_events;
 	unsigned int accepted_prescaled_events;
-	unsigned int handshake_count;
-	unsigned long time_stamps[2]; //first entry = old, second entry = new timestamp
-
-protected:
-	Server * TUServer;
-
 };
 
 int main(int /*argc*/, const char ** argv);

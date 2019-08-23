@@ -94,10 +94,6 @@ namespace eudaq {
         std::vector<signed char> pulser_polarities;
         std::vector<signed char> spectrum_polarities;
 
-        std::vector<int16_t> *v_polarities;
-        std::vector<int16_t> *v_pulser_polarities;
-        std::vector<int16_t> *v_spectrum_polarities;
-
         // drs4 timing calibration
         std::map<uint8_t, std::vector<float> > tcal;
         std::map<uint8_t, std::vector<float> > full_time;
@@ -131,7 +127,7 @@ namespace eudaq {
 
         uint16_t spectrum_waveforms;
         uint16_t fft_waveforms;
-        std::pair<uint16_t, uint16_t> pulser_range;
+        std::pair<uint16_t, uint16_t> pulser_region;
         int pulser_threshold;
         uint8_t pulser_channel;
         uint8_t trigger_channel;
@@ -155,6 +151,12 @@ namespace eudaq {
         std::vector<std::vector<uint16_t> > * v_peak_positions;
         std::vector<std::vector<float> > * v_peak_times;
         std::vector<uint8_t> * v_npeaks;
+        std::vector<float> * v_rise_time;
+        std::vector<float> * v_fall_time;
+        std::vector<float> * v_wf_start;
+        std::vector<float> * v_fit_peak_time;
+        std::vector<float> * v_fit_peak_value;
+        std::vector<float> * v_peaking_time;
 
         // waveforms
         std::map<uint8_t, std::vector<float> *> f_wf;

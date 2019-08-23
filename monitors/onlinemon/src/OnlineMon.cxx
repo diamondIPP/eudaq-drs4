@@ -457,28 +457,28 @@ void RootMonitor::OnEvent(const eudaq::StandardEvent & ev) {
 
     //Filling
     my_event_processing_time.Start(true); //start the stopwatch again
-    for (unsigned int i = 0 ; i < _colls.size(); ++i){
-      if (_colls.at(i) == corrCollection){
+    for (auto & i_col : _colls){
+      if (i_col == corrCollection){
+        if (myevent.getNPlanes() == 0) { continue; }
         my_event_inner_operations_time.Start(true);
-        if (getUseTrack_corr() == true){
+        if (getUseTrack_corr()){
           tracksPerEvent = corrCollection->FillWithTracks(simpEv);
-          if (eudaqCollection->getEUDAQMonitorHistos() != NULL) //workaround because Correlation Collection is before EUDAQ Mon collection
+          if (eudaqCollection->getEUDAQMonitorHistos() != nullptr) //workaround because Correlation Collection is before EUDAQ Mon collection
             eudaqCollection->getEUDAQMonitorHistos()->Fill(simpEv.getEvent_number(), tracksPerEvent);
         }
-        else
-          _colls.at(i)->Fill(simpEv);
-          my_event_inner_operations_time.Stop();
-          previous_event_correlation_time = my_event_inner_operations_time.RealTime();
+        else { i_col->Fill(simpEv); }
+        my_event_inner_operations_time.Stop();
+        previous_event_correlation_time = my_event_inner_operations_time.RealTime();
       }
       else
-        _colls.at(i)->Fill(simpEv);
+        i_col->Fill(simpEv);
 
       // CollType is used to check which kind of Collection we are having
-      if (_colls.at(i)->getCollectionType()==HITMAP_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
-        _colls.at(i)->Calculate(ev.GetEventNumber());}
+      if (i_col->getCollectionType() == HITMAP_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
+        i_col->Calculate(ev.GetEventNumber());}
 
-      if (_colls.at(i)->getCollectionType()==WAVEFORM_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
-        _colls.at(i)->Calculate(ev.GetEventNumber());
+      if (i_col->getCollectionType() == WAVEFORM_COLLECTION_TYPE){ // Calculate is only implemented for HitMapCollections
+        i_col->Calculate(ev.GetEventNumber());
       }
     }//end for
 

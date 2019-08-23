@@ -12,6 +12,7 @@ lib/*
 
 # ignore log files
 *.log
+logs
 
 # ignore ROOT files
 *.root

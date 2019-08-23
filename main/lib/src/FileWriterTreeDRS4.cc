@@ -50,9 +50,6 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     IntegralLength  = new std::vector<float>;
 
     // general waveform information
-    v_polarities = new vector<int16_t>;
-    v_pulser_polarities = new vector<int16_t>;
-    v_spectrum_polarities = new vector<int16_t>;
     v_is_saturated = new vector<bool>;
     v_median = new vector<float>;
     v_average = new vector<float>;
@@ -66,6 +63,12 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     v_npeaks = new vector<uint8_t>;
     v_npeaks->resize(4, 0);
     v_max_peak_time->resize(4, 0);
+    v_rise_time = new vector<float>;
+    v_fall_time = new vector<float>;
+    v_wf_start = new vector<float>;
+    v_fit_peak_time = new vector<float>;
+    v_fit_peak_value = new vector<float>;
+    v_peaking_time = new vector<float>;
 
     // waveforms
     for (uint8_t i = 0; i < 4; i++) f_wf[i] = new vector<float>;
@@ -133,12 +136,12 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
 void FileWriterTreeDRS4::Configure(){
 
     // do some assertions
-    if (!this->m_config){
+    if (this->m_config == nullptr){
         EUDAQ_WARN("Configuration class instance m_config does not exist!");
         return;
     }
     m_config->SetSection("Converter.drs4tree");
-    if (m_config->NSections()==0){
+    if (m_config->NSections() == 0){
         EUDAQ_WARN("Config file has no sections!");
         return;
     }
@@ -148,7 +151,7 @@ void FileWriterTreeDRS4::Configure(){
     max_event_number = m_config->Get("max_event_number", 0);
 
     // spectrum and fft
-    peak_noise_pos = m_config->Get("peak_noise_pos", unsigned(0));
+    peak_noise_pos = m_config->Get("peak_noise_pos", m_config->Get("pedestal_ab_region", make_pair(20, 20)).first);
     spec_sigma = m_config->Get("spectrum_sigma", 5);
     spec_decon_iter = m_config->Get("spectrum_deconIterations", 3);
     spec_aver_win = m_config->Get("spectrum_averageWindow", 5);
@@ -161,7 +164,7 @@ void FileWriterTreeDRS4::Configure(){
     peak_finding_roi = m_config->Get("peak_finding_roi", make_pair(0.0, 0.0));
 
     // channels
-    pulser_threshold = m_config->Get("pulser_drs4_threshold", 80);
+    pulser_threshold = m_config->Get("pulser_channel_threshold", 80);
     pulser_channel = uint8_t(m_config->Get("pulser_channel", 1));
     trigger_channel = uint8_t(m_config->Get("trigger_channel", 2));
 
@@ -172,9 +175,6 @@ void FileWriterTreeDRS4::Configure(){
     polarities = m_config->Get("polarities", polarities);
     pulser_polarities = m_config->Get("pulser_polarities", pulser_polarities);
     spectrum_polarities = m_config->Get("spectrum_polarities", spectrum_polarities);
-    for (auto i: polarities)  v_polarities->push_back(uint16_t(i * 1));
-    for (auto i: pulser_polarities) v_pulser_polarities->push_back(uint16_t(i * 1));
-    for (auto i: spectrum_polarities) v_spectrum_polarities->push_back(uint16_t(i * 1));
 
     // regions todo: add default range
     active_regions = m_config->Get("active_regions", uint16_t(0));
@@ -196,7 +196,7 @@ void FileWriterTreeDRS4::Configure(){
         if (UseWaveForm(active_regions, i)) (*regions)[i] = new WaveformSignalRegions(i, polarities.at(i), pulser_polarities.at(i));
 
     // read the peak integral ranges from the config file
-    pulser_range = m_config->Get("pulser_range_drs4", make_pair(800, 1000));
+    pulser_region = m_config->Get("pulser_channel_region", make_pair(800, 1000));
     ReadIntegralRanges();
     for (auto ch: ranges) {
       macro->AddLine(TString::Format("\n[Integral Ranges %d]", ch.first));
@@ -271,9 +271,6 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("IntegralLength",&IntegralLength);
 
     // DUT
-    m_ttree->Branch("polarities", &v_polarities);
-    m_ttree->Branch("pulser_polarities", &v_pulser_polarities);
-    m_ttree->Branch("spectrum_polarities", &v_spectrum_polarities);
     m_ttree->Branch("is_saturated", &v_is_saturated);
     m_ttree->Branch("median", &v_median);
     m_ttree->Branch("average", &v_average);
@@ -284,6 +281,12 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
       m_ttree->Branch("peak_positions", &v_peak_positions);
       m_ttree->Branch("peak_times", &v_peak_times);
       m_ttree->Branch("n_peaks", &v_npeaks);
+      m_ttree->Branch("fall_time", &v_fall_time);
+      m_ttree->Branch("rise_time", &v_rise_time);
+      m_ttree->Branch("wf_start", &v_wf_start);
+      m_ttree->Branch("fit_peak_time", &v_fit_peak_time);
+      m_ttree->Branch("fit_peak_value", &v_fit_peak_value);
+      m_ttree->Branch("peaking_time", &v_peaking_time);
     }
 
     // fft stuff and spectrum
@@ -346,7 +349,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 
     f_event_number = sev.GetEventNumber();
-    // set time stamp
+
     /** TU STUFF */
     SetTimeStamp(sev);
     SetBeamCurrent(sev);
@@ -354,18 +357,17 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
     // ---------- get the number of waveforms -----------------------------
     // --------------------------------------------------------------------
-    unsigned int nwfs = (unsigned int) sev.NumWaveforms();
+    auto nwfs = (unsigned int) sev.NumWaveforms();
     f_nwfs = nwfs;
 
     if(f_event_number <= 10 && verbose > 0){
-        cout << "event number " << f_event_number << endl;
-        cout << "number of waveforms " << nwfs << endl;
         if(nwfs ==0){
             cout << "----------------------------------------" << endl;
             cout << "WARNING!!! NO WAVEFORMS IN THIS EVENT!!!" << endl;
             cout << "----------------------------------------" << endl;
         }
     }
+
     if (verbose > 3) cout << "ClearVectors" << endl;
     ClearVectors();
 
@@ -381,7 +383,11 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
 
     //use different order of wfs in order to 'know' if its a pulser event or not.
-    vector<uint8_t> wf_order = {2,1,0,3};
+    vector<uint8_t> wf_order = {2, 1, 0, 3};
+    for (auto iwf : wf_order) {
+      sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
+      sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
+    }
     ResizeVectors(sev.GetNWaveforms());
     FillRegionIntegrals(sev);
 
@@ -467,7 +473,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 FileWriterTreeDRS4::~FileWriterTreeDRS4() {
     macro->AddLine("\n[Sensor Names]");
     vector<string> names;
-    for (auto name: sensor_name)
+    for (const auto &name: sensor_name)
       names.push_back("\"" + name + "\"");
     macro->AddLine(("Names = [" + to_string(names) + "]").c_str());
     stringstream ss;
@@ -565,8 +571,14 @@ inline void FileWriterTreeDRS4::ResizeVectors(size_t n_channels) {
     v_is_saturated->resize(n_channels);
     v_median->resize(n_channels);
     v_average->resize(n_channels);
-    v_max_peak_time->resize(4, 0);
-    v_max_peak_position->resize(4, 0);
+    v_max_peak_time->resize(n_channels, 0);
+    v_max_peak_position->resize(n_channels, 0);
+    v_rise_time->resize(n_channels);
+    v_fall_time->resize(n_channels);
+    v_wf_start->resize(n_channels);
+    v_fit_peak_time->resize(n_channels);
+    v_fit_peak_value->resize(n_channels);
+    v_peaking_time->resize(n_channels);
 
     f_isDa->resize(n_channels);
 
@@ -723,7 +735,7 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);
           integral->SetPeakPosition(peak_pos, wf->GetNSamples());
-          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, f_trigger_cell, &tcal.at(0), 2.0));
+          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, 2.0));
           if (name.find("peaktopeak")!=std::string::npos){
             integral->SetIntegral(wf->getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else if (name.find("median")!=name.npos){
@@ -763,6 +775,14 @@ void FileWriterTreeDRS4::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     v_average->at(iwf) = pol * wf->getIntegral(0, 1023);
     if (UseWaveForm(active_regions, iwf)){
 
+        WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
+        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
+        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
+        auto fit_peak = wf->fitMaximum(reg->GetLowBoarder(), reg->GetHighBoarder());
+        v_fit_peak_time->at(iwf) = fit_peak.first;
+        v_fit_peak_value->at(iwf) = fit_peak.second;
+        v_wf_start->at(iwf) = wf->getWFStartTime(reg->GetLowBoarder(), reg->GetHighBoarder(), noise->at(iwf).first, fit_peak.second);
+        v_peaking_time->at(iwf) = v_fit_peak_time->at(iwf) - v_wf_start->at(iwf);
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
@@ -805,7 +825,7 @@ void FileWriterTreeDRS4::UpdateWaveforms(uint8_t iwf){
 } // end UpdateWaveforms()
 
 inline int FileWriterTreeDRS4::IsPulserEvent(const StandardWaveform *wf){
-    float pulser_int = wf->getIntegral(pulser_range.first, pulser_range.second, true);
+    float pulser_int = wf->getIntegral(pulser_region.first, pulser_region.second, true);
     return pulser_int > pulser_threshold;
 } //end IsPulserEvent
 
@@ -893,7 +913,7 @@ void FileWriterTreeDRS4::SetScalers(StandardEvent sev) {
         if (valid)
             old_time = f_time;
         }
-    }
+}
 
 void FileWriterTreeDRS4::ReadIntegralRanges() {
 
@@ -925,6 +945,7 @@ void FileWriterTreeDRS4::ReadIntegralRegions() {
 
   for (const auto &i_key: m_config->GetKeys()){
     if (i_key.find("active_regions") != string::npos) continue;
+    if (i_key.find("pulser_channel") != string::npos) continue;
     size_t found = i_key.find("_region");
     if (found == string::npos) continue;
     string name = i_key.substr(0, found);

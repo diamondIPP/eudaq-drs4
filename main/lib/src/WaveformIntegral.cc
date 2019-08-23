@@ -32,14 +32,8 @@ void WaveformIntegral::SetIntegral(float integral) {
 }
 
 void WaveformIntegral::SetPeakPosition(int peak_position, int n_samples) {
-    if (peak_position-down_range>=0)
-        integral_start = peak_position-down_range;
-    else
-        integral_start = 0;
-    if (peak_position+up_range<n_samples)
-        integral_stop = peak_position+up_range+1;
-    else
-        integral_stop = n_samples;
+    integral_start = uint16_t(std::max(peak_position - down_range, 0));
+    integral_stop = uint16_t(std::min(peak_position + up_range, n_samples));
 }
 
 void WaveformIntegral::Print(std::ostream & out, bool bEndl) const{
