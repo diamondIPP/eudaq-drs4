@@ -22,6 +22,8 @@
 #include <sys/time.h>
 #include <fcntl.h>
 
+#include <chrono>
+using namespace std::chrono;
 
 
 
@@ -241,6 +243,8 @@ tuc::Readout_Data *Trigger_logic_tpc_Stream::pars_stream_ret(char *stream)
     iptr = (unsigned int *) (start + tuc::TRIGGER_LOGIC_TIME_STAMP_LOW);
     i = *iptr;
     readout->time_stamp =  readout->time_stamp | (((unsigned long)i) & 0xFFFFFFFF);
+    //TODO DIRTY HOTFIX FOR TIMING!
+    readout->time_stamp =  duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     /* rates are not implimented
     iptr = (unsigned int *) (start + TRIGGER_LOGIC_COINCIDENCE_RATE);
     readout->coincidence_rate = *iptr;
