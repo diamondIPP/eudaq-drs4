@@ -45,6 +45,7 @@ class Eudaq(Mouse, Keys):
         flux = sheet.col_values(col2num('G'))[row - 1]
         flux = '10000' if flux == 'MAX' else flux
         self.enter_text(flux, *loads(self.get_from_config('EUDAQ', 'flux')))
+        return flux
 
     def start_onlinemon(self, run):
         self.click(*loads(self.get_from_config('EUDAQ', 'online monitor window')))
