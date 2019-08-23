@@ -122,6 +122,14 @@ class Keys:
             self.k.release_key(self.k.alt_key)
             self.k.release_key(self.k.control_key)
 
+    def press_ctrl_shift_and(self, letter, num=1):
+        for i in range(num):
+            self.k.press_key(self.k.control_key)
+            self.k.press_key(self.k.shift_key)
+            self.k.tap_key(letter)
+            self.k.release_key(self.k.alt_key)
+            self.k.release_key(self.k.shift_key)
+
     def press_ctrl_alt_up(self, num=1):
         self.press_ctrl_alt_and(self.press_up, num)
 
