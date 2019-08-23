@@ -35,6 +35,9 @@ def get_first_unfilled(sheet, col):
     last_filled = len(cols) - cols[::-1].index('TRUE')
     return cols.index('FALSE', last_filled) + 1  # return the last index that is "TRUE"
 
+def next_row_is_empty(sheet, col):
+    return len(sheet.col_values(col2num('A'))) < get_first_unfilled(sheet, col) + 1
+
 
 if __name__ == '__main__':
     s = load_sheet()
