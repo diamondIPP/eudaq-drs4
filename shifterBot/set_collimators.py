@@ -47,10 +47,10 @@ class Run(Mouse, Keys):
         return get_first_unfilled(self.Sheet, col='J')
 
     def read_fs11_lr_values(self, row):
-        return int(self.Sheet.col_values(col2num('H'))[row - 1])
+        return int(self.Sheet.col_values(col2num('I'))[row - 1])
 
     def read_fs11_ou_values(self, row):
-        return int(self.Sheet.col_values(col2num('I'))[row - 1])
+        return str(self.Sheet.col_values(col2num('H'))[row - 1])
 
     def reload_sheet(self):
         if (time() - self.TStart) / (55 * 60) - 1 > self.Reloads:
@@ -120,9 +120,9 @@ class Run(Mouse, Keys):
         while abs(diff) > float(self.get_from_config('SetPoint', 'max diff')) and iterations < int(self.get_from_config('SetPoint', 'max iterations')):
             if abs(diff) < float(self.get_from_config('SetPoint', 'start adjust diff')):
                 self.increment_fs11(string) if diff > 0 else self.decrement_fs11(string)
-            sleep(1)
+                iterations += 1
+            sleep(2)
             diff = value - self.get_fs11_value(string)
-            iterations += 1
 
     def adjust_fs11_lr(self, value):
         self.set_fs11_lr(value)
@@ -136,21 +136,29 @@ class Run(Mouse, Keys):
         idle()
         self.adjust_fs11('fs11-u', value)
 
+    def set_fs13(self, value):
+        self.set_fs11_ou(value)
+        idle()
+
     def adjust_all_fs11(self, lr_value, ou_value):
         self.set_all_fs11(lr_value, ou_value)
-        self.adjust_fs11_lr(lr_value)
-        idle()
-        self.adjust_fs11_ou(ou_value)
+	self.adjust_fs11_lr(lr_value)
+	idle()
+	self.adjust_fs13(ou_value)
 
     def increment_fs11(self, string):
         self.click_fs11_set(string)
         idle()
         self.press_up()
+	idle()
+	self.press_enter()
 
     def decrement_fs11(self, string):
         self.click_fs11_set(string)
         idle()
         self.press_down()
+	idle()
+	self.press_enter()
 
     def run(self):
         while True:
@@ -159,17 +167,17 @@ class Run(Mouse, Keys):
             first_unfilled = self.get_first_unfilled()
             if self.LastUnfilledRow != first_unfilled:
                 fs11_lr = self.read_fs11_lr_values(first_unfilled)
-                fs11_ou = self.read_fs11_ou_values(first_unfilled)
+                fs13 = self.read_fs11_ou_values(first_unfilled)
                 if fs11_lr != self.LastFS11LR:
                     self.set_fs11_lr(fs11_lr)
-                if fs11_ou != self.LastFS11OU:
-                    self.set_fs11_ou(fs11_ou)
+                if fs13 != self.LastFS11OU:
+                    self.set_fs13(fs13)
                 if fs11_lr != self.LastFS11LR:
                     self.adjust_fs11_lr(fs11_lr)
                     self.LastFS11LR = fs11_lr
-                if fs11_ou != self.LastFS11OU:
-                    self.adjust_fs11_ou(fs11_ou)
-                    self.LastFS11OU = fs11_ou
+                if fs13 != self.LastFS11OU:
+                    #self.adjust_fs11_ou(fs11_ou)
+                    self.LastFS11OU = fs13
                 self.LastUnfilledRow = first_unfilled
                 self.Sheet.update_cell(first_unfilled - 1, col2num('K'), 'TRUE')
             sleep(5)  # need large sleep time because google sheets can only be read 100 times per 100 seconds
