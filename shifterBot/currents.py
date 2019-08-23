@@ -31,7 +31,7 @@ class Currents:
 
     def get_currents(self, t_start, t_stop, sheet, row, ind=-1):
         filenames = OrderedDict([(name, self.get_last_file(device, channel, ind)) for device, channel, name in get_name_device_channel(sheet, row)])
-        self.Data = {name: self.get_current(filename, t_start, t_stop) for name, filename in filenames.iteritems()}
+        self.Data = OrderedDict((name, self.get_current(filename, t_start, t_stop)) for name, filename in filenames.iteritems())
         return self.Data
 
     @staticmethod
