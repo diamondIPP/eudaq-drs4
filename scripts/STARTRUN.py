@@ -123,9 +123,11 @@ class EudaqStart:
         self.start_data_collector()
         self.start_tu()
         self.start_beam_device('CMS Pixel Telescope', 'cmstel', 'StartCMSPixel.sh')
-        self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDig.sh')
+        self.start_beam_device('CMS Pixel Telescope', 'cmstelold', 'StartCMSPixelOld.sh')
+        self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDigOld.sh')
         self.start_beam_device('Clock Generator', 'clock', 'clockgen.sh')
         self.start_beam_device('WBC Scan', 'wbc', 'wbcScan.sh', src=True)
+        self.start_beam_device('WBC Scan DUT', 'wbcdut', 'wbcScanDUT.sh', src=True)
         self.start_beam_device('DRS4 Producer', 'drs4', 'StartDRS4.sh')
         self.start_beam_device('DRS4 Osci', 'drsgui', 'drsosc', script_dir=join('software', 'DRS4'))
         self.start_beam_device('CAEN Producer', 'caen', 'StartVME.sh')
@@ -142,6 +144,7 @@ class EudaqStart:
         string = 'cornBot 1 {} {}\ncornTop 1 {} {}\n\n'.format(x1[0].rjust(2), y1[0].rjust(2), x1[1].rjust(2), y1[1].rjust(2))
         string += 'cornBot 2 {} {}\ncornTop 2 {} {}\n\n'.format(x2[0].rjust(2), y2[0].rjust(2), x2[1].rjust(2), y2[1].rjust(2))
         system('ssh -tY {} "echo \'{}\' > {}"'.format(self.BeamPC, string, file_path))
+        print file_name
 
 
 if __name__ == '__main__':
