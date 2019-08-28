@@ -1,0 +1,6 @@
+[MAIN]
+location = psi
+raw directory = raw
+data directory = /scratch2/psi
+software directory = software
+telescope = 50

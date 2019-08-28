@@ -5,6 +5,10 @@
 # -------------------------------------------------------
 from commands import getstatusoutput
 from time import sleep
+from glob import glob
+from os.path import join, isfile, dirname, realpath
+from datetime import datetime
+from ConfigParser import ConfigParser
 
 
 RED = '\033[91m'
@@ -13,12 +17,21 @@ BOLD = '\033[1m'
 ENDC = '\033[0m'
 
 
+def get_t_str():
+    return datetime.now().strftime('%H:%M:%S')
+
+
 def warning(txt):
-    print '{}{}{}{}'.format(BOLD, RED, txt, ENDC)
+    print '{} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC)
+
+
+def critical(txt):
+    print 'CRITICAL: {} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC)
+    exit(2)
 
 
 def finished(txt):
-    print '{}{}{}{}'.format(BOLD, GREEN, txt, ENDC)
+    print '{} --> {}{}{}{}'.format(get_t_str(), BOLD, GREEN, txt, ENDC)
 
 
 def get_output(command, process=''):
@@ -54,3 +67,33 @@ def get_height(name):
 
 def get_user(host):
     return get_output('ssh -tY {} whoami'.format(host))[0]
+
+
+def remove_letters(string):
+    return filter(lambda x: x.isdigit(), string)
+
+
+def get_tc(data_dir, tc, location):
+    data_paths = glob(join(data_dir, '{}*'.format(location)))
+    if tc is None:
+        return max(data_paths)
+    tc = datetime.strptime(tc, '%Y%m')
+    return join(data_dir, tc.strftime('psi_%Y_%m'))
+
+
+def get_run_path(run, tc_dir, raw_dir):
+    run_paths = glob(join(tc_dir, raw_dir, 'run*.raw'))
+    return max(run_paths) if run is None else join(tc_dir, raw_dir, 'run{n}.raw'.format(n=run.zfill(6)))
+
+
+def get_dir():
+    return dirname(dirname(realpath(__file__)))
+
+
+def load_config():
+    filename = join(get_dir(), 'scripts', 'dirs.ini')
+    if not isfile(filename):
+        critical('Please create the dirs.ini file in eudaq/scripts based on dirs.default')
+    p = ConfigParser()
+    p.read(filename)
+    return p
