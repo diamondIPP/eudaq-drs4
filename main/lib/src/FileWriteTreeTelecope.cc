@@ -257,8 +257,7 @@ namespace eudaq {
 
 }void FileWriterTreeTelescope::SetTimeStamp(StandardEvent sev) {
   if (sev.hasTUEvent()){
-    if (sev.GetTUEvent(0).GetValid())
-      f_time = sev.GetTimestamp();
+    if (sev.GetTUEvent(0).GetValid()) { f_time = sev.GetTimestamp(); }
   }
   else
     f_time = sev.GetTimestamp() / 384066.;
