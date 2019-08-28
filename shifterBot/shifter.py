@@ -12,7 +12,7 @@ from Email import Email
 
 
 class ShifterBot:
-    def __init__(self, log_dir='/data/psi_2018_10/logs_eudaq', hv_dir='~/sdvlp/HVClient'):
+    def __init__(self, log_dir='/data/psi_2019_08/logs_eudaq', hv_dir='~/sdvlp/HVClient'):
 
         self.TStart = time()
 
@@ -148,15 +148,21 @@ class ShifterBot:
                 play('Filling the google sheet for run {}...'.format(last_run))
                 self.update_sheet(*self.get_times(last_run))
                 play('Done')
+                # self.reload_sheet()
+                # if next_row_is_empty(self.Sheet, 'J'):
+                #     play('Did not find next line... exiting!')
+                #     break
                 if start_eudaq:
                     self.Eudaq.press_ctrl_alt_left(3)
                     sleep(.5)
                     while self.collimaters_busy():
                         sleep(5)
                     if configure_eudaq:
-                        self.Eudaq.set_flux(self.Sheet, self.FirstUnfilledRow + 1)
+                        flux = self.Eudaq.set_flux(self.Sheet, self.FirstUnfilledRow + 1)
+                        play('configuring run {} with flux {}'.format(last_run + 1, flux))
                         self.Eudaq.configure()
                         sleep(10)
+                    play('starting run {}'.format(last_run + 1))
                     self.Eudaq.start()
                     if start_online_mon:
                         sleep(10)

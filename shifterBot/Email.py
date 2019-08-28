@@ -33,7 +33,7 @@ class Email:
     def load_server(self):
         server = SMTP_SSL('smtp.gmail.com', 465)
         server.ehlo()
-        server.login(self.MyAddress, self.__get_pw())
+        server.login(self.MyAddress, self.__get_pw())  # maybe activate less secure apps in email acccount
         return server
 
     def send_message(self, subject, msg):

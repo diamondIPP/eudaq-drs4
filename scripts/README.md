@@ -1,11 +1,10 @@
 # EUDAQ Starting Scripts
 
 ### Usage
- - run main file "STARTRUN.py \<conf1> (\<conf2>) (-t)"
- - arguments in bracket are optional
+ - run main file "STARTRUN.py \<conf>  (-t)"
  - all settings provided by the config files in the config directory
- - conf1 = main config
- - conf2 = auxiliary config overwriting settings from conf1
+ - main config is the file without the dash
+ - subconfig behind the dash overwrites the setting from the main file
  - if flag "-t" is set, it runs in test mode without starting the program
 
 ### Settings File

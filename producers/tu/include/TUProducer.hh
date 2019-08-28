@@ -34,7 +34,9 @@ public:
 	void OnReset() override;
 	void OnStatus() override;
 	template <typename Q>
-	float CalculateAverage(std::deque<Q> & d, Q value, unsigned short max_size=10);
+	float CalculateAverage(std::deque<Q> & d, Q value, bool=false, unsigned short max_size=10);
+	void UpdateBeamCurrent(tuc::Readout_Data*);
+	void UpdateScaler(tuc::Readout_Data*);
 	float CalculateBeamCurrent();
 	float TimeDiff() { return (time_stamps.second - time_stamps.first) / 1000.; } /** time difference in seconds */
 
@@ -42,7 +44,7 @@ private:
 	std::string event_type;
 	unsigned m_run;
 	std::pair<unsigned, unsigned> m_event;
-	bool done, TUStarted, TUJustStopped;
+	bool done, TUStarted, TUJustStopped, TUConfigured;
 	trigger_control *tc; //class for TU control from trigger_control.h
 	Trigger_logic_tpc_Stream *stream; //class for handling communication from triger_logic_tpc_stream.h
 //	unsigned int error_code;

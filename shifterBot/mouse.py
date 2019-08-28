@@ -1,4 +1,5 @@
-__author__ = 'micha'
+#!/usr/bin/env python
+# __author__ = 'micha'
 
 # ============================================
 # IMPORTS
@@ -35,3 +36,7 @@ class Mouse:
         for i in range(num):
             print '\r\033[1A' + 46 * ' ',
         print
+
+if __name__ == '__main__':
+    z = Mouse()
+    print z.get_mouse_position()
