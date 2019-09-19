@@ -15,7 +15,7 @@ def load_sheet():
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
         creds = ServiceAccountCredentials.from_json_keyfile_name('/home/testbeam/eudaq-drs4/shifterBot/client_secret.json', scope)
         client = gspread.authorize(creds)
-        return client.open_by_key('1ytMfao0rF7MB3rvUAruQCihJa1NhqIxcPuTQJ9BjxFk').sheet1
+        return client.open_by_key('13akZj6qfx9zC7mxQgXVi7zBTtAMT9QzTln4LKrjTQjI').sheet1
 
 
 def num2col(n):

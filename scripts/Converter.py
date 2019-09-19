@@ -28,14 +28,14 @@ location = config.get('MAIN', 'location')
 raw_dir = config.get('MAIN', 'raw directory')
 data_dir = config.get('MAIN', 'data directory')
 eudaq_dir = get_dir()
+conf_file_dir = join(eudaq_dir, 'conf', config.get('MAIN', 'config dir').strip(), 'converter_waveform_integrals.conf')
 
 tc_dir = get_tc(data_dir, args.tc, location)
 run_file_path = get_run_path(args.run, tc_dir, raw_dir) if args.p is None else args.p
 run = int((remove_letters(basename(run_file_path))))
-conf_file = join(eudaq_dir, 'conf', 'converter_waveform_integrals.conf')
 
 warning('Converting run {0}'.format(run))
-cmd_list = [join(eudaq_dir, 'bin', 'Converter.exe'), '-t', args.t, '-c', conf_file, run_file_path]
+cmd_list = [join(eudaq_dir, 'bin', 'Converter.exe'), '-t', args.t, '-c', conf_file_dir, run_file_path]
 # cmd = '{eudaq}/bin/Converter.exe -t {tree} -c {conf}/converter_waveform_integrals.conf {raw}/{file}'.format(eudaq=eudaq_dir, conf=conf_dir, tree=args.t, raw=raw_path, file=run_str)
 print 'executing:', ' '.join(cmd_list)
 max_tries = 10

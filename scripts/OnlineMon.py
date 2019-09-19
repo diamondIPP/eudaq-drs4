@@ -26,7 +26,7 @@ run_file_path = get_run_path(args.run, tc_dir, raw_dir)
 run = int((remove_letters(basename(run_file_path))))
 warning('STARTING Onlinemonitor for run {r} from test campaign {tc}'.format(r=run, tc=basename(tc_dir), d=raw_dir))
 
-conf_file = join(eudaq_dir, 'conf', 'converter_waveform_integrals.conf')
+conf_file = join(eudaq_dir, 'conf', 'old', 'converter_waveform_integrals.conf')
 if not isfile(run_file_path):
     critical('the file in {} does not exist!'.format(run_file_path))
 
