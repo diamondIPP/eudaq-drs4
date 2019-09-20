@@ -1,6 +1,11 @@
 # EUDAQ Shifter Bot
 
  - EUDAQ run bots for the PSI beam tests communicating via Google Sheets
+ 
+## Starting a New Beam Test
+ - make a new run plan in google sheets
+ - copy sheet key to spreadsheet.py: "return client.open_by_key('13akZj6qfx9zC7mxQgXVi7zBTtAMT9QzTln4LKrjTQjI').sheet1" which can be copied from the address line of the google sheet in the browser
+ - share it to the beam test account auth email: beamtest2@beamtest-219608.iam.gserviceaccount.com
 
 ##Main Bot 
 
