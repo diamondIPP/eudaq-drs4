@@ -12,11 +12,11 @@ from Email import Email
 
 
 class ShifterBot:
-    def __init__(self, log_dir='/data/psi_2019_08/logs_eudaq', hv_dir='~/sdvlp/HVClient'):
+    def __init__(self, log_dir='/data/psi_2019_09/logs_eudaq', hv_dir='~/sdvlp/HVClient'):
 
         self.TStart = time()
 
-        self.Mail = Email()
+        self.Mail = None
         self.Eudaq = Eudaq()
         self.Currents = Currents(hv_dir)
 
@@ -199,6 +199,7 @@ if __name__ == '__main__':
     bot = ShifterBot()
     if not args.t:
         if args.m:
+            bot.Mail = Email()
             bot.run_mail_bot()
         else:
             bot.run(args.reconfigure, args.no_restart, args.online_mon, select=True)
