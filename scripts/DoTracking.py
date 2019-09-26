@@ -27,7 +27,7 @@ chdir(track_dir)
 root_file = join(track_dir, 'test{}.root'.format(args.run.zfill(6)))
 
 cmd = '{c} -t telescopetree {r}'.format(c=converter, r=args.run)
-cmd2 = '{d}/TrackingTelescope {f} 0 {t}'.format(f=root_file, d=track_dir, t=tel)
+cmd2 = '{d}/TrackingTelescope {f} 0 {t} 1'.format(f=root_file, d=track_dir, t=tel)
 html_file = join(track_dir, 'plots', '{r}'.format(r=args.run), 'index.html')
 cmd3 = 'google-chrome {f}'.format(f=html_file)
 
