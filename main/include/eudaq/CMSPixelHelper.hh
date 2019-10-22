@@ -91,6 +91,8 @@ namespace eudaq {
 
       m_conv_cfg->SetSection("Converter.telescopetree");
       decodingOffset = m_conv_cfg->Get("decoding_offset", 25);
+      decodingOffsetVector.resize(4, decodingOffset);
+      decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", decodingOffsetVector);
 
       std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type 
 	       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
@@ -224,7 +226,12 @@ namespace eudaq {
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
       // todo: read this by a config file or even better, write it to the data!
-      decoder.setOffset(decodingOffset);
+      if(decodingOffsetVector.empty()) {
+        decoder.setOffset(decodingOffset);
+      }
+      else {
+        decoder.setOffset(std::vector<uint8_t>(decodingOffsetVector.begin(), decodingOffsetVector.end()));
+      }
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
       try{
@@ -413,6 +420,7 @@ namespace eudaq {
     bool do_conversion;
     Configuration * m_conv_cfg;
     uint8_t decodingOffset;
+    std::vector<signed char> decodingOffsetVector;
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
 
       // Transform data of form char* to vector<int16_t>
