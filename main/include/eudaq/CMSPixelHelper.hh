@@ -30,6 +30,8 @@ using eutelescope::EUTELESCOPE;
 #include <TMath.h>
 #include <TString.h>
 #include <TF1.h>
+#include <TH1F.h>
+#include <TFile.h>
 
 using namespace pxar;
 
@@ -56,6 +58,8 @@ namespace eudaq {
     bool get_conversion(){return do_conversion;}
     std::map< std::string, VCALDict> vcal_vals;
     TF1 * fFitfunction;
+      std::vector<TH1F *> bla;
+      TString dutBla;
     void initializeFitfunction(){fFitfunction = new TF1("fitfunc", "[3]*(TMath::Erf((x-[0])/[1])+[2])",-4096,4096);}
     float getCharge(VCALDict d, float val,float factor = 65.) const{  
         fFitfunction->SetParameter(0, d.par0);
@@ -70,6 +74,7 @@ namespace eudaq {
     virtual void SetConfig(Configuration * conv_cfg) { m_conv_cfg = conv_cfg; }
 
     void Initialize(const Event & bore, const Configuration & cnf) {
+        dutBla = TString("DUT");
       DeviceDictionary* devDict;
       std::string roctype = bore.GetTag("ROCTYPE", "");
       std::string tbmtype = bore.GetTag("TBMTYPE", "tbmemulator");
@@ -97,11 +102,25 @@ namespace eudaq {
       std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type 
 	       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
 	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
+      bla.empty();
+      if(dutBla.CompareTo(TString(m_detector)) == 0) {
+          for (size_t it = 0; it < m_nplanes; it++) {
+              bla.push_back(new TH1F(TString::Format("bla%d", int(it)), TString::Format("bla%d", int(it)), 4096, -2048, 2048));
+          }
+      }
     }
 
     std::string GetStats() {
       std::cout << "Getting decoding statistics for detector " << m_detector << std::endl;
-      return decoding_stats.getString();
+        if(dutBla.CompareTo(TString(m_detector)) == 0) {
+            TFile *blaf = new TFile("blaBla.root", "RECREATE");
+            blaf->cd();
+            for (size_t it = 0; it < bla.size(); it++)
+                bla[it]->Write();
+            blaf->Close();
+            std::cout << "saved root file blaBla.root" << std::endl;
+        }
+        return decoding_stats.getString();
     }
 
     void read_PHCalibrationData(const Configuration & cnf){
@@ -243,7 +262,33 @@ namespace eudaq {
           src.AddData(TransformRawData(in_raw.GetBlock(0)));
           // ...and pull it out at the other end:
           evt = Eventpump.Get();
+
           decoding_stats += decoder.getStatistics();
+          if(dutBla.CompareTo(TString(m_detector)) == 0) {
+              for (size_t roc = 0; roc < m_nplanes; roc++) {
+                  std::vector<int16_t> tempc0 = decoder.Getc0Vect(roc);
+                  std::vector<int16_t> tempc1 = decoder.Getc1Vect(roc);
+                  std::vector<int16_t> tempr0 = decoder.Getr0Vect(roc);
+                  std::vector<int16_t> tempr1 = decoder.Getr1Vect(roc);
+                  std::vector<int16_t> tempcr = decoder.GetcrVect(roc);
+                  std::vector<int16_t> tempblack = decoder.GetblackVect(roc);
+                  std::vector<int16_t> tempUblack = decoder.GetUblackVect(roc);
+                  for (size_t itbla = 0; itbla < tempc0.size(); itbla++)
+                      bla[roc]->Fill(tempc0[itbla]);
+                  for (size_t itbla = 0; itbla < tempc1.size(); itbla++)
+                      bla[roc]->Fill(tempc1[itbla]);
+                  for (size_t itbla = 0; itbla < tempr0.size(); itbla++)
+                      bla[roc]->Fill(tempr0[itbla]);
+                  for (size_t itbla = 0; itbla < tempr1.size(); itbla++)
+                      bla[roc]->Fill(tempr1[itbla]);
+                  for (size_t itbla = 0; itbla < tempcr.size(); itbla++)
+                      bla[roc]->Fill(tempcr[itbla]);
+                  for (size_t itbla = 0; itbla < tempblack.size(); itbla++)
+                      bla[roc]->Fill(tempblack[itbla]);
+                  for (size_t itbla = 0; itbla < tempUblack.size(); itbla++)
+                      bla[roc]->Fill(tempUblack[itbla]);
+              }
+          }
       }
       catch (std::exception& e){
           EUDAQ_WARN("Decoding crashed at event " + to_string(in.GetEventNumber()) + ":");
@@ -434,9 +479,11 @@ namespace eudaq {
         uint16_t temp = ((uint16_t)block.data()[i+1] << 8) | block.data()[i];
         rawData.push_back(temp);
         i+=2;
+//        bla->Fill(temp);
       }
       return rawData;
     }
+
   };
 
 }
