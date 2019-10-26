@@ -31,7 +31,10 @@ using eutelescope::EUTELESCOPE;
 #include <TString.h>
 #include <TF1.h>
 #include <TH1F.h>
+#include <TH2F.h>
+#include <TProfile.h>
 #include <TFile.h>
+#include <TDirectory.h>
 
 using namespace pxar;
 
@@ -58,7 +61,25 @@ namespace eudaq {
     bool get_conversion(){return do_conversion;}
     std::map< std::string, VCALDict> vcal_vals;
     TF1 * fFitfunction;
-      std::vector<TH1F *> bla;
+      std::vector<TH1F *> hDecode;
+      std::vector<TH1F *> hBlack;
+      std::vector<TH1F *> hUblack;
+      std::vector<TH1F *> hc0;
+      std::vector<TH1F *> hc1;
+      std::vector<TH1F *> hr0;
+      std::vector<TH1F *> hr1;
+      std::vector<TH1F *> hcr;
+      std::vector<TH1F *> hl1;
+      std::vector<TH1F *> hls;
+      std::vector<TProfile *> pblack;
+      std::vector<TProfile *> pUblack;
+      std::vector<TProfile *> pls;
+      std::vector<TProfile *> pl1;
+      std::vector<TH2F *> h2c0;
+      std::vector<TH2F *> h2c1;
+      std::vector<TH2F *> h2r0;
+      std::vector<TH2F *> h2r1;
+      std::vector<TH2F *> h2cr;
       TString dutBla;
     void initializeFitfunction(){fFitfunction = new TF1("fitfunc", "[3]*(TMath::Erf((x-[0])/[1])+[2])",-4096,4096);}
     float getCharge(VCALDict d, float val,float factor = 65.) const{  
@@ -96,16 +117,51 @@ namespace eudaq {
 
       m_conv_cfg->SetSection("Converter.telescopetree");
       decodingOffset = m_conv_cfg->Get("decoding_offset", 25);
-      decodingOffsetVector.resize(4, decodingOffset);
+      decodingOffsetVector.resize(4, float(decodingOffset));
       decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", decodingOffsetVector);
 
       std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type 
 	       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
 	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
-      bla.empty();
+      hDecode.empty();
+      hc0.empty();
+      hc1.empty();
+      hr0.empty();
+      hr1.empty();
+      hcr.empty();
+      hBlack.empty();
+      hUblack.empty();
+      hl1.empty();
+      hls.empty();
+      pblack.empty();
+      pUblack.empty();
+      pl1.empty();
+      pls.empty();
+      h2c0.empty();
+      h2c1.empty();
+      h2r0.empty();
+      h2r1.empty();
       if(dutBla.CompareTo(TString(m_detector)) == 0) {
           for (size_t it = 0; it < m_nplanes; it++) {
-              bla.push_back(new TH1F(TString::Format("bla%d", int(it)), TString::Format("bla%d", int(it)), 4096, -2048, 2048));
+              hDecode.push_back(new TH1F(TString::Format("decode%d", int(it)), TString::Format("decode%d", int(it)), 4096, -2048, 2048));
+              hc0.push_back(new TH1F(TString::Format("c0_%d", int(it)), TString::Format("c0_%d", int(it)), 4096, -2048, 2048));
+              hc1.push_back(new TH1F(TString::Format("c1_%d", int(it)), TString::Format("c1_%d", int(it)), 4096, -2048, 2048));
+              hr0.push_back(new TH1F(TString::Format("r0_%d", int(it)), TString::Format("r0_%d", int(it)), 4096, -2048, 2048));
+              hr1.push_back(new TH1F(TString::Format("r1_%d", int(it)), TString::Format("r1_%d", int(it)), 4096, -2048, 2048));
+              hcr.push_back(new TH1F(TString::Format("cr_%d", int(it)), TString::Format("cr_%d", int(it)), 4096, -2048, 2048));
+              hBlack.push_back(new TH1F(TString::Format("black_%d", int(it)), TString::Format("black_%d", int(it)), 4096, -2048, 2048));
+              hUblack.push_back(new TH1F(TString::Format("uBlack_%d", int(it)), TString::Format("uBlack_%d", int(it)), 4096, -2048, 2048));
+              hl1.push_back(new TH1F(TString::Format("l1_%d", int(it)), TString::Format("l1_%d", int(it)), 4096, -2048, 2048));
+              hls.push_back(new TH1F(TString::Format("ls_%d", int(it)), TString::Format("ls_%d", int(it)), 4096, -2048, 2048));
+              pblack.push_back(new TProfile(TString::Format("pblack_%d", int(it)), TString::Format("pblack_%d", int(it)), 5000, 0, 5000000, -2048, 2048));
+              pUblack.push_back(new TProfile(TString::Format("pUblack_%d", int(it)), TString::Format("pUblack_%d", int(it)), 5000, 0, 5000000, -2048, 2048));
+              pls.push_back(new TProfile(TString::Format("pls_%d", int(it)), TString::Format("pls_%d", int(it)), 5000, 0, 5000000, 0, 4096));
+              pl1.push_back(new TProfile(TString::Format("pl1_%d", int(it)), TString::Format("pl1_%d", int(it)), 5000, 0, 5000000, 0, 4096));
+              h2c0.push_back(new TH2F(TString::Format("h2c0_%d", int(it)), TString::Format("h2c0_%d", int(it)), 5000, 0, 5000000, 4096, -2048, 2048));
+              h2c1.push_back(new TH2F(TString::Format("h2c1_%d", int(it)), TString::Format("h2c1_%d", int(it)), 5000, 0, 5000000, 4096, -2048, 2048));
+              h2r0.push_back(new TH2F(TString::Format("h2r0_%d", int(it)), TString::Format("h2r0_%d", int(it)), 5000, 0, 5000000, 4096, -2048, 2048));
+              h2r1.push_back(new TH2F(TString::Format("h2r1_%d", int(it)), TString::Format("h2r1_%d", int(it)), 5000, 0, 5000000, 4096, -2048, 2048));
+              h2cr.push_back(new TH2F(TString::Format("h2cr_%d", int(it)), TString::Format("h2cr_%d", int(it)), 5000, 0, 5000000, 4096, -2048, 2048));
           }
       }
     }
@@ -113,12 +169,49 @@ namespace eudaq {
     std::string GetStats() {
       std::cout << "Getting decoding statistics for detector " << m_detector << std::endl;
         if(dutBla.CompareTo(TString(m_detector)) == 0) {
-            TFile *blaf = new TFile("blaBla.root", "RECREATE");
+            TDirectory *blaf = gDirectory->GetDirectory("DecodingHistos");
             blaf->cd();
-            for (size_t it = 0; it < bla.size(); it++)
-                bla[it]->Write();
-            blaf->Close();
-            std::cout << "saved root file blaBla.root" << std::endl;
+            for (size_t it = 0; it < hDecode.size(); it++)
+                hDecode[it]->Write();
+            for (size_t it = 0; it < hBlack.size(); it++)
+                hBlack[it]->Write();
+            for (size_t it = 0; it < hUblack.size(); it++)
+                hUblack[it]->Write();
+            for (size_t it = 0; it < hc0.size(); it++)
+                hc0[it]->Write();
+            for (size_t it = 0; it < hc1.size(); it++)
+                hc1[it]->Write();
+            for (size_t it = 0; it < hr0.size(); it++)
+                hr0[it]->Write();
+            for (size_t it = 0; it < hr1.size(); it++)
+                hr1[it]->Write();
+            for (size_t it = 0; it < hcr.size(); it++)
+                hcr[it]->Write();
+            for (size_t it = 0; it < hl1.size(); it++)
+                hl1[it]->Write();
+            for (size_t it = 0; it < hls.size(); it++)
+                hls[it]->Write();
+            for (size_t it = 0; it < pblack.size(); it++)
+                pblack[it]->Write();
+            for (size_t it = 0; it < pUblack.size(); it++)
+                pUblack[it]->Write();
+            for (size_t it = 0; it < pls.size(); it++)
+                pls[it]->Write();
+            for (size_t it = 0; it < pl1.size(); it++)
+                pl1[it]->Write();
+            for (size_t it = 0; it < h2c0.size(); it++)
+                h2c0[it]->Write();
+            for (size_t it = 0; it < h2c1.size(); it++)
+                h2c1[it]->Write();
+            for (size_t it = 0; it < h2r0.size(); it++)
+                h2r0[it]->Write();
+            for (size_t it = 0; it < h2r1.size(); it++)
+                h2r1[it]->Write();
+            for (size_t it = 0; it < h2cr.size(); it++)
+                h2cr[it]->Write();
+//            blaf->Close();
+            std::cout << "saved histograms under DecodingHistos" << std::endl;
+            blaf->cd("../");
         }
         return decoding_stats.getString();
     }
@@ -210,6 +303,50 @@ namespace eudaq {
       // If we receive the EORE print the collected statistics:
       if (out.IsEORE()) {
 	// Set decoder to INFO level for statistics printout:
+          if(dutBla.CompareTo(TString(m_detector)) == 0) {
+              TFile *blaf = new TFile("blaBla.root", "RECREATE");
+              blaf->cd();
+              for (size_t it = 0; it < hDecode.size(); it++)
+                  hDecode[it]->Write();
+              for (size_t it = 0; it < hBlack.size(); it++)
+                  hBlack[it]->Write();
+              for (size_t it = 0; it < hUblack.size(); it++)
+                  hUblack[it]->Write();
+              for (size_t it = 0; it < hc0.size(); it++)
+                  hc0[it]->Write();
+              for (size_t it = 0; it < hc1.size(); it++)
+                  hc1[it]->Write();
+              for (size_t it = 0; it < hr0.size(); it++)
+                  hr0[it]->Write();
+              for (size_t it = 0; it < hr1.size(); it++)
+                  hr1[it]->Write();
+              for (size_t it = 0; it < hcr.size(); it++)
+                  hcr[it]->Write();
+              for (size_t it = 0; it < hl1.size(); it++)
+                  hl1[it]->Write();
+              for (size_t it = 0; it < hls.size(); it++)
+                  hls[it]->Write();
+              for (size_t it = 0; it < pblack.size(); it++)
+                  pblack[it]->Write();
+              for (size_t it = 0; it < pUblack.size(); it++)
+                  pUblack[it]->Write();
+              for (size_t it = 0; it < pls.size(); it++)
+                  pls[it]->Write();
+              for (size_t it = 0; it < pl1.size(); it++)
+                  pl1[it]->Write();
+              for (size_t it = 0; it < h2c0.size(); it++)
+                  h2c0[it]->Write();
+              for (size_t it = 0; it < h2c1.size(); it++)
+                  h2c1[it]->Write();
+              for (size_t it = 0; it < h2r0.size(); it++)
+                  h2r0[it]->Write();
+              for (size_t it = 0; it < h2r1.size(); it++)
+                  h2r1[it]->Write();
+              for (size_t it = 0; it < h2cr.size(); it++)
+                  h2cr[it]->Write();
+              blaf->Close();
+              std::cout << "saved root file blaBla.root" << std::endl;
+          }
 	std::cout << "Decoding statistics for detector " << m_detector << std::endl;
 	pxar::Log::ReportingLevel() = pxar::Log::FromString("INFO");
 	decoding_stats.dump();
@@ -249,7 +386,7 @@ namespace eudaq {
         decoder.setOffset(decodingOffset);
       }
       else {
-        decoder.setOffset(std::vector<uint8_t>(decodingOffsetVector.begin(), decodingOffsetVector.end()));
+        decoder.setOffset(std::vector<float>(decodingOffsetVector.begin(), decodingOffsetVector.end()));
       }
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
@@ -273,20 +410,47 @@ namespace eudaq {
                   std::vector<int16_t> tempcr = decoder.GetcrVect(roc);
                   std::vector<int16_t> tempblack = decoder.GetblackVect(roc);
                   std::vector<int16_t> tempUblack = decoder.GetUblackVect(roc);
-                  for (size_t itbla = 0; itbla < tempc0.size(); itbla++)
-                      bla[roc]->Fill(tempc0[itbla]);
-                  for (size_t itbla = 0; itbla < tempc1.size(); itbla++)
-                      bla[roc]->Fill(tempc1[itbla]);
-                  for (size_t itbla = 0; itbla < tempr0.size(); itbla++)
-                      bla[roc]->Fill(tempr0[itbla]);
-                  for (size_t itbla = 0; itbla < tempr1.size(); itbla++)
-                      bla[roc]->Fill(tempr1[itbla]);
-                  for (size_t itbla = 0; itbla < tempcr.size(); itbla++)
-                      bla[roc]->Fill(tempcr[itbla]);
-                  for (size_t itbla = 0; itbla < tempblack.size(); itbla++)
-                      bla[roc]->Fill(tempblack[itbla]);
-                  for (size_t itbla = 0; itbla < tempUblack.size(); itbla++)
-                      bla[roc]->Fill(tempUblack[itbla]);
+                  for (size_t itbla = 0; itbla < tempc0.size(); itbla++) {
+                      hDecode[roc]->Fill(tempc0[itbla]);
+                      hc0[roc]->Fill(tempc0[itbla]);
+                      h2c0[roc]->Fill(in.GetEventNumber(), tempc0[itbla]);
+                  }
+                  for (size_t itbla = 0; itbla < tempc1.size(); itbla++) {
+                      hDecode[roc]->Fill(tempc1[itbla]);
+                      hc1[roc]->Fill(tempc1[itbla]);
+                      h2c1[roc]->Fill(in.GetEventNumber(), tempc1[itbla]);
+                  }
+                  for (size_t itbla = 0; itbla < tempr0.size(); itbla++) {
+                      hDecode[roc]->Fill(tempr0[itbla]);
+                      hr0[roc]->Fill(tempr0[itbla]);
+                      h2r0[roc]->Fill(in.GetEventNumber(), tempr0[itbla]);
+                  }
+                  for (size_t itbla = 0; itbla < tempr1.size(); itbla++) {
+                      hDecode[roc]->Fill(tempr1[itbla]);
+                      hr1[roc]->Fill(tempr1[itbla]);
+                      h2r1[roc]->Fill(in.GetEventNumber(), tempr1[itbla]);
+                  }
+                  for (size_t itbla = 0; itbla < tempcr.size(); itbla++) {
+                      hDecode[roc]->Fill(tempcr[itbla]);
+                      hcr[roc]->Fill(tempcr[itbla]);
+                      h2cr[roc]->Fill(in.GetEventNumber(), tempcr[itbla]);
+                  }
+                  for (size_t itbla = 0; itbla < tempblack.size(); itbla++) {
+                      hDecode[roc]->Fill(tempblack[itbla]);
+                      hBlack[roc]->Fill(tempblack[itbla]);
+                      pblack[roc]->Fill(in.GetEventNumber(), tempblack[itbla]);
+                  }
+                  for (size_t itbla = 0; itbla < tempUblack.size(); itbla++) {
+                      hDecode[roc]->Fill(tempUblack[itbla]);
+                      hUblack[roc]->Fill(tempUblack[itbla]);
+                      pUblack[roc]->Fill(in.GetEventNumber(), tempUblack[itbla]);
+                  }
+                  for (size_t itbla = 0; (itbla < tempUblack.size()) and (tempUblack.size() == tempblack.size()); itbla++) {
+                      hl1[roc]->Fill(int(int(tempblack[itbla] - tempUblack[itbla])/int(4)));
+                      hls[roc]->Fill(int(int(tempblack[itbla] - tempUblack[itbla])/int(8)));
+                      pl1[roc]->Fill(in.GetEventNumber(), int(int(tempblack[itbla] - tempUblack[itbla])/int(4)));
+                      pls[roc]->Fill(in.GetEventNumber(), int(int(tempblack[itbla] - tempUblack[itbla])/int(8)));
+                  }
               }
           }
       }
@@ -465,7 +629,7 @@ namespace eudaq {
     bool do_conversion;
     Configuration * m_conv_cfg;
     uint8_t decodingOffset;
-    std::vector<signed char> decodingOffsetVector;
+    std::vector<float> decodingOffsetVector;
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
 
       // Transform data of form char* to vector<int16_t>
@@ -479,7 +643,7 @@ namespace eudaq {
         uint16_t temp = ((uint16_t)block.data()[i+1] << 8) | block.data()[i];
         rawData.push_back(temp);
         i+=2;
-//        bla->Fill(temp);
+//        hDecode->Fill(temp);
       }
       return rawData;
     }

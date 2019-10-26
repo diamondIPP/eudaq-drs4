@@ -7,6 +7,7 @@
 #include "eudaq/FileSerializer.hh"
 
 #include "TFile.h"
+#include "TDirectory.h"
 #include "TTree.h"
 #include "TROOT.h"
 
@@ -64,6 +65,7 @@ namespace eudaq {
   private:
     TFile * m_tfile; // book the pointer to a file (to store the otuput)
     TTree * m_ttree; // book the tree (to store the needed event info)
+      TDirectory * m_thdir;
     // Book variables for the Event_to_TTree conversion
     unsigned m_noe;
     short chan;
@@ -149,6 +151,7 @@ namespace eudaq {
     EUDAQ_INFO("Preparing the outputfile: " + foutput);
     m_tfile = new TFile(foutput.c_str(), "RECREATE");
     m_ttree = new TTree("tree", "a simple Tree with simple variables");
+    m_thdir = m_tfile->mkdir("DecodingHistos");
 
     // Set Branch Addresses
     m_ttree->Branch("event_number",&f_event_number, "event_number/I");
@@ -249,6 +252,7 @@ namespace eudaq {
 
   FileWriterTreeTelescope::~FileWriterTreeTelescope() {
     std::cout<<"Tree has " << m_ttree->GetEntries() << " entries" << std::endl;
+    m_tfile->cd();
     m_ttree->Write();
     if(m_tfile->IsOpen()) m_tfile->Close();
   }
