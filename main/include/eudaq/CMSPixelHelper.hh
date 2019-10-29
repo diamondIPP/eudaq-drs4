@@ -71,6 +71,8 @@ namespace eudaq {
       std::vector<TH1F *> hcr;
       std::vector<TH1F *> hl1;
       std::vector<TH1F *> hls;
+      std::vector<TH1F *> hDeltas;
+      std::vector<TH1F *> hDecodeShift;
       std::vector<TProfile *> pblack;
       std::vector<TProfile *> pUblack;
       std::vector<TProfile *> pls;
@@ -80,6 +82,9 @@ namespace eudaq {
       std::vector<TH2F *> h2r0;
       std::vector<TH2F *> h2r1;
       std::vector<TH2F *> h2cr;
+      std::vector<float> *blackV;
+      std::vector<float> *uBlackV;
+      std::vector<int16_t> *levelSV;
       TString dutBla;
     void initializeFitfunction(){fFitfunction = new TF1("fitfunc", "[3]*(TMath::Erf((x-[0])/[1])+[2])",-4096,4096);}
     float getCharge(VCALDict d, float val,float factor = 65.) const{  
@@ -123,24 +128,25 @@ namespace eudaq {
       std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type 
 	       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
 	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
-      hDecode.empty();
-      hc0.empty();
-      hc1.empty();
-      hr0.empty();
-      hr1.empty();
-      hcr.empty();
-      hBlack.empty();
-      hUblack.empty();
-      hl1.empty();
-      hls.empty();
-      pblack.empty();
-      pUblack.empty();
-      pl1.empty();
-      pls.empty();
-      h2c0.empty();
-      h2c1.empty();
-      h2r0.empty();
-      h2r1.empty();
+      hDecode.clear();
+      hc0.clear();
+      hc1.clear();
+      hr0.clear();
+      hr1.clear();
+      hcr.clear();
+      hBlack.clear();
+      hUblack.clear();
+      hl1.clear();
+      hls.clear();
+      pblack.clear();
+      pUblack.clear();
+      pl1.clear();
+      pls.clear();
+      h2c0.clear();
+      h2c1.clear();
+      h2r0.clear();
+      h2r1.clear();
+      hDeltas.clear();
       if(dutBla.CompareTo(TString(m_detector)) == 0) {
           for (size_t it = 0; it < m_nplanes; it++) {
               hDecode.push_back(new TH1F(TString::Format("decode%d", int(it)), TString::Format("decode%d", int(it)), 4096, -2048, 2048));
@@ -149,6 +155,8 @@ namespace eudaq {
               hr0.push_back(new TH1F(TString::Format("r0_%d", int(it)), TString::Format("r0_%d", int(it)), 4096, -2048, 2048));
               hr1.push_back(new TH1F(TString::Format("r1_%d", int(it)), TString::Format("r1_%d", int(it)), 4096, -2048, 2048));
               hcr.push_back(new TH1F(TString::Format("cr_%d", int(it)), TString::Format("cr_%d", int(it)), 4096, -2048, 2048));
+              hDeltas.push_back(new TH1F(TString::Format("deltas_%d", int(it)), TString::Format("deltas_%d", int(it)), 1025, -512.5, 512.5));
+              hDecodeShift.push_back(new TH1F(TString::Format("decodeShift_%d", int(it)), TString::Format("decodeShift_%d", int(it)), 2048, -1024, 1024));
               hBlack.push_back(new TH1F(TString::Format("black_%d", int(it)), TString::Format("black_%d", int(it)), 4096, -2048, 2048));
               hUblack.push_back(new TH1F(TString::Format("uBlack_%d", int(it)), TString::Format("uBlack_%d", int(it)), 4096, -2048, 2048));
               hl1.push_back(new TH1F(TString::Format("l1_%d", int(it)), TString::Format("l1_%d", int(it)), 4096, -2048, 2048));
@@ -164,6 +172,12 @@ namespace eudaq {
               h2cr.push_back(new TH2F(TString::Format("h2cr_%d", int(it)), TString::Format("h2cr_%d", int(it)), 5000, 0, 5000000, 4096, -2048, 2048));
           }
       }
+        uBlackV = new std::vector<float>();
+        blackV = new std::vector<float>();
+        levelSV = new std::vector<int16_t>();
+        uBlackV->resize(16, 0.);
+        blackV->resize(16, 0.);
+        levelSV->resize(16, 0);
     }
 
     std::string GetStats() {
@@ -173,10 +187,10 @@ namespace eudaq {
             blaf->cd();
             for (size_t it = 0; it < hDecode.size(); it++)
                 hDecode[it]->Write();
-            for (size_t it = 0; it < hBlack.size(); it++)
-                hBlack[it]->Write();
             for (size_t it = 0; it < hUblack.size(); it++)
                 hUblack[it]->Write();
+            for (size_t it = 0; it < hBlack.size(); it++)
+                hBlack[it]->Write();
             for (size_t it = 0; it < hc0.size(); it++)
                 hc0[it]->Write();
             for (size_t it = 0; it < hc1.size(); it++)
@@ -191,6 +205,10 @@ namespace eudaq {
                 hl1[it]->Write();
             for (size_t it = 0; it < hls.size(); it++)
                 hls[it]->Write();
+            for (size_t it = 0; it < hDeltas.size(); it++)
+                hDeltas[it]->Write();
+            for (size_t it = 0; it < hDecodeShift.size(); it++)
+                hDecodeShift[it]->Write();
             for (size_t it = 0; it < pblack.size(); it++)
                 pblack[it]->Write();
             for (size_t it = 0; it < pUblack.size(); it++)
@@ -209,7 +227,6 @@ namespace eudaq {
                 h2r1[it]->Write();
             for (size_t it = 0; it < h2cr.size(); it++)
                 h2cr[it]->Write();
-//            blaf->Close();
             std::cout << "saved histograms under DecodingHistos" << std::endl;
             blaf->cd("../");
         }
@@ -298,20 +315,32 @@ namespace eudaq {
       return true;
     }
 
+      void UpdateHeaderVectors(dtbEventDecoder decoder, std::vector<float> *tvectUB, std::vector<float> *tvectB, std::vector<int16_t> *tvectLS) const {
+          std::vector<float> tempUB = decoder.GetUBlack();
+          std::vector<float> tempB = decoder.GetBlack();
+          std::vector<int16_t> tempLS = decoder.GetLevelS();
+          for(size_t it = 0; it < tempUB.size() and it < tvectUB->size(); it++)
+              (*tvectUB).at(it) = tempUB[it];
+          for(size_t it = 0; it < tempB.size() and it < tvectB->size(); it++)
+              (*tvectB).at(it) = tempB[it];
+          for(size_t it = 0; it < tempLS.size() and it < tvectLS->size(); it++)
+              (*tvectLS).at(it) = tempLS[it];
+      }
+
     bool GetStandardSubEvent(StandardEvent & out, const Event & in) const {
 
       // If we receive the EORE print the collected statistics:
       if (out.IsEORE()) {
 	// Set decoder to INFO level for statistics printout:
           if(dutBla.CompareTo(TString(m_detector)) == 0) {
-              TFile *blaf = new TFile("blaBla.root", "RECREATE");
+              TDirectory *blaf = gDirectory->GetDirectory("DecodingHistos");
               blaf->cd();
               for (size_t it = 0; it < hDecode.size(); it++)
                   hDecode[it]->Write();
-              for (size_t it = 0; it < hBlack.size(); it++)
-                  hBlack[it]->Write();
               for (size_t it = 0; it < hUblack.size(); it++)
                   hUblack[it]->Write();
+              for (size_t it = 0; it < hBlack.size(); it++)
+                  hBlack[it]->Write();
               for (size_t it = 0; it < hc0.size(); it++)
                   hc0[it]->Write();
               for (size_t it = 0; it < hc1.size(); it++)
@@ -326,6 +355,10 @@ namespace eudaq {
                   hl1[it]->Write();
               for (size_t it = 0; it < hls.size(); it++)
                   hls[it]->Write();
+              for (size_t it = 0; it < hDeltas.size(); it++)
+                  hDeltas[it]->Write();
+              for (size_t it = 0; it < hDecodeShift.size(); it++)
+                  hDecodeShift[it]->Write();
               for (size_t it = 0; it < pblack.size(); it++)
                   pblack[it]->Write();
               for (size_t it = 0; it < pUblack.size(); it++)
@@ -344,8 +377,8 @@ namespace eudaq {
                   h2r1[it]->Write();
               for (size_t it = 0; it < h2cr.size(); it++)
                   h2cr[it]->Write();
-              blaf->Close();
-              std::cout << "saved root file blaBla.root" << std::endl;
+              std::cout << "saved histograms under DecodingHistos" << std::endl;
+              blaf->cd("../");
           }
 	std::cout << "Decoding statistics for detector " << m_detector << std::endl;
 	pxar::Log::ReportingLevel() = pxar::Log::FromString("INFO");
@@ -388,19 +421,21 @@ namespace eudaq {
       else {
         decoder.setOffset(std::vector<float>(decodingOffsetVector.begin(), decodingOffsetVector.end()));
       }
+        decoder.SetBlackVectors(*uBlackV, *blackV, *levelSV);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
-      try{
-          // Connect the data source and set up the pipe:
-          src = evtSource(0, m_nplanes, 0, m_tbmtype, m_roctype);
-          src >> splitter >> decoder >> Eventpump;
+        try{
+            // Connect the data source and set up the pipe:
+            src = evtSource(0, m_nplanes, 0, m_tbmtype, m_roctype);
+            src >> splitter >> decoder >> Eventpump;
 
-          // Transform from EUDAQ data, add it to the datasource:
-          src.AddData(TransformRawData(in_raw.GetBlock(0)));
-          // ...and pull it out at the other end:
-          evt = Eventpump.Get();
+            // Transform from EUDAQ data, add it to the datasource:
+            src.AddData(TransformRawData(in_raw.GetBlock(0)));
+            // ...and pull it out at the other end:
+            evt = Eventpump.Get();
 
-          decoding_stats += decoder.getStatistics();
+            decoding_stats += decoder.getStatistics();
+            UpdateHeaderVectors(decoder, uBlackV, blackV, levelSV);
           if(dutBla.CompareTo(TString(m_detector)) == 0) {
               for (size_t roc = 0; roc < m_nplanes; roc++) {
                   std::vector<int16_t> tempc0 = decoder.Getc0Vect(roc);
@@ -414,26 +449,37 @@ namespace eudaq {
                       hDecode[roc]->Fill(tempc0[itbla]);
                       hc0[roc]->Fill(tempc0[itbla]);
                       h2c0[roc]->Fill(in.GetEventNumber(), tempc0[itbla]);
+                      hDecodeShift[roc]->Fill(tempc0[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempc1.size(); itbla++) {
                       hDecode[roc]->Fill(tempc1[itbla]);
                       hc1[roc]->Fill(tempc1[itbla]);
                       h2c1[roc]->Fill(in.GetEventNumber(), tempc1[itbla]);
+                      hDecodeShift[roc]->Fill(tempc1[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempr0.size(); itbla++) {
                       hDecode[roc]->Fill(tempr0[itbla]);
                       hr0[roc]->Fill(tempr0[itbla]);
                       h2r0[roc]->Fill(in.GetEventNumber(), tempr0[itbla]);
+                      hDecodeShift[roc]->Fill(tempr0[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempr1.size(); itbla++) {
                       hDecode[roc]->Fill(tempr1[itbla]);
                       hr1[roc]->Fill(tempr1[itbla]);
                       h2r1[roc]->Fill(in.GetEventNumber(), tempr1[itbla]);
+                      hDecodeShift[roc]->Fill(tempr1[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempcr.size(); itbla++) {
                       hDecode[roc]->Fill(tempcr[itbla]);
                       hcr[roc]->Fill(tempcr[itbla]);
                       h2cr[roc]->Fill(in.GetEventNumber(), tempcr[itbla]);
+                      hDecodeShift[roc]->Fill(tempcr[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
+                  }
+                  for(size_t itbla = 0; itbla < tempc0.size() and itbla < tempc1.size() and itbla < tempr0.size() and itbla < tempr1.size() and itbla < tempcr.size(); itbla++) {
+                      hDeltas[roc]->Fill(tempc0[itbla] - tempblack[itbla]);
+                      hDeltas[roc]->Fill(tempr1[itbla] - tempblack[itbla]);
+                      hDeltas[roc]->Fill(tempr0[itbla] - tempblack[itbla]);
+                      hDeltas[roc]->Fill(tempcr[itbla] - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempblack.size(); itbla++) {
                       hDecode[roc]->Fill(tempblack[itbla]);
