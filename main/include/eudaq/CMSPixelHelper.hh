@@ -85,7 +85,12 @@ namespace eudaq {
       std::vector<float> *blackV;
       std::vector<float> *uBlackV;
       std::vector<int16_t> *levelSV;
+      std::vector<float> *decodingOffsetVector2;
       TString dutBla;
+
+      TFile *DecodingFile;
+      TDirectory *DecodingDirectory;
+
     void initializeFitfunction(){fFitfunction = new TF1("fitfunc", "[3]*(TMath::Erf((x-[0])/[1])+[2])",-4096,4096);}
     float getCharge(VCALDict d, float val,float factor = 65.) const{  
         fFitfunction->SetParameter(0, d.par0);
@@ -124,8 +129,20 @@ namespace eudaq {
       decodingOffset = m_conv_cfg->Get("decoding_offset", 25);
       decodingOffsetVector.resize(4, float(decodingOffset));
       decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", decodingOffsetVector);
+        std::cout << "Using decoding offsets: ";
+        for(std::vector<float>::iterator decOit = decodingOffsetVector.begin(); decOit != decodingOffsetVector.end(); decOit++) {
+            std::cout << *decOit << ", ";
+        }
+        std::cout << std::endl;
+        level1OffsetVector.resize(4, float(0));
+        level1OffsetVector = m_conv_cfg->Get("decoding_l1_offset_v", level1OffsetVector);
+        std::cout << "Using decoding Level1 offsets: ";
+        for(std::vector<float>::iterator decOit = level1OffsetVector.begin(); decOit != level1OffsetVector.end(); decOit++) {
+            std::cout << *decOit << ", ";
+        }
+        std::cout << std::endl;
 
-      std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type 
+        std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type
 	       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
 	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
       hDecode.clear();
@@ -175,9 +192,13 @@ namespace eudaq {
         uBlackV = new std::vector<float>();
         blackV = new std::vector<float>();
         levelSV = new std::vector<int16_t>();
+        decodingOffsetVector2 = new std::vector<float>();
         uBlackV->resize(16, 0.);
         blackV->resize(16, 0.);
         levelSV->resize(16, 0);
+        decodingOffsetVector2->resize(16, 0.);
+        for(size_t it = 0; it < decodingOffsetVector.size(); it++)
+            decodingOffsetVector2->at(it) = decodingOffsetVector[it];
     }
 
     std::string GetStats() {
@@ -315,16 +336,19 @@ namespace eudaq {
       return true;
     }
 
-      void UpdateHeaderVectors(dtbEventDecoder decoder, std::vector<float> *tvectUB, std::vector<float> *tvectB, std::vector<int16_t> *tvectLS) const {
+      void UpdateHeaderVectors(dtbEventDecoder decoder, std::vector<float> *tvectUB, std::vector<float> *tvectB, std::vector<int16_t> *tvectLS, std::vector<float> *tvectDOff) const {
           std::vector<float> tempUB = decoder.GetUBlack();
           std::vector<float> tempB = decoder.GetBlack();
           std::vector<int16_t> tempLS = decoder.GetLevelS();
+          std::vector<float> tempDOFF = decoder.GetDecodingOffsets();
           for(size_t it = 0; it < tempUB.size() and it < tvectUB->size(); it++)
               (*tvectUB).at(it) = tempUB[it];
           for(size_t it = 0; it < tempB.size() and it < tvectB->size(); it++)
               (*tvectB).at(it) = tempB[it];
           for(size_t it = 0; it < tempLS.size() and it < tvectLS->size(); it++)
               (*tvectLS).at(it) = tempLS[it];
+          for(size_t it = 0; it < tempDOFF.size() and it < tvectDOff->size(); it++)
+              (*tvectDOff).at(it) = tempDOFF[it];
       }
 
     bool GetStandardSubEvent(StandardEvent & out, const Event & in) const {
@@ -414,14 +438,15 @@ namespace eudaq {
       evtSource src;
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
-      // todo: read this by a config file or even better, write it to the data!
-      if(decodingOffsetVector.empty()) {
-        decoder.setOffset(decodingOffset);
+        // todo: read this by a config file or even better, write it to the data!
+        decoder.setLevel1Offsets(std::vector<float>(level1OffsetVector.begin(), level1OffsetVector.end()));
+        if(decodingOffsetVector.empty()) {
+          decoder.setOffset(decodingOffset);
       }
       else {
-        decoder.setOffset(std::vector<float>(decodingOffsetVector.begin(), decodingOffsetVector.end()));
+          decoder.setOffset(std::vector<float>(decodingOffsetVector.begin(), decodingOffsetVector.end()));
       }
-        decoder.SetBlackVectors(*uBlackV, *blackV, *levelSV);
+        decoder.SetBlackVectors(*uBlackV, *blackV, *levelSV, *decodingOffsetVector2);
       dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
         try{
@@ -435,7 +460,7 @@ namespace eudaq {
             evt = Eventpump.Get();
 
             decoding_stats += decoder.getStatistics();
-            UpdateHeaderVectors(decoder, uBlackV, blackV, levelSV);
+            UpdateHeaderVectors(decoder, uBlackV, blackV, levelSV, decodingOffsetVector2);
           if(dutBla.CompareTo(TString(m_detector)) == 0) {
               for (size_t roc = 0; roc < m_nplanes; roc++) {
                   std::vector<int16_t> tempc0 = decoder.Getc0Vect(roc);
@@ -676,6 +701,7 @@ namespace eudaq {
     Configuration * m_conv_cfg;
     uint8_t decodingOffset;
     std::vector<float> decodingOffsetVector;
+        std::vector<float> level1OffsetVector;
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
 
       // Transform data of form char* to vector<int16_t>

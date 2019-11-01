@@ -10,6 +10,9 @@
 #include "TDirectory.h"
 #include "TTree.h"
 #include "TROOT.h"
+#include "TH1F.h"
+#include "TF1.h"
+#include "TFitResultPtr.h"
 
 using namespace std;
 using namespace eudaq;
@@ -55,17 +58,26 @@ namespace eudaq {
     virtual void StartRun(unsigned);
     virtual void Configure();
     virtual void WriteEvent(const DetectorEvent &);
-    virtual uint64_t FileBytes() const;
-    virtual ~FileWriterTreeTelescope();
-    // Add to get maximum number of events: DA
+      virtual uint64_t FileBytes() const;
+      virtual ~FileWriterTreeTelescope();
+      // Add to get maximum number of events: DA
     virtual long GetMaxEventNumber();
-    virtual string GetStats(const DetectorEvent &);
-    virtual void setTU(bool tu) { hasTU = tu; }
+      virtual string GetStats(const DetectorEvent &);
+      virtual void setTU(bool tu) { hasTU = tu; }
+      virtual void WriteEvent2(const DetectorEvent &);
+      virtual void StartRun2(unsigned);
+      virtual void TempFunction();
+      virtual std::vector<float> TempFunctionL1Off();
+      virtual std::vector<float> TempFunctionDecOff();
 
   private:
     TFile * m_tfile; // book the pointer to a file (to store the otuput)
     TTree * m_ttree; // book the tree (to store the needed event info)
+      TFile * m_tfile2; // book the pointer to a file (to store the otuput)
+      TFile * m_tfile3; // book the pointer to a file (to store the otuput)
       TDirectory * m_thdir;
+      TDirectory * m_thdir2;
+      TDirectory * m_thdir3;
     // Book variables for the Event_to_TTree conversion
     unsigned m_noe;
     short chan;
@@ -87,8 +99,11 @@ namespace eudaq {
     std::vector<int16_t> * f_adc;
     std::vector<uint32_t> * f_charge;
     std::vector<int16_t> * f_trig_phase;
+      std::vector<float> *offsetsL1;
+      std::vector<float> *decOffsets;
 
-    //tu
+
+      //tu
     std::vector<uint64_t> * v_scaler;
     std::vector<uint64_t> * old_scaler;
     void SetTimeStamp(StandardEvent /*sev*/);
@@ -176,6 +191,107 @@ namespace eudaq {
   string FileWriterTreeTelescope::GetStats(const DetectorEvent & dev) {
     return PluginManager::GetStats(dev);
   }
+
+    void FileWriterTreeTelescope::StartRun2(unsigned runno){
+        m_tfile2 = new TFile(TString::Format("decoding_%d", runno), TString::Format("decoding_%d", runno), "RECREATE");
+        m_thdir2 = m_tfile2->mkdir("DecodingHistos");
+    }
+
+    void FileWriterTreeTelescope::WriteEvent2(const DetectorEvent & ev) {
+        if (ev.IsBORE()) {
+            eudaq::PluginManager::SetConfig(ev, m_config);
+            eudaq::PluginManager::Initialize(ev);
+            //firstEvent =true;
+            cout << "loading the first event...." << endl;
+            return;
+        } else if (ev.IsEORE()) {
+            eudaq::PluginManager::ConvertToStandard(ev);
+            cout << "loading the last event...." << endl;
+            return;
+        }
+        // Condition to evaluate only certain number of events defined in configuration file  : DA
+        if(max_event_number>0 && f_event_number>max_event_number)
+            return;
+
+        StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
+    }
+    void FileWriterTreeTelescope::TempFunction(){
+        m_tfile2->cd();
+        TString bla = m_tfile->GetName();
+        if(m_tfile2->IsOpen()) m_tfile2->Close();
+
+        m_tfile3 = new TFile(bla, "READ");
+        m_thdir3 = (TDirectory*)m_tfile3->Get("DecodingHistos");
+        offsetsL1->clear();
+        decOffsets->clear();
+        for(size_t roci = 0; roci < 16; roci++){
+            if(m_thdir3->FindObject(TString::Format("decode%d", int(roci)))){
+                TH1F *blah_decode = (TH1F*)m_thdir3->Get(TString::Format("decode%d", int(roci)));
+                TH1F *blah_black = (TH1F*)m_thdir3->Get(TString::Format("black_%d", int(roci)));
+                TH1F *blah_ub = (TH1F*)m_thdir3->Get(TString::Format("uBlack_%d", int(roci)));
+                TH1F *blah_decode2 = (TH1F*)blah_decode->Clone(TString::Format("decode%dV2", int(roci)));
+                blah_decode2->SetTitle(TString::Format("decode%dV2", int(roci)));
+                blah_decode2->Add(blah_ub, -1);
+                blah_decode2->Add(blah_black, -1);
+                auto tempUB = float(blah_ub->GetMean());
+                auto tempB = float(blah_black->GetMean());
+                auto tempL1 = (0 - tempUB) / 4.;
+                float offL1 = 0;
+                auto p1 = -tempL1 / 2. + offL1;
+                auto *blaf1 = new TF1("blaf1", "[0]+TMath::Power((x-[1])/[2],2)", -1000, 2000);
+                std::vector<float> *valleys;
+                if(!valleys->empty()) valleys->clear();
+                blaf1->SetParameter(0, 1000);
+                blaf1->SetParameter(2, 1000);
+                blaf1->SetParLimits(0, -1000, blah_decode2->GetEntries());
+                blaf1->SetParLimits(2, 0, 1000);
+                blaf1->SetParameter(1, p1);
+                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
+                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
+                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
+                p1 = blaf1->GetParameter(1);
+                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
+                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
+                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
+                valleys->push_back(float(blaf1->GetParameter(1)));
+
+                p1 = tempL1 / 2. + offL1;
+                blaf1->SetParameter(1, p1);
+                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
+                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
+                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
+                p1 = blaf1->GetParameter(1);
+                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
+                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
+                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
+                valleys->push_back(float(blaf1->GetParameter(1)));
+
+                for(unsigned int it = 1; it < 3; it++){
+                    tempL1 = (valleys->at(it) - valleys->at(0)) / it;
+                    offL1 = float(valleys->at(0) + tempL1 / 2.);
+                    p1 = tempL1 * (it + 0.5) + offL1;
+                    blaf1->SetParameter(1, p1);
+                    blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
+                    blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
+                    blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
+                    p1 = blaf1->GetParameter(1);
+                    blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
+                    blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
+                    blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
+                    valleys->push_back(float(blaf1->GetParameter(1)));
+                }
+                offsetsL1->push_back(offL1);
+                decOffsets->push_back((0 - (tempB - offL1)));
+            }
+        }
+        m_tfile3->Close();
+    }
+    std::vector<float> FileWriterTreeTelescope::TempFunctionL1Off() {
+        return *offsetsL1;
+    }
+    std::vector<float> FileWriterTreeTelescope::TempFunctionDecOff() {
+        return *decOffsets;
+    }
 
   void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {
 

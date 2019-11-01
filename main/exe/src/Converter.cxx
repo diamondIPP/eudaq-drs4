@@ -27,34 +27,81 @@ int main(int, char ** argv) {
   try {
     op.Parse(argv);
     EUDAQ_LOG_LEVEL(level.Value());
-    std::vector<unsigned> numbers = parsenumbers(events.Value());
-    std::sort(numbers.begin(),numbers.end());
-    eudaq::multiFileReader reader(!async.Value());
+    std::vector<unsigned> numbers2 = parsenumbers(events.Value());
+    std::sort(numbers2.begin(),numbers2.end());
+    eudaq::multiFileReader reader2(!async.Value());
     for (size_t i = 0; i < op.NumArgs(); ++i) {
-      reader.addFileReader(op.GetArg(i), ipat.Value());
+      reader2.addFileReader(op.GetArg(i), ipat.Value());
 	}
-    std::stringstream message;
-    message << "STARTING EUDAQ " << to_string(type.Value()) << " CONVERTER";
-    print_banner(message.str());
-    Configuration config("");
+    Configuration config2("");
     if (configFileName.Value() != ""){
         std::cout << "Read config file: "<<configFileName.Value()<<std::endl;
-        std::ifstream file(configFileName.Value().c_str());
-        if (file.is_open()) {
-          config.Load(file,"");
+        std::ifstream file2(configFileName.Value().c_str());
+        if (file2.is_open()) {
+          config2.Load(file2,"");
           std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
-          config.Set("Name",name);
+          config2.Set("Name",name);
         } else {
           std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
         }
     }
+      std::shared_ptr<eudaq::FileWriter> writer2(FileWriterFactory::Create(type.Value(),&config2));
+      writer2->setTU(reader2.hasTUEvent());
+      writer2->SetConfig(&config2);
+      writer2->SetFilePattern(opat.Value());
+      writer2->StartRun2(reader2.RunNumber());
+      ProgressBar bla2(uint32_t(writer2->GetMaxEventNumber()));
+	    uint32_t event_nr = 0;
+
+      do {
+        if ( !numbers2.empty() && reader2.GetDetectorEvent().GetEventNumber()>numbers2.back() ) {
+          break;
+        } else if (reader2.GetDetectorEvent().IsBORE() || reader2.GetDetectorEvent().IsEORE() || numbers2.empty() ||
+                  std::find(numbers2.begin(), numbers2.end(), reader2.GetDetectorEvent().GetEventNumber()) != numbers2.end()) {
+          writer2->WriteEvent2(reader2.GetDetectorEvent());
+          if(dbg>0)std::cout<< "writing one more event" << std::endl;
+          ++event_nr;
+          if (writer2->GetMaxEventNumber()){
+            bla2.update(event_nr);
+          }
+          else
+          if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
+        }
+      } while (reader2.NextEvent() && (writer2->GetMaxEventNumber() <= 0 || event_nr <= writer2->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
+
+      writer2->TempFunction();
+      std::vector<float> l1Offs = writer2->TempFunctionL1Off();
+      std::vector<float> decOffs = writer2->TempFunctionDecOff();
+
+      std::vector<unsigned> numbers = parsenumbers(events.Value());
+      std::sort(numbers.begin(),numbers.end());
+      eudaq::multiFileReader reader(!async.Value());
+      for (size_t i = 0; i < op.NumArgs(); ++i) {
+          reader.addFileReader(op.GetArg(i), ipat.Value());
+      }
+      std::stringstream message;
+      message << "STARTING EUDAQ " << to_string(type.Value()) << " CONVERTER";
+      print_banner(message.str());
+      Configuration config("");
+      if (configFileName.Value() != ""){
+          std::cout << "Read config file: "<<configFileName.Value()<<std::endl;
+          std::ifstream file(configFileName.Value().c_str());
+          if (file.is_open()) {
+              config.Load(file,"");
+              std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
+              config.Set("Name",name);
+          } else {
+              std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
+          }
+      }
+
       std::shared_ptr<eudaq::FileWriter> writer(FileWriterFactory::Create(type.Value(),&config));
       writer->setTU(reader.hasTUEvent());
       writer->SetConfig(&config);
       writer->SetFilePattern(opat.Value());
       writer->StartRun(reader.RunNumber());
       ProgressBar bla(uint32_t(writer->GetMaxEventNumber()));
-	    uint32_t event_nr = 0;
+      event_nr = 0;
       do {
         if ( !numbers.empty() && reader.GetDetectorEvent().GetEventNumber()>numbers.back() ) {
           break;
