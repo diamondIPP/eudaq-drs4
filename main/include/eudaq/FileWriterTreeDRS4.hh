@@ -25,9 +25,11 @@
 #include "TMacro.h"
 #include "TF1.h"
 #include "TGraph.h"
+#include "TMath.h"
 #include "TCanvas.h"
 #include "TSpectrum.h"
 #include "TPolyMarker.h"
+#include <armadillo>
 
 namespace eudaq {
 
@@ -55,11 +57,14 @@ namespace eudaq {
         long max_event_number;
         uint16_t save_waveforms;
         uint16_t active_regions;
+		uint16_t baseline_corr;
         uint16_t n_active_channels;
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
         int IsPulserEvent(const StandardWaveform *wf);
         void ExtractForcTiming(std::vector<float> *);
+		void FillBaselineWfs(uint8_t iwf, const StandardEvent sev);
+		void GetBaseline(uint8_t iwf);
         void FillRegionIntegrals(const StandardEvent sev);
         void FillRegionVectors();
         void FillTotalRange(uint8_t iwf, const StandardWaveform *wf);
@@ -113,6 +118,17 @@ namespace eudaq {
 
         //drs4
         uint16_t f_trigger_cell;
+
+		//baseline subtraction stuff
+		arma::uword nEntries = 1024;
+		arma::uword nAvg = 500;
+		arma::uword avg_idx = 0; //this is our index for filling the matrix with nAvg rows
+		arma::vec tax = arma::linspace<arma::vec>(0, 512, nEntries); //create universal time axis for all events
+		arma::mat avg_amp_0 = arma::mat(nAvg, nEntries,arma::fill::none); //200 wf average matrix for signal channel0
+		arma::mat avg_amp_3 = arma::mat(nAvg, nEntries,arma::fill::none); //200 wf average matrix for signal channel3
+		bool blsub_ready = false; //whenever we have collected nAvg events for the first time this goes true
+		int fit_start = 200;
+		int fit_end = 600;
 
         int f_pulser;
         std::vector<uint16_t> *v_forc_pos;

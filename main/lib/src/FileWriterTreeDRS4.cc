@@ -2,6 +2,7 @@
 
 #include "eudaq/FileWriterTreeDRS4.hh"
 
+
 using namespace std;
 using namespace eudaq;
 
@@ -178,12 +179,14 @@ void FileWriterTreeDRS4::Configure(){
 
     // regions todo: add default range
     active_regions = m_config->Get("active_regions", uint16_t(0));
+	baseline_corr =  m_config->Get("baseline_corr", uint16_t(0));
     macro->AddLine("[General]");
     macro->AddLine((append_spaces(21, "max event number = ") + to_string(max_event_number)).c_str());
     macro->AddLine((append_spaces(21, "pulser channel = ") + to_string(int(pulser_channel))).c_str());
     macro->AddLine((append_spaces(21, "trigger channel = ") + to_string(int(trigger_channel))).c_str());
     macro->AddLine((append_spaces(21, "pulser threshold = ") + to_string(pulser_threshold)).c_str());
     macro->AddLine((append_spaces(21, "active regions = ") + to_string(GetBitMask(active_regions))).c_str());
+    macro->AddLine((append_spaces(21, "baseline corr = ") + to_string(GetBitMask(baseline_corr))).c_str());
     macro->AddLine((append_spaces(21, "save waveforms = ") + GetBitMask(save_waveforms)).c_str());
     macro->AddLine((append_spaces(21, "fft waveforms = ") + GetBitMask(fft_waveforms)).c_str());
     macro->AddLine((append_spaces(21, "spectrum waveforms = ") + GetBitMask(spectrum_waveforms)).c_str());
@@ -388,8 +391,12 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
       sev.GetWaveform(iwf).SetPolarities(polarities.at(iwf), pulser_polarities.at(iwf));
       sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
     }
-    ResizeVectors(sev.GetNWaveforms());
-    FillRegionIntegrals(sev);
+
+
+    ResizeVectors(sev.GetNWaveforms()); //changes the size of the vector holding the waveforms to the number of available channels
+
+
+    FillRegionIntegrals(sev); //this calculates all the integrals for the analysis
 
     for (auto iwf : wf_order){
         if (verbose > 3) cout<<"Channel Nr: "<< int(iwf) <<endl;
@@ -436,6 +443,11 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         // fill waveform vectors
         if (verbose > 3) cout << "fill wf " << iwf << endl;
         UpdateWaveforms(iwf);
+
+		if (!f_pulser){ //only use non-pulser events for baseline subtraction
+			FillBaselineWfs(iwf, sev);
+		}
+		
 
         f_isDa->at(iwf) = *max_element(&data->at(20), &data->at(1023)) > wf_thr.at(iwf);
 
@@ -722,10 +734,112 @@ void FileWriterTreeDRS4::calc_noise(uint8_t iwf) {
   noise->at(iwf) = calc_mean(*noise_vectors.at(iwf));
 }
 
+
+void FileWriterTreeDRS4::FillBaselineWfs(uint8_t iwf, const StandardEvent sev){
+	if (!UseWaveForm(baseline_corr, iwf)) return;
+	//std::cout << "Saving baseline for channel: " << unsigned(iwf) << "." << std::endl;
+
+	const eudaq::StandardWaveform &wf = sev.GetWaveform(iwf); //amplitude values of event
+	std::vector<float> *wf_data = wf.GetData();
+	std::vector<float> event_tax = full_time.at(iwf);
+
+
+	arma::vec tax_ev = arma::vec(nEntries); //create time axis vector of event
+	arma::vec amp_ev = arma::vec(nEntries); //create amplitude vector of event
+	for (arma::uword i=0; i < nEntries; i++){
+		tax_ev.at(i) = event_tax.at(i);
+		amp_ev.at(i) = wf_data->at(i);
+	}
+
+	arma::vec amp;
+	arma::interp1(tax_ev, amp_ev, tax, amp, "*linear"); //interpolate waveform to given time axis
+
+	if(avg_idx == nAvg){
+		avg_idx = 0; //start filling the first row again if nAvg row count is reached
+		blsub_ready = true;
+	}
+
+	for(arma::uword c=0; c<nEntries; c++){
+		if(iwf == 0){
+			avg_amp_0(avg_idx, c) = amp.at(c);
+		}
+		if(iwf == 3){
+			avg_amp_3(avg_idx, c) = amp.at(c);
+		}
+	}
+
+	avg_idx++;
+
+	/*
+	if(avg_idx == (nAvg-1)){
+		arma::rowvec mean_amp = arma::mean(avg_amp_0);
+		for (int i=0; i < nEntries; i++){
+			cout <<  tax.at(i) << " " << mean_amp.at(i) << std::endl;
+		}
+	}
+	*/
+}
+
+
+void FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
+	if (!UseWaveForm(baseline_corr, iwf)) return;
+
+	arma::rowvec mean_amp;
+	if (iwf == 0){
+		mean_amp = arma::mean(avg_amp_0);
+	}
+	else if (iwf == 3){
+		mean_amp = arma::mean(avg_amp_3);
+	}
+
+	int nth_point = 2;
+	int lenfit = (fit_end - fit_start)/nth_point;
+	float x[lenfit];
+	float y[lenfit];
+
+	for(int i=0; i<lenfit; i++){
+		int idx = fit_start + i*nth_point;
+		//std::cout << i << " " << lenfit << " " << idx << std::endl;
+
+		x[i] = tax.at(idx);	
+		y[i] = mean_amp.at(idx);
+	}
+
+	TGraph *g = new TGraph(lenfit, x, y); 
+
+
+	TF1 *f = new TF1("f", "[0] + [1]*sin([2]*TMath::Pi()*x + [3])");
+	f->SetParameter(0, -0.177);
+	f->SetParLimits(0, -10, 10);
+	f->SetParameter(1, 0.35);
+	f->SetParLimits(1, -3, 3);
+	f->SetParameter(2, 0.09);
+	f->SetParLimits(2, 0.02, 1);
+	f->SetParameter(3, -2.16);
+	f->SetParLimits(3, -10, 10);
+	//g->Fit(f, "RNV"); 
+	g->Fit(f); 
+
+	f->GetParameters();
+
+	for(int i=0; i<lenfit; i++){
+		std::cout << i << " " << x[i] <<" " << y[i] <<" " << f->Eval(x[i]) << std::endl;
+	}
+
+
+}
+
+
 void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
 
     for (auto channel: *regions){
       const StandardWaveform * wf = &sev.GetWaveform(channel.first);
+
+	  //if channel.first == 0 oder 3 and ready_to_subtract then subtract baseline
+	  if (blsub_ready){
+	 	GetBaseline(0);
+	  }
+
       channel.second->GetRegion(0)->SetPeakPostion(5);
       for (auto region: channel.second->GetRegions()){
         signed char polarity = (string(region->GetName()).find("pulser") != string::npos) ? channel.second->GetPulserPolarity() : channel.second->GetPolarity();

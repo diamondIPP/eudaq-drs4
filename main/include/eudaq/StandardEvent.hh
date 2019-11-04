@@ -80,7 +80,7 @@ public:
     float getPeakToPeak(int min, int max) const{return getSpreadInRange(min,max);}
     float getIntegral(uint16_t min, uint16_t max, bool _abs=false) const;
     float getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const;
-		std::vector<float> getCalibratedTimes(std::vector<float>*) const;
+	std::vector<float> getCalibratedTimes(std::vector<float>*) const;
     float getTriggerTime(std::vector<float>*) const;
     float getPeakFit(uint16_t, uint16_t, signed char) const;
     TF1 getRFFit(std::vector<float>*) const;
@@ -97,13 +97,13 @@ private:
 	uint64_t m_timestamp;
 	uint16_t m_n_samples;
 	int m_channelnumber;
-	mutable std::vector<float> m_samples;
+	mutable std::vector<float> m_samples; //the waveform
 	unsigned m_id;
 	std::string m_type, m_sensor, m_channelname;
 	uint16_t m_trigger_cell;
 	signed char m_polarity;
 	signed char m_pulser_polarity;
-	std::vector<float> m_times;
+	std::vector<float> m_times; //tcal array
 
 };
 
