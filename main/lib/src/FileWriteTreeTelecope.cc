@@ -193,8 +193,11 @@ namespace eudaq {
   }
 
     void FileWriterTreeTelescope::StartRun2(unsigned runno){
-        m_tfile2 = new TFile(TString::Format("decoding_%d", runno), TString::Format("decoding_%d", runno), "RECREATE");
+        m_tfile2 = new TFile(TString::Format("decoding_%d.root", runno), "RECREATE");
+        std::cout << "\nCreated file \"decoding_" << int(runno) << ".root\"" << std::endl;
         m_thdir2 = m_tfile2->mkdir("DecodingHistos");
+        m_thdir2->cd();
+        std::cout << "Created directory \"DecodingHistos\"" << std::endl;
     }
 
     void FileWriterTreeTelescope::WriteEvent2(const DetectorEvent & ev) {
@@ -217,15 +220,17 @@ namespace eudaq {
     }
     void FileWriterTreeTelescope::TempFunction(){
         m_tfile2->cd();
-        TString bla = m_tfile->GetName();
+        TString bla = m_tfile2->GetName();
+        std::cout << "FileName is: "<< bla << std::endl;
         if(m_tfile2->IsOpen()) m_tfile2->Close();
-
         m_tfile3 = new TFile(bla, "READ");
         m_thdir3 = (TDirectory*)m_tfile3->Get("DecodingHistos");
-        offsetsL1->clear();
-        decOffsets->clear();
+        offsetsL1 = new std::vector<float>;
+        decOffsets = new std::vector<float>;
         for(size_t roci = 0; roci < 16; roci++){
-            if(m_thdir3->FindObject(TString::Format("decode%d", int(roci)))){
+            std::vector<float> *valleys = new std::vector<float>;
+            valleys->resize(0);
+            if(m_thdir3->Get(TString::Format("decode%d", int(roci)))){
                 TH1F *blah_decode = (TH1F*)m_thdir3->Get(TString::Format("decode%d", int(roci)));
                 TH1F *blah_black = (TH1F*)m_thdir3->Get(TString::Format("black_%d", int(roci)));
                 TH1F *blah_ub = (TH1F*)m_thdir3->Get(TString::Format("uBlack_%d", int(roci)));
@@ -239,8 +244,6 @@ namespace eudaq {
                 float offL1 = 0;
                 auto p1 = -tempL1 / 2. + offL1;
                 auto *blaf1 = new TF1("blaf1", "[0]+TMath::Power((x-[1])/[2],2)", -1000, 2000);
-                std::vector<float> *valleys;
-                if(!valleys->empty()) valleys->clear();
                 blaf1->SetParameter(0, 1000);
                 blaf1->SetParameter(2, 1000);
                 blaf1->SetParLimits(0, -1000, blah_decode2->GetEntries());
@@ -280,8 +283,15 @@ namespace eudaq {
                     blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
                     valleys->push_back(float(blaf1->GetParameter(1)));
                 }
+                std::cout << "valleys roc " << int(roci) << ": ";
+                for(size_t it = 0; it < valleys->size(); it++)
+                    std::cout << float(valleys->at(it)) << ", ";
+                std::cout << std::endl;
+
                 offsetsL1->push_back(offL1);
                 decOffsets->push_back((0 - (tempB - offL1)));
+            } else {
+//                std::cout << "it DOES NOT have decode" << int(roci) << std::endl;
             }
         }
         m_tfile3->Close();
@@ -294,24 +304,26 @@ namespace eudaq {
     }
 
   void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {
+      if (ev.IsBORE()) {
+          eudaq::PluginManager::SetConfig(ev, m_config);
+          eudaq::PluginManager::Initialize(ev);
+          //firstEvent =true;
+          cout << "loading the first event..." << endl;
+          return;
+      } else if (ev.IsEORE()) {
+          eudaq::PluginManager::ConvertToStandard(ev);
+          cout << "loading the last event..." << endl;
+          return;
+      }
+      // Condition to evaluate only certain number of events defined in configuration file  : DA
+      if(max_event_number>0 && f_event_number>max_event_number) {
+          return;
+      }
 
-    if (ev.IsBORE()) {
-      eudaq::PluginManager::SetConfig(ev, m_config);
-      eudaq::PluginManager::Initialize(ev);
-      //firstEvent =true;
-      cout << "loading the first event...." << endl;
-      return;
-    } else if (ev.IsEORE()) {
-      eudaq::PluginManager::ConvertToStandard(ev);
-      cout << "loading the last event...." << endl;
-      return;
-    }
-    // Condition to evaluate only certain number of events defined in configuration file  : DA
-    if(max_event_number>0 && f_event_number>max_event_number)
-      return;
-
-    StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
-    f_event_number = sev.GetEventNumber();
+      std::cout<<"write event"<< std::endl;
+      StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
+      std::cout<<"write event..."<< std::endl;
+      f_event_number = sev.GetEventNumber();
 
     /** TU STUFF */
     SetTimeStamp(sev);
