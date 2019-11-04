@@ -44,6 +44,7 @@ int main(int, char ** argv) {
         } else {
           std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
         }
+        file2.close();
     }
       std::shared_ptr<eudaq::FileWriter> writer2(FileWriterFactory::Create(type.Value(),&config2));
       writer2->setTU(reader2.hasTUEvent());
@@ -62,6 +63,8 @@ int main(int, char ** argv) {
           if(dbg>0)std::cout<< "writing one more event" << std::endl;
           ++event_nr;
           if (writer2->GetMaxEventNumber()){
+              if(event_nr == writer2->GetMaxEventNumber() + 1)
+                  writer2->GetStats(reader2.GetDetectorEvent());
             bla2.update(event_nr);
           }
           else
@@ -71,7 +74,16 @@ int main(int, char ** argv) {
 
       writer2->TempFunction();
       std::vector<float> l1Offs = writer2->TempFunctionL1Off();
+      std::cout << "Offsets L1: ";
+      for(size_t it = 0; it < l1Offs.size(); it++)
+          std::cout << float(l1Offs.at(it)) << ", ";
+      std::cout << std::endl;
       std::vector<float> decOffs = writer2->TempFunctionDecOff();
+      std::cout << "Offsets decOffsets: ";
+      for(size_t it = 0; it < decOffs.size(); it++)
+          std::cout << float(decOffs.at(it)) << ", ";
+      std::cout << std::endl;
+
 
       std::vector<unsigned> numbers = parsenumbers(events.Value());
       std::sort(numbers.begin(),numbers.end());
@@ -83,21 +95,47 @@ int main(int, char ** argv) {
       message << "STARTING EUDAQ " << to_string(type.Value()) << " CONVERTER";
       print_banner(message.str());
       Configuration config("");
+      std::string tempBla (configFileName.Value());
+      std::string tempConvType ("Converter.");
+      tempConvType.append(type.Value());
+      tempBla.append(".dasb");
       if (configFileName.Value() != ""){
-          std::cout << "Read config file: "<<configFileName.Value()<<std::endl;
+          std::cout << "Read base config file: "<<configFileName.Value()<<std::endl;
           std::ifstream file(configFileName.Value().c_str());
           if (file.is_open()) {
               config.Load(file,"");
               std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
               config.Set("Name",name);
+              config.SetSection(tempConvType);
+              config.Set("decoding_l1_offset_v", l1Offs);
+              config.Set("decoding_offset_v", decOffs);
+              std::ofstream filebla(tempBla.c_str());
+              config.Save(filebla);
           } else {
               std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
           }
+          file.close();
+      }
+      Configuration config3("");
+      if(tempBla != ""){
+          std::cout << "Read modified config file: "<<tempBla<<std::endl;
+          std::ifstream filebla2(tempBla.c_str());
+          if (filebla2.is_open()) {
+              config3.Load(filebla2,"");
+              std::string name = tempBla.substr(0, configFileName.Value().find("."));
+              config3.Set("Name",name);
+              config3.SetSection(tempConvType);
+//              config3.PrintKeys(tempConvType);
+              config3.Print();
+          } else {
+              std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
+          }
+          filebla2.close();
       }
 
-      std::shared_ptr<eudaq::FileWriter> writer(FileWriterFactory::Create(type.Value(),&config));
+      std::shared_ptr<eudaq::FileWriter> writer(FileWriterFactory::Create(type.Value(),&config3));
       writer->setTU(reader.hasTUEvent());
-      writer->SetConfig(&config);
+      writer->SetConfig(&config3);
       writer->SetFilePattern(opat.Value());
       writer->StartRun(reader.RunNumber());
       ProgressBar bla(uint32_t(writer->GetMaxEventNumber()));
