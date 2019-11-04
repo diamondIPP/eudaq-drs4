@@ -17,7 +17,7 @@ namespace eudaq{
 SyncBase::SyncBase(bool sync):
 	m_registertProducer(0),
 	m_ProducerEventQueue(0),
-	NumberOfEventsToSync_(1), longTimeDiff_(0), isAsync_(false), m_TLUs_found(0), m_sync(sync)
+	NumberOfEventsToSync_(1), longTimeDiff_(0), isAsync_(false), m_TLUs_found(0), m_sync(sync), m_TUs_found(0)
 {
 
 
@@ -47,7 +47,7 @@ void SyncBase::addBOREEvent(int fileIndex, const eudaq::DetectorEvent& BOREvent 
 
 	const unsigned int TLU_ID=Event::str2id("_TLU");
 	static size_t id=1;
-	
+    if(id!=1) id=1;
 	for (unsigned i=0;i<BOREvent.NumEvents();++i)
 	{
 		if (TLU_ID==BOREvent.GetEvent(i)->get_id())
