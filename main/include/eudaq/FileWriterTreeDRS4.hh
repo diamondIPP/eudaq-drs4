@@ -121,7 +121,7 @@ namespace eudaq {
 
 		//baseline subtraction stuff
 		arma::uword nEntries = 1024;
-		arma::uword nAvg = 500;
+		arma::uword nAvg = 20;
 		arma::uword avg_idx0 = 0;
 		arma::uword avg_idx3 = 0;
 		arma::vec tax = arma::linspace<arma::vec>(0, 512, nEntries); //create universal time axis for all events
@@ -129,7 +129,7 @@ namespace eudaq {
 		arma::mat avg_amp_3 = arma::mat(nAvg, nEntries,arma::fill::none); //200 wf average matrix for signal channel3
 		bool blsub_ready = false; //whenever we have collected nAvg events for the first time this goes true
 		int fit_start = 200;
-		int fit_end = 600;
+		int fit_end = 400;
 
         int f_pulser;
         std::vector<uint16_t> *v_forc_pos;

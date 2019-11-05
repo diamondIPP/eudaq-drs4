@@ -409,7 +409,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         int n_samples = waveform.GetNSamples();
         if (verbose > 3) cout << "number of samples in my wf " << n_samples << std::endl;
 
-
+		
 		if (UseWaveForm(baseline_corr, iwf) and blsub_ready){
 			std::vector<float> baseline = GetBaseline(iwf);
 			waveform.DoBaselineCorretion(baseline);	
@@ -866,33 +866,33 @@ std::vector<float> FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
 void FileWriterTreeDRS4::FillRegionIntegrals(StandardEvent sev){
 
     for (auto channel: *regions){
-      StandardWaveform * wf = &sev.GetWaveform(channel.first);
+      StandardWaveform &wf = sev.GetWaveform(channel.first);
 
 	  //do baseline subtraction here
-		/*
+	
 	  if (UseWaveForm(baseline_corr, channel.first) and blsub_ready){
-		  std::cout << "FillRegionIntegrals call to GetBaseline " << unsigned(channel.first) << std::endl;
+		  //std::cout << "FillRegionIntegrals call to GetBaseline " << unsigned(channel.first) << std::endl;
 		  std::vector<float> baseline = GetBaseline(channel.first);
-		  wf->DoBaselineCorretion(baseline);
+		  wf.DoBaselineCorretion(baseline);
 	  
-	  }*/
+	  }
 
       channel.second->GetRegion(0)->SetPeakPostion(5);
       for (auto region: channel.second->GetRegions()){
         signed char polarity = (string(region->GetName()).find("pulser") != string::npos) ? channel.second->GetPulserPolarity() : channel.second->GetPolarity();
-        uint16_t peak_pos = wf->getIndex(region->GetLowBoarder(), region->GetHighBoarder(), polarity);
+        uint16_t peak_pos = wf.getIndex(region->GetLowBoarder(), region->GetHighBoarder(), polarity);
         region->SetPeakPostion(peak_pos);
         for (auto integral: region->GetIntegrals()){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-          integral->SetPeakPosition(peak_pos, wf->GetNSamples());
-          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, 2.0));
+          integral->SetPeakPosition(peak_pos, wf.GetNSamples());
+          integral->SetTimeIntegral(wf.getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, 2.0));
           if (name.find("peaktopeak")!=std::string::npos){
-            integral->SetIntegral(wf->getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
+            integral->SetIntegral(wf.getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else if (name.find("median")!=name.npos){
-            integral->SetIntegral(wf->getMedian(integral->GetIntegralStart(), integral->GetIntegralStop()));
+            integral->SetIntegral(wf.getMedian(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else
-            integral->SetIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop()));
+            integral->SetIntegral(wf.getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop()));
         }
       }
     }
