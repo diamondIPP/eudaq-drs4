@@ -392,7 +392,6 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
       sev.GetWaveform(iwf).SetTimes(&tcal.at(0));
     }
 
-
     ResizeVectors(sev.GetNWaveforms()); //changes the size of the vector holding the waveforms to the number of available channels
 
     FillRegionIntegrals(sev); //this calculates all the integrals for the analysis
@@ -409,32 +408,15 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 
         int n_samples = waveform.GetNSamples();
         if (verbose > 3) cout << "number of samples in my wf " << n_samples << std::endl;
-        // load the waveforms into the vector
-        
-		
 
-		/*
-		std::vector<float> event_tax = full_time.at(iwf);
-		std::vector<float> * data_before = waveform.GetData();
-		for(int i=0; i<1024; i++){
-			std::cout << "before " << event_tax.at(i) << " " << data_before->at(i) << std::endl;
-		}
-		*/
 
 		if (UseWaveForm(baseline_corr, iwf) and blsub_ready){
-			std::cout << "Getting baseline for channel: " << unsigned(iwf) << std::endl;
 			std::vector<float> baseline = GetBaseline(iwf);
 			waveform.DoBaselineCorretion(baseline);	
 		}
 
+
 		data = waveform.GetData();
-
-		/*
-		for(int i=0; i<1024; i++){
-			std::cout << "after " << event_tax.at(i) << " "  << data->at(i) << std::endl;
-		}
-		*/
-
         calc_noise(iwf);
 
         this->FillSpectrumData(iwf);
@@ -474,6 +456,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 
         f_isDa->at(iwf) = *max_element(&data->at(20), &data->at(1023)) > wf_thr.at(iwf);
 
+
         data->clear();
     } // end iwf waveform loop
 
@@ -494,7 +477,10 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
             f_adc->push_back(int16_t(plane.GetPixel(ipix)));
             f_charge->push_back(42);						// todo: do charge conversion here!
         }
-    }
+	}
+
+
+
     m_ttree->Fill();
     if (f_event_number + 1 % 1000 == 0) cout << "of run " << runnumber << flush;
 //        <<" "<<std::setw(7)<<f_event_number<<"\tSpectrum: "<<w_spectrum.RealTime()/w_spectrum.Counter()<<"\t" <<"LinearFitting: "
@@ -883,11 +869,13 @@ void FileWriterTreeDRS4::FillRegionIntegrals(StandardEvent sev){
       StandardWaveform * wf = &sev.GetWaveform(channel.first);
 
 	  //do baseline subtraction here
+		/*
 	  if (UseWaveForm(baseline_corr, channel.first) and blsub_ready){
 		  std::cout << "FillRegionIntegrals call to GetBaseline " << unsigned(channel.first) << std::endl;
 		  std::vector<float> baseline = GetBaseline(channel.first);
 		  wf->DoBaselineCorretion(baseline);
-	  }
+	  
+	  }*/
 
       channel.second->GetRegion(0)->SetPeakPostion(5);
       for (auto region: channel.second->GetRegions()){

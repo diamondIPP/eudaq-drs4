@@ -121,7 +121,7 @@ namespace eudaq {
 
 		//baseline subtraction stuff
 		arma::uword nEntries = 1024;
-		arma::uword nAvg = 200;
+		arma::uword nAvg = 500;
 		arma::uword avg_idx0 = 0;
 		arma::uword avg_idx3 = 0;
 		arma::vec tax = arma::linspace<arma::vec>(0, 512, nEntries); //create universal time axis for all events
