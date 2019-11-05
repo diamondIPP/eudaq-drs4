@@ -295,6 +295,14 @@ float StandardWaveform::getMedian(uint32_t min, uint32_t max) const
     return median;
 }
 
+void StandardWaveform::DoBaselineCorretion(std::vector<float> baseline){
+	for(int i=0; i<(int)(m_samples.size()/2); i++){
+		//std::cout << "blcorr: " << i << " " << m_samples.at(i) << " " << baseline.at(i) << std::endl;
+		m_samples.at(i) = m_samples.at(i) - baseline.at(i);
+	}
+}
+
+
 /************************************************************************************************/
 /*************************************** Standard Plane *****************************************/
 /************************************************************************************************/

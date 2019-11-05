@@ -92,6 +92,7 @@ public:
     float interpolateTime(uint16_t ibin, float value) const;
     float interpolateVoltage(uint16_t ibin, float time) const;
     float getBinWidth(uint16_t ibin) const { return m_times.at(ibin) - m_times.at(uint16_t(ibin - 1)); }
+	void DoBaselineCorretion(std::vector<float>);
 
 private:
 	uint64_t m_timestamp;

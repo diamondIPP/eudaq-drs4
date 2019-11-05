@@ -64,7 +64,7 @@ namespace eudaq {
         int IsPulserEvent(const StandardWaveform *wf);
         void ExtractForcTiming(std::vector<float> *);
 		void FillBaselineWfs(uint8_t iwf, const StandardEvent sev);
-		void GetBaseline(uint8_t iwf);
+		std::vector<float> GetBaseline(uint8_t iwf);
         void FillRegionIntegrals(const StandardEvent sev);
         void FillRegionVectors();
         void FillTotalRange(uint8_t iwf, const StandardWaveform *wf);
@@ -121,8 +121,9 @@ namespace eudaq {
 
 		//baseline subtraction stuff
 		arma::uword nEntries = 1024;
-		arma::uword nAvg = 500;
-		arma::uword avg_idx = 0; //this is our index for filling the matrix with nAvg rows
+		arma::uword nAvg = 20;
+		arma::uword avg_idx0 = 0;
+		arma::uword avg_idx3 = 0;
 		arma::vec tax = arma::linspace<arma::vec>(0, 512, nEntries); //create universal time axis for all events
 		arma::mat avg_amp_0 = arma::mat(nAvg, nEntries,arma::fill::none); //200 wf average matrix for signal channel0
 		arma::mat avg_amp_3 = arma::mat(nAvg, nEntries,arma::fill::none); //200 wf average matrix for signal channel3

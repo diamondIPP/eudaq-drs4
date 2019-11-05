@@ -395,13 +395,12 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
 
     ResizeVectors(sev.GetNWaveforms()); //changes the size of the vector holding the waveforms to the number of available channels
 
-
     FillRegionIntegrals(sev); //this calculates all the integrals for the analysis
 
     for (auto iwf : wf_order){
         if (verbose > 3) cout<<"Channel Nr: "<< int(iwf) <<endl;
 
-        const eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
+        eudaq::StandardWaveform & waveform = sev.GetWaveform(iwf);
         // save the sensor names
         if (f_event_number == 0) {
             sensor_name.resize(sev.GetNWaveforms(), "");
@@ -411,7 +410,28 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         int n_samples = waveform.GetNSamples();
         if (verbose > 3) cout << "number of samples in my wf " << n_samples << std::endl;
         // load the waveforms into the vector
-        data = waveform.GetData();
+        
+		std::vector<float> event_tax = full_time.at(iwf);
+
+		std::vector<float> * data_before = waveform.GetData();
+		for(int i=0; i<1024; i++){
+			std::cout << "before " << event_tax.at(i) << " " << data_before->at(i) << std::endl;
+		}
+
+		if (UseWaveForm(baseline_corr, iwf) and blsub_ready){
+			std::vector<float> baseline = GetBaseline(iwf);
+			waveform.DoBaselineCorretion(baseline);	
+		}
+
+		data = waveform.GetData();
+
+		for(int i=0; i<1024; i++){
+			std::cout << "after " << event_tax.at(i) << " "  << data->at(i) << std::endl;
+		}
+
+
+
+
         calc_noise(iwf);
 
         this->FillSpectrumData(iwf);
@@ -754,35 +774,40 @@ void FileWriterTreeDRS4::FillBaselineWfs(uint8_t iwf, const StandardEvent sev){
 	arma::vec amp;
 	arma::interp1(tax_ev, amp_ev, tax, amp, "*linear"); //interpolate waveform to given time axis
 
-	if(avg_idx == nAvg){
-		avg_idx = 0; //start filling the first row again if nAvg row count is reached
+	if(avg_idx0 == nAvg){
+		avg_idx0 = 0; //start filling the first row again if nAvg row count is reached
+	}
+
+	if(avg_idx3 == nAvg){
+		avg_idx3 = 0;
 		blsub_ready = true;
 	}
 
 	for(arma::uword c=0; c<nEntries; c++){
 		if(iwf == 0){
-			avg_amp_0(avg_idx, c) = amp.at(c);
+			avg_amp_0(avg_idx0, c) = amp.at(c);
 		}
 		if(iwf == 3){
-			avg_amp_3(avg_idx, c) = amp.at(c);
+			avg_amp_3(avg_idx3, c) = amp.at(c);
 		}
 	}
 
-	avg_idx++;
+	if(iwf == 0){avg_idx0++;}
+	if(iwf == 3){avg_idx3++;}
 
-	/*
-	if(avg_idx == (nAvg-1)){
-		arma::rowvec mean_amp = arma::mean(avg_amp_0);
-		for (int i=0; i < nEntries; i++){
-			cout <<  tax.at(i) << " " << mean_amp.at(i) << std::endl;
-		}
+	if(avg_idx0 == (nAvg-1) and iwf ==0){
+		avg_amp_0.save("/home/dorfer/avg_amp_0.csv", arma::csv_ascii);
+		
+		//arma::rowvec mean_amp = arma::mean(avg_amp_0);
+		//for (int i=0; i < nEntries; i++){
+		//	cout << tax.at(i) << " " << amp.at(i) << " " <<  mean_amp.at(i) << std::endl;
+		//}
 	}
-	*/
+
 }
 
 
-void FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
-	if (!UseWaveForm(baseline_corr, iwf)) return;
+std::vector<float> FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
 
 	arma::rowvec mean_amp;
 	if (iwf == 0){
@@ -818,26 +843,39 @@ void FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
 	f->SetParameter(3, -2.16);
 	f->SetParLimits(3, -10, 10);
 	//g->Fit(f, "RNV"); 
-	g->Fit(f); 
+	g->Fit(f, "QN"); 
+	//g->Fit(f);
 
 	f->GetParameters();
 
-	for(int i=0; i<lenfit; i++){
-		std::cout << i << " " << x[i] <<" " << y[i] <<" " << f->Eval(x[i]) << std::endl;
+	//make a vector that fits the time axis of the event for subtraction
+	std::vector<float> baseline(nEntries);
+	std::vector<float> event_tax = full_time.at(iwf);
+	for(int i=0; i<nEntries; i++){
+		baseline.at(i) = f->Eval(event_tax.at(i));
 	}
 
+	
+	for(int i=0; i<lenfit; i++){
+		std::cout << i << " " << x[i] <<" " << y[i] <<" " << event_tax.at(i+200) << " " << baseline.at(i+200) << std::endl;
+	}
+	
+	delete g;
+	delete f;
+	return baseline;
 
 }
 
 
-void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
+void FileWriterTreeDRS4::FillRegionIntegrals(StandardEvent sev){
 
     for (auto channel: *regions){
-      const StandardWaveform * wf = &sev.GetWaveform(channel.first);
+      StandardWaveform * wf = &sev.GetWaveform(channel.first);
 
-	  //if channel.first == 0 oder 3 and ready_to_subtract then subtract baseline
-	  if (blsub_ready){
-	 	GetBaseline(0);
+	  //do baseline subtraction here
+	  if (UseWaveForm(baseline_corr, channel.first) and blsub_ready){
+		  std::vector<float> baseline = GetBaseline(channel.first);
+		  wf->DoBaselineCorretion(baseline);
 	  }
 
       channel.second->GetRegion(0)->SetPeakPostion(5);
