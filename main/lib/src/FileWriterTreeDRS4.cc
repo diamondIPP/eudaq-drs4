@@ -411,26 +411,29 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         if (verbose > 3) cout << "number of samples in my wf " << n_samples << std::endl;
         // load the waveforms into the vector
         
-		std::vector<float> event_tax = full_time.at(iwf);
+		
 
+		/*
+		std::vector<float> event_tax = full_time.at(iwf);
 		std::vector<float> * data_before = waveform.GetData();
 		for(int i=0; i<1024; i++){
 			std::cout << "before " << event_tax.at(i) << " " << data_before->at(i) << std::endl;
 		}
+		*/
 
 		if (UseWaveForm(baseline_corr, iwf) and blsub_ready){
+			std::cout << "Getting baseline for channel: " << unsigned(iwf) << std::endl;
 			std::vector<float> baseline = GetBaseline(iwf);
 			waveform.DoBaselineCorretion(baseline);	
 		}
 
 		data = waveform.GetData();
 
+		/*
 		for(int i=0; i<1024; i++){
 			std::cout << "after " << event_tax.at(i) << " "  << data->at(i) << std::endl;
 		}
-
-
-
+		*/
 
         calc_noise(iwf);
 
@@ -795,14 +798,14 @@ void FileWriterTreeDRS4::FillBaselineWfs(uint8_t iwf, const StandardEvent sev){
 	if(iwf == 0){avg_idx0++;}
 	if(iwf == 3){avg_idx3++;}
 
-	if(avg_idx0 == (nAvg-1) and iwf ==0){
-		avg_amp_0.save("/home/dorfer/avg_amp_0.csv", arma::csv_ascii);
+	//if(avg_idx0 == (nAvg-1) and iwf ==0){
+	//	avg_amp_0.save("/home/dorfer/avg_amp_0.csv", arma::csv_ascii);
 		
 		//arma::rowvec mean_amp = arma::mean(avg_amp_0);
 		//for (int i=0; i < nEntries; i++){
 		//	cout << tax.at(i) << " " << amp.at(i) << " " <<  mean_amp.at(i) << std::endl;
 		//}
-	}
+	//}
 
 }
 
@@ -817,7 +820,7 @@ std::vector<float> FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
 		mean_amp = arma::mean(avg_amp_3);
 	}
 
-	int nth_point = 2;
+	int nth_point = 3;
 	int lenfit = (fit_end - fit_start)/nth_point;
 	float x[lenfit];
 	float y[lenfit];
@@ -835,18 +838,18 @@ std::vector<float> FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
 
 	TF1 *f = new TF1("f", "[0] + [1]*sin([2]*TMath::Pi()*x + [3])");
 	f->SetParameter(0, -0.177);
-	f->SetParLimits(0, -10, 10);
-	f->SetParameter(1, 0.35);
-	f->SetParLimits(1, -3, 3);
-	f->SetParameter(2, 0.09);
-	f->SetParLimits(2, 0.02, 1);
-	f->SetParameter(3, -2.16);
-	f->SetParLimits(3, -10, 10);
+	f->SetParLimits(0, -5, 5);
+	f->SetParameter(1, 1.2);
+	f->SetParLimits(1, 0.4, 4);
+	f->SetParameter(2, 0.10);
+	f->SetParLimits(2, 0.09, 0.11);
+	//f->SetParameter(3, -2.16);
+	//f->SetParLimits(3, -10, 10);
 	//g->Fit(f, "RNV"); 
 	g->Fit(f, "QN"); 
 	//g->Fit(f);
 
-	f->GetParameters();
+	//f->GetParameters();
 
 	//make a vector that fits the time axis of the event for subtraction
 	std::vector<float> baseline(nEntries);
@@ -855,11 +858,18 @@ std::vector<float> FileWriterTreeDRS4::GetBaseline(uint8_t iwf){
 		baseline.at(i) = f->Eval(event_tax.at(i));
 	}
 
-	
+	//debugging
+	/*
+	std::vector<float> check_ax(lenfit);
 	for(int i=0; i<lenfit; i++){
-		std::cout << i << " " << x[i] <<" " << y[i] <<" " << event_tax.at(i+200) << " " << baseline.at(i+200) << std::endl;
+		check_ax.at(i) = f->Eval(x[i]);
 	}
 	
+	for(int i=0; i<lenfit; i++){
+		std::cout << i << " " << x[i] <<" " << y[i]  << " " << check_ax.at(i) << std::endl;
+	}
+	*/
+
 	delete g;
 	delete f;
 	return baseline;
@@ -874,6 +884,7 @@ void FileWriterTreeDRS4::FillRegionIntegrals(StandardEvent sev){
 
 	  //do baseline subtraction here
 	  if (UseWaveForm(baseline_corr, channel.first) and blsub_ready){
+		  std::cout << "FillRegionIntegrals call to GetBaseline " << unsigned(channel.first) << std::endl;
 		  std::vector<float> baseline = GetBaseline(channel.first);
 		  wf->DoBaselineCorretion(baseline);
 	  }
