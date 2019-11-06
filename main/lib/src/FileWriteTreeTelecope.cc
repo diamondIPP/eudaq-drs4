@@ -230,12 +230,12 @@ namespace eudaq {
         for(size_t roci = 0; roci < 16; roci++){
             std::vector<float> *valleys = new std::vector<float>;
             valleys->resize(0);
-            if(m_thdir3->Get(TString::Format("decode%d", int(roci)))){
-                TH1F *blah_decode = (TH1F*)m_thdir3->Get(TString::Format("decode%d", int(roci)));
+            if(m_thdir3->Get(TString::Format("encoded_%d", int(roci)))){
+                TH1F *blah_decode = (TH1F*)m_thdir3->Get(TString::Format("encoded_%d", int(roci)));
                 TH1F *blah_black = (TH1F*)m_thdir3->Get(TString::Format("black_%d", int(roci)));
                 TH1F *blah_ub = (TH1F*)m_thdir3->Get(TString::Format("uBlack_%d", int(roci)));
-                TH1F *blah_decode2 = (TH1F*)blah_decode->Clone(TString::Format("decode%dV2", int(roci)));
-                blah_decode2->SetTitle(TString::Format("decode%dV2", int(roci)));
+                TH1F *blah_decode2 = (TH1F*)blah_decode->Clone(TString::Format("encoded_%dV2", int(roci)));
+                blah_decode2->SetTitle(TString::Format("encoded_%dV2", int(roci)));
                 blah_decode2->Add(blah_ub, -1);
                 blah_decode2->Add(blah_black, -1);
                 auto tempUB = float(blah_ub->GetMean());
@@ -271,6 +271,7 @@ namespace eudaq {
 
                 for(unsigned int it = 1; it < 3; it++){
                     tempL1 = (valleys->at(it) - valleys->at(0)) / it;
+//                    offL1 = 0;
                     offL1 = float(valleys->at(0) + tempL1 / 2.);
                     p1 = tempL1 * (it + 0.5) + offL1;
                     blaf1->SetParameter(1, p1);
@@ -320,9 +321,7 @@ namespace eudaq {
           return;
       }
 
-      std::cout<<"write event"<< std::endl;
       StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
-      std::cout<<"write event..."<< std::endl;
       f_event_number = sev.GetEventNumber();
 
     /** TU STUFF */
@@ -379,10 +378,20 @@ namespace eudaq {
 
 
   FileWriterTreeTelescope::~FileWriterTreeTelescope() {
-    std::cout<<"Tree has " << m_ttree->GetEntries() << " entries" << std::endl;
-    m_tfile->cd();
-    m_ttree->Write();
-    if(m_tfile->IsOpen()) m_tfile->Close();
+      if(m_ttree) {
+          std::cout << "Tree has " << m_ttree->GetEntries() << " entries" << std::endl;
+      }
+      if(m_tfile)
+          if(m_tfile->IsOpen())
+              m_tfile->cd();
+      if(m_ttree)
+          m_ttree->Write();
+      if(m_tfile2)
+          if(m_tfile2->IsOpen())
+              m_tfile2->Close();
+      if(m_tfile3)
+          if(m_tfile3->IsOpen())
+              m_tfile3->Close();
   }
 
   uint64_t FileWriterTreeTelescope::FileBytes() const { return 0; }

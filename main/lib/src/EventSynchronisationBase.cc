@@ -56,7 +56,7 @@ void SyncBase::addBOREEvent(int fileIndex, const eudaq::DetectorEvent& BOREvent 
 			{
 				m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)]=0;
 			}else{
-			 m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)]=id++; //only the first TLU gets threated differently all others are just producers
+			 m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)] = id++; //only the first TLU gets threated differently all others are just producers
 			}
 			 ++m_TLUs_found;
 		}
@@ -70,7 +70,7 @@ void SyncBase::addBOREEvent(int fileIndex, const eudaq::DetectorEvent& BOREvent 
 		}
 		else{
 
-			m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)]=id++;
+			m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)] = id++;
 		}
 		
 	}

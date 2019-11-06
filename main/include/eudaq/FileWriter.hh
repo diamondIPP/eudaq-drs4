@@ -17,7 +17,7 @@ namespace eudaq {
       virtual void StartRun(unsigned runnumber) = 0;
       virtual void WriteEvent(const DetectorEvent &) = 0;
       virtual void WriteEvent2(const DetectorEvent &) {};
-      virtual void StartRun2(int runno) {};
+      virtual void StartRun2(unsigned) {};
       virtual void TempFunction() {};
       virtual std::vector<float> TempFunctionL1Off() {};
       virtual std::vector<float> TempFunctionDecOff() {};

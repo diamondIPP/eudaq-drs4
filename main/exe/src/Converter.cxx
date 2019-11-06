@@ -78,13 +78,20 @@ int main(int, char ** argv) {
       for(size_t it = 0; it < l1Offs.size(); it++)
           std::cout << float(l1Offs.at(it)) << ", ";
       std::cout << std::endl;
+      std::cout << "Offsets L1 used (only with magnitude greater than 1): ";
+      for(size_t it = 0; it < l1Offs.size(); it++) {
+          if(fabs(l1Offs.at(it)) < 1)
+              l1Offs.at(it) = 0;
+          std::cout << float(l1Offs.at(it)) << ", ";
+      }
+      std::cout << std::endl;
       std::vector<float> decOffs = writer2->TempFunctionDecOff();
       std::cout << "Offsets decOffsets: ";
       for(size_t it = 0; it < decOffs.size(); it++)
           std::cout << float(decOffs.at(it)) << ", ";
       std::cout << std::endl;
 
-
+      writer2.reset();
       std::vector<unsigned> numbers = parsenumbers(events.Value());
       std::sort(numbers.begin(),numbers.end());
       eudaq::multiFileReader reader(!async.Value());
