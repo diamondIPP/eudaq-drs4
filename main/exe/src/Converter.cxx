@@ -71,24 +71,25 @@ int main(int, char ** argv) {
           if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
         }
       } while (reader2.NextEvent() && (writer2->GetMaxEventNumber() <= 0 || event_nr <= writer2->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
-
+      // Calculate Level1, decodeing offsets and timing compensations (alphas)
       writer2->TempFunction();
-      std::vector<float> l1Offs = writer2->TempFunctionL1Off();
-      std::cout << "Offsets L1: ";
-      for(size_t it = 0; it < l1Offs.size(); it++)
-          std::cout << float(l1Offs.at(it)) << ", ";
+
+      std::vector<float> Level1s = writer2->TempFunctionLevel1();
+      std::cout << "Calculated Levels 1: ";
+      for(size_t it = 0; it < Level1s.size(); it++)
+          std::cout << float(Level1s.at(it)) << ", ";
       std::cout << std::endl;
-      std::cout << "Offsets L1 used (only with magnitude greater than 1): ";
-      for(size_t it = 0; it < l1Offs.size(); it++) {
-          if(fabs(l1Offs.at(it)) < 1)
-              l1Offs.at(it) = 0;
-          std::cout << float(l1Offs.at(it)) << ", ";
-      }
-      std::cout << std::endl;
+
       std::vector<float> decOffs = writer2->TempFunctionDecOff();
       std::cout << "Offsets decOffsets: ";
       for(size_t it = 0; it < decOffs.size(); it++)
           std::cout << float(decOffs.at(it)) << ", ";
+      std::cout << std::endl;
+
+      std::vector<float> alphas = writer2->TempFunctionAlphas();
+      std::cout << "Timing compensation alphas: ";
+      for(size_t it = 0; it < alphas.size(); it++)
+          std::cout << float(alphas.at(it)) << ", ";
       std::cout << std::endl;
 
       writer2.reset();
@@ -114,8 +115,9 @@ int main(int, char ** argv) {
               std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
               config.Set("Name",name);
               config.SetSection(tempConvType);
-              config.Set("decoding_l1_offset_v", l1Offs);
+              config.Set("decoding_l1_v", Level1s);
               config.Set("decoding_offset_v", decOffs);
+              config.Set("decoding_alphas_v", alphas);
               std::ofstream filebla(tempBla.c_str());
               config.Save(filebla);
           } else {

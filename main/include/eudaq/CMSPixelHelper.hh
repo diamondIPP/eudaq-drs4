@@ -129,7 +129,7 @@ namespace eudaq {
       initializeFitfunction();
 
       m_conv_cfg->SetSection("Converter.telescopetree");
-      decodingOffset = m_conv_cfg->Get("decoding_offset", 25);
+      decodingOffset = m_conv_cfg->Get("decoding_offset", 5.);
       decodingOffsetVector.resize(4, float(decodingOffset));
       decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", decodingOffsetVector);
         std::cout << "Using decoding offsets: ";
@@ -137,10 +137,18 @@ namespace eudaq {
             std::cout << *decOit << ", ";
         }
         std::cout << std::endl;
-        level1OffsetVector.resize(4, float(0));
-        level1OffsetVector = m_conv_cfg->Get("decoding_l1_offset_v", level1OffsetVector);
+        level1Vector.resize(4, float(0));
+        level1Vector = m_conv_cfg->Get("decoding_l1_v", level1Vector);
         std::cout << "Using decoding Level1 offsets: ";
-        for(std::vector<float>::iterator decOit = level1OffsetVector.begin(); decOit != level1OffsetVector.end(); decOit++) {
+        for(std::vector<float>::iterator decOit = level1Vector.begin(); decOit != level1Vector.end(); decOit++) {
+            std::cout << *decOit << ", ";
+        }
+        std::cout << std::endl;
+
+        decodingAlphasVector.resize(4, float(0));
+        decodingAlphasVector = m_conv_cfg->Get("decoding_alphas_v", decodingAlphasVector);
+        std::cout << "Using decoding alphas: ";
+        for(std::vector<float>::iterator decOit = decodingAlphasVector.begin(); decOit != decodingAlphasVector.end(); decOit++) {
             std::cout << *decOit << ", ";
         }
         std::cout << std::endl;
@@ -574,10 +582,10 @@ namespace eudaq {
       dtbEventDecoder decoder;
         // todo: read this by a config file or even better, write it to the data!
 //        std::cout<<"Level1 Offsets: ";
-//        for(size_t it = 0; it < level1OffsetVector.size(); it++)
-//            std::cout << level1OffsetVector.at(it) << ", ";
+//        for(size_t it = 0; it < level1Vector.size(); it++)
+//            std::cout << level1Vector.at(it) << ", ";
 //        std::cout << std::endl;
-        decoder.setLevel1Offsets(std::vector<float>(level1OffsetVector.begin(), level1OffsetVector.end()));
+        decoder.setLevel1Offsets(std::vector<float>(level1Vector.begin(), level1Vector.end()));
         if(decodingOffsetVector.empty()) {
             decoder.setOffset(decodingOffset);
         }
@@ -852,7 +860,8 @@ namespace eudaq {
     Configuration * m_conv_cfg;
     uint8_t decodingOffset;
     std::vector<float> decodingOffsetVector;
-        std::vector<float> level1OffsetVector;
+    std::vector<float> decodingAlphasVector;
+        std::vector<float> level1Vector;
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
 
       // Transform data of form char* to vector<int16_t>

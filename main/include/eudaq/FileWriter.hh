@@ -19,8 +19,9 @@ namespace eudaq {
       virtual void WriteEvent2(const DetectorEvent &) {};
       virtual void StartRun2(unsigned) {};
       virtual void TempFunction() {};
-      virtual std::vector<float> TempFunctionL1Off() {};
+      virtual std::vector<float> TempFunctionLevel1() {};
       virtual std::vector<float> TempFunctionDecOff() {};
+      virtual std::vector<float> TempFunctionAlphas() {};
       virtual uint64_t FileBytes() const = 0;
       void SetFilePattern(const std::string & p) { m_filepattern = p; }
       // method to get max event number: DA

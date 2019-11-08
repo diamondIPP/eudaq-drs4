@@ -1,5 +1,6 @@
 #ifdef ROOT_FOUND
 
+#include <Math/MinimizerOptions.h>
 #include "eudaq/FileNamer.hh"
 #include "eudaq/FileWriter.hh"
 #include "eudaq/PluginManager.hh"
@@ -12,7 +13,9 @@
 #include "TROOT.h"
 #include "TH1F.h"
 #include "TF1.h"
+#include "TString.h"
 #include "TFitResultPtr.h"
+#include "TMath.h"
 
 using namespace std;
 using namespace eudaq;
@@ -67,8 +70,9 @@ namespace eudaq {
       virtual void WriteEvent2(const DetectorEvent &);
       virtual void StartRun2(unsigned);
       virtual void TempFunction();
-      virtual std::vector<float> TempFunctionL1Off();
+      virtual std::vector<float> TempFunctionLevel1();
       virtual std::vector<float> TempFunctionDecOff();
+      virtual std::vector<float> TempFunctionAlphas();
 
   private:
     TFile * m_tfile; // book the pointer to a file (to store the otuput)
@@ -99,8 +103,9 @@ namespace eudaq {
     std::vector<int16_t> * f_adc;
     std::vector<uint32_t> * f_charge;
     std::vector<int16_t> * f_trig_phase;
-      std::vector<float> *offsetsL1;
+      std::vector<float> *Level1s;
       std::vector<float> *decOffsets;
+      std::vector<float> *alphas;
 
 
       //tu
@@ -110,6 +115,13 @@ namespace eudaq {
     void SetBeamCurrent(StandardEvent /*sev*/);
     void SetScalers(StandardEvent /*sev*/);
 
+      // Decoding stuff
+      int FindFirstBinAbove(TH1F* blah, float value, int binl, int binh);
+      int FindLastBinAbove(TH1F* blah, float value, int binl, int binh);
+
+      float GetTimeCorrectedValue(float value, float prevValue, float alpha=0.1);
+      TString* GetFitString(int NL=3, int NSp=6, float sigmaSp=2.5);
+      TF1* SetFit(TH1F* blah, TH1F* hblack, int NL=3, int NSp=6, int NTotal=6);
   };
 
   namespace {
@@ -225,83 +237,48 @@ namespace eudaq {
         if(m_tfile2->IsOpen()) m_tfile2->Close();
         m_tfile3 = new TFile(bla, "READ");
         m_thdir3 = (TDirectory*)m_tfile3->Get("DecodingHistos");
-        offsetsL1 = new std::vector<float>;
+        Level1s = new std::vector<float>;
         decOffsets = new std::vector<float>;
-        for(size_t roci = 0; roci < 16; roci++){
-            std::vector<float> *valleys = new std::vector<float>;
-            valleys->resize(0);
-            if(m_thdir3->Get(TString::Format("encoded_%d", int(roci)))){
-                TH1F *blah_decode = (TH1F*)m_thdir3->Get(TString::Format("encoded_%d", int(roci)));
-                TH1F *blah_black = (TH1F*)m_thdir3->Get(TString::Format("black_%d", int(roci)));
-                TH1F *blah_ub = (TH1F*)m_thdir3->Get(TString::Format("uBlack_%d", int(roci)));
-                TH1F *blah_decode2 = (TH1F*)blah_decode->Clone(TString::Format("encoded_%dV2", int(roci)));
-                blah_decode2->SetTitle(TString::Format("encoded_%dV2", int(roci)));
-                blah_decode2->Add(blah_ub, -1);
-                blah_decode2->Add(blah_black, -1);
-                auto tempUB = float(blah_ub->GetMean());
-                auto tempB = float(blah_black->GetMean());
-                auto tempL1 = (0 - tempUB) / 4.;
-                float offL1 = 0;
-                auto p1 = -tempL1 / 2. + offL1;
-                auto *blaf1 = new TF1("blaf1", "[0]+TMath::Power((x-[1])/[2],2)", -1000, 2000);
-                blaf1->SetParameter(0, 1000);
-                blaf1->SetParameter(2, 1000);
-                blaf1->SetParLimits(0, -1000, blah_decode2->GetEntries());
-                blaf1->SetParLimits(2, 0, 1000);
-                blaf1->SetParameter(1, p1);
-                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
-                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
-                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
-                p1 = blaf1->GetParameter(1);
-                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
-                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
-                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
-                valleys->push_back(float(blaf1->GetParameter(1)));
-
-                p1 = tempL1 / 2. + offL1;
-                blaf1->SetParameter(1, p1);
-                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
-                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
-                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
-                p1 = blaf1->GetParameter(1);
-                blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
-                blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
-                blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
-                valleys->push_back(float(blaf1->GetParameter(1)));
-
-                for(unsigned int it = 1; it < 3; it++){
-                    tempL1 = (valleys->at(it) - valleys->at(0)) / it;
-//                    offL1 = 0;
-                    offL1 = float(valleys->at(0) + tempL1 / 2.);
-                    p1 = tempL1 * (it + 0.5) + offL1;
-                    blaf1->SetParameter(1, p1);
-                    blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
-                    blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
-                    blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
-                    p1 = blaf1->GetParameter(1);
-                    blaf1->SetParLimits(1, p1 - tempL1 / 3., p1 + tempL1 / 3.);
-                    blah_decode2->GetXaxis()->SetRangeUser(p1 - tempL1/3., p1 + tempL1/3.);
-                    blah_decode2->Fit("blaf1", "IMQ", "", p1 - tempL1/3., p1 + tempL1/3.);
-                    valleys->push_back(float(blaf1->GetParameter(1)));
-                }
-                std::cout << "valleys roc " << int(roci) << ": ";
-                for(size_t it = 0; it < valleys->size(); it++)
-                    std::cout << float(valleys->at(it)) << ", ";
-                std::cout << std::endl;
-
-                offsetsL1->push_back(offL1);
-                decOffsets->push_back((0 - (tempB - offL1)));
-            } else {
-//                std::cout << "it DOES NOT have decode" << int(roci) << std::endl;
+        alphas = new std::vector<float>;
+        std::vector<float> *blacks = new std::vector<float>;
+        alphas->resize(0);
+        Level1s->resize(0);
+        decOffsets->resize(0);
+        blacks->resize(0);
+        for(size_t roci = 0; roci < 16; roci++) {
+            if (m_thdir3->Get(TString::Format("cr_%d", int(roci)))) {
+                TH1F *blah = (TH1F *) m_thdir3->Get(TString::Format("cr_%d", int(roci)));
+                TH1F *hblack = (TH1F *) m_thdir3->Get(TString::Format("black_%d", int(roci)));
+                TH1F *hublack = (TH1F *) m_thdir3->Get(TString::Format("uBlack_%d", int(roci)));
+                TF1 *blaf1 = SetFit(blah, hblack, 3, 6, 6);
+                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Fumili2");
+                blah->Fit("blaf1", "MQ");
+                auto black(float(hblack->GetMean())), uBlack(float(hublack->GetMean()));
+                auto p0(float(blaf1->GetParameter(0))), delta(float(blaf1->GetParameter(1))), l1Spacing(
+                        float(blaf1->GetParameter(2)));
+                l1Spacing += delta;
+                auto Level1(float(l1Spacing + p0));
+                auto alpha(float(delta / l1Spacing));
+                auto uBlackCorrected(float(GetTimeCorrectedValue(uBlack, 0, alpha)));
+                auto blackCorrected(float(GetTimeCorrectedValue(black, uBlackCorrected, alpha)));
+                alphas->push_back(alpha);
+                blacks->push_back(blackCorrected);
+                Level1s->push_back(Level1);
+                decOffsets->push_back(Level1 - blackCorrected);
             }
         }
         m_tfile3->Close();
     }
-    std::vector<float> FileWriterTreeTelescope::TempFunctionL1Off() {
-        return *offsetsL1;
+
+    std::vector<float> FileWriterTreeTelescope::TempFunctionLevel1() {
+        return *Level1s;
     }
     std::vector<float> FileWriterTreeTelescope::TempFunctionDecOff() {
         return *decOffsets;
+    }
+
+    std::vector<float> FileWriterTreeTelescope::TempFunctionAlphas() {
+        return *alphas;
     }
 
   void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {
@@ -427,5 +404,88 @@ void FileWriterTreeTelescope::SetScalers(StandardEvent sev) {
     if (valid)
       old_time = f_time;
   }
+
+    static int FileWriterTreeTelescope::FindFirstBinAbove(TH1F* blah, float value, int binl, int binh){
+        for(int bini = binl; bini <= binh; bini++){
+            if(blah->GetBinContent(bini) > value)
+                return bini;
+        }
+        return binh;
+    }
+
+    static int FileWriterTreeTelescope::FindLastBinAbove(TH1F* blah, float value, int binl, int binh){
+        for(int bini = binl; bini <= binh; bini++){
+            if(blah->GetBinContent(binh + binl - bini) > value)
+                return binh + binl - bini;
+        }
+        return binl;
+    }
+
+    float FileWriterTreeTelescope::GetTimeCorrectedValue(float value, float prevValue, float alpha){
+        return (value - prevValue * alpha) / (1 - alpha);
+    }
+
+    static TString* FileWriterTreeTelescope::GetFitString(int NL, int NSp, float sigmaSp) {
+        TString *temps = new TString("0");
+        for(int m = 0; m < NL; m++){
+            for(int n = 0; n < NSp; n++){
+                temps->Append(TString::Format("+([%d]*TMath::Exp(-TMath::Power((x-[0]-%d*[1]-%d[2]-%f*[%d])/(TMath::Sqrt(2)*[3]),2)))", 4 + NSp * m + n, n, m, sigmaSp, 4 + NSp * (NL + m) + n));
+            }
+        }
+        return temps;
+    }
+
+    TF1* FileWriterTreeTelescope::SetFit(TH1F* blah, TH1F* hblack, int NL, int NSp, int NTotal){
+        float sigmaSp = float(hblack->GetRMS());
+        TString *blast = GetFitString(NL, NSp, sigmaSp / 2.);
+        int entries = int(blah->GetEntries());
+        float maxh = float(blah->GetMaximum());
+        float fracth = 20;
+        int binl(int(blah->FindFirstBinAbove(0))), binh(int(blah->FindLastBinAbove(0)));
+        float xmin(float(blah->GetBinLowEdge(binl))), xmax(float(blah->GetBinLowEdge(binh + 1)));
+        // Find levels limits
+        int binl0(FindFirstBinAbove(blah, maxh / fracth, binl, binh)), binh0(FindLastBinAbove(blah, maxh / fracth, binl, binh));
+        float xmin0(float(blah->GetBinLowEdge(binl0))), xmax0(float(blah->GetBinLowEdge(binh0 + 1)));
+        // Find an estimate for l1; the spacing between clusters
+        float widthp(float(2 * sigmaSp * TMath::Sqrt(2 * TMath::Log(fracth))); // From FWPercent(p) = 2 * sigma * sqrt(2 * Ln(1/p)) for p = 1/fracth
+        float l1(float((xmax0 - xmin0) / (NTotal - 1.) - widthp / 2));
+        // Find First cluster limits
+        int binlN(0), binhN(0), binhP(FindLastBinAbove(blah, maxh / fracth, binl0 + 1, int(blah->FindBin(xmin0 + l1))));
+        float xminN(0), xmaxN(0), xmaxP(float(blah->GetBinLowEdge(binhP + 1)));
+        float xmax10(xmaxP);
+        // Find cluster NL limits
+        for(size_t it = 2; it <= NL; it++){
+            binlN = FindFirstBinAbove(blah, maxh / fracth, binhP + 1, int(blah->FindBin(xmaxP + l1)));
+            xminN = float(blah->GetBinLowEdge(binlN));
+            binhN = FindLastBinAbove(blah, maxh / fracth, binlN + 1, int(blah->FindBin(xminN + l1)));
+            xmaxN = float(blah->GetBinLowEdge(binhN + 1));
+            binhP = binhN;
+            xmaxP = xmaxN;
+        }
+        // Guess the offset on each cluster due to bad timing setting, a more accurate spacing between clusters, and the first position of the first cluster
+        float delta0((xmax10 - xmin0 - widthp) / float(NSp - 1));
+        float l1Guess((xminN - xmin0) / float(NL - 1));
+        float p0(xmin0 + widthp / 2);
+        // Create Fitting function
+        TF1* tempf = new TF1("blaf1", blast, xmin0, xmaxN, 4 + 2 * NL * NSp);
+        tempf->SetNpx(1000);
+        tempf->SetParLimits(0, xmin0 - 50, xmin0 + delta0 / 4 + widthp);
+        tempf->SetParLimits(1, 0, 1.5 * delta0);
+        tempf->SetParLimits(2, l1Guess / 2, 1.5 * l1Guess);
+        tempf->SetParLimits(3, 0.1, 3 * sigmaSp);
+        tempf->SetParameter(0, p0);
+        tempf->SetParameter(1, delta0);
+        tempf->SetParameter(2, l1Guess);
+        tempf->SetParameter(3, sigmaSp);
+        for(int m = 0; m < NL; m++){
+            for(int n = 0; n < NSp; n++){
+                tempf->SetParLimits(4 + NSp * m + n, 0, entries);
+                tempf->SetParameter(4 + NSp * m + n, 0.8 * maxh);
+                tempf->SetParLimits(4 + NSp * (NL + m) + n, -1, 1);
+                tempf->SetParameter(4 + NSp * (NL + m) + n, 0.01);
+            }
+        }
+        return tempf;
+    }
 }
 #endif // ROOT_FOUND
