@@ -129,7 +129,7 @@ namespace eudaq {
       initializeFitfunction();
 
       m_conv_cfg->SetSection("Converter.telescopetree");
-      decodingOffset = m_conv_cfg->Get("decoding_offset", 5.);
+      decodingOffset = m_conv_cfg->Get("decoding_offset", 0.);
       decodingOffsetVector.resize(4, float(decodingOffset));
       decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", decodingOffsetVector);
         std::cout << "Using decoding offsets: ";
@@ -585,7 +585,7 @@ namespace eudaq {
 //        for(size_t it = 0; it < level1Vector.size(); it++)
 //            std::cout << level1Vector.at(it) << ", ";
 //        std::cout << std::endl;
-        decoder.setLevel1Offsets(std::vector<float>(level1Vector.begin(), level1Vector.end()));
+        decoder.setLevel1s(std::vector<float>(level1Vector.begin(), level1Vector.end()));
         if(decodingOffsetVector.empty()) {
             decoder.setOffset(decodingOffset);
         }
