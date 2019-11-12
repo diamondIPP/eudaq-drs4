@@ -121,7 +121,7 @@ namespace eudaq {
 
       float GetTimeCorrectedValue(float value, float prevValue, float alpha=0.1);
       TString* GetFitString(int NL=3, int NSp=6, float sigmaSp=2.5);
-      TF1* SetFit(TH1F* blah, TH1F* hblack, int NL=3, int NSp=6, int NTotal=6);
+      TF1* SetFit(TH1F* blah, TH1F* hblack, int NL=3, int NSp=6, int NTotal=6, int rocn=0);
   };
 
   namespace {
@@ -250,13 +250,14 @@ namespace eudaq {
                 TH1F *blah = (TH1F *) m_thdir3->Get(TString::Format("cr_%d", int(roci)));
                 TH1F *hblack = (TH1F *) m_thdir3->Get(TString::Format("black_%d", int(roci)));
                 TH1F *hublack = (TH1F *) m_thdir3->Get(TString::Format("uBlack_%d", int(roci)));
-                TF1 *blaf1 = SetFit(blah, hblack, 3, 6, 6);
+                TF1 *blaf1 = SetFit(blah, hblack, 3, 6, 6, int(roci));
                 ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Fumili2");
-                blah->Fit("blaf1", "MQ");
+                blah->Fit(TString::Format("blaf1_%d", int(roci)).Data(), "MQ0");
                 auto black(float(hblack->GetMean())), uBlack(float(hublack->GetMean()));
-                auto p0(float(blaf1->GetParameter(0))), delta(float(blaf1->GetParameter(1))), l1Spacing(
-                        float(blaf1->GetParameter(2)));
-                l1Spacing += delta;
+                auto delta(float(blaf1->GetParameter(1))), l1Spacing(float(blaf1->GetParameter(2) + blaf1->GetParameter(1)));
+                // check if the first fitted peak is the extra one
+                float p0 = blaf1->GetParameter(5) > blaf1->GetParameter(4) * 5? float(blaf1->GetParameter(0) + delta) : float(blaf1->GetParameter(0));
+//                auto Level1(float(l1Spacing + p0 + 4 * delta));
                 auto Level1(float(l1Spacing + p0));
                 auto alpha(float(delta / l1Spacing));
                 auto uBlackCorrected(float(GetTimeCorrectedValue(uBlack, 0, alpha)));
@@ -407,19 +408,36 @@ void FileWriterTreeTelescope::SetScalers(StandardEvent sev) {
 }
 
  int FileWriterTreeTelescope::FindFirstBinAbove(TH1F* blah, float value, int binl, int binh){
-    for(int bini = binl; bini <= binh; bini++){
-        if(blah->GetBinContent(bini) > value)
-            return bini;
-    }
-    return binh;
+     if(blah->GetBinContent(binl) > value){
+         if(binl != 1)
+             return FindFirstBinAbove(blah, value, binl - 1, binh);
+         else
+             return binl;
+     } else if(blah->GetBinContent(binl) <= value && blah->GetBinContent(binh) <= value)
+         return FindFirstBinAbove(blah, value, binl, binh + 1);
+     else {
+         for (int bini = binl; bini <= binh; bini++) {
+             if (blah->GetBinContent(bini) > value)
+                 return bini;
+         }
+         return binh;
+     }
 }
 
  int FileWriterTreeTelescope::FindLastBinAbove(TH1F* blah, float value, int binl, int binh){
-    for(int bini = binl; bini <= binh; bini++){
-        if(blah->GetBinContent(binh + binl - bini) > value)
-            return binh + binl - bini;
-    }
-    return binl;
+     if(blah->GetBinContent(binh) > value){
+         if(binh != blah->GetNbinsX())
+             return FindLastBinAbove(blah, value, binl, binh + 1);
+         else
+             return binh;
+     }
+     else {
+         for (int bini = binl; bini <= binh; bini++) {
+             if (blah->GetBinContent(binh + binl - bini) > value)
+                 return binh + binl - bini;
+         }
+         return binl;
+     }
 }
 
 float FileWriterTreeTelescope::GetTimeCorrectedValue(float value, float prevValue, float alpha){
@@ -430,26 +448,38 @@ float FileWriterTreeTelescope::GetTimeCorrectedValue(float value, float prevValu
     TString *temps = new TString("0");
     for(int m = 0; m < NL; m++){
         for(int n = 0; n < NSp; n++){
-            temps->Append(TString::Format("+([%d]*TMath::Exp(-TMath::Power((x-[0]-%d*[1]-%d[2]-%f*[%d])/(TMath::Sqrt(2)*[3]),2)))", 4 + NSp * m + n, n, m, sigmaSp, 4 + NSp * (NL + m) + n));
+            temps->Append(TString::Format("+([%d]*TMath::Exp(-TMath::Power((x-[0]-%d*[1]-%d*[2]-%f*[%d])/(TMath::Sqrt(2)*[3]),2)))", 4 + NSp * m + n, n, m, sigmaSp, 4 + NSp * (NL + m) + n));
+//            temps->Append(TString::Format("+([%d]*TMath::Exp(-TMath::Power((x-[0]-%d*[1]-%d*[2]-%f*[%d])/(TMath::Sqrt(2)*[3]),2)))", 4 + NSp * m + n, n, m, sigmaSp, 4 + NSp * NL + m));
         }
     }
     return temps;
 }
 
-TF1* FileWriterTreeTelescope::SetFit(TH1F* blah, TH1F* hblack, int NL, int NSp, int NTotal){
+TF1* FileWriterTreeTelescope::SetFit(TH1F* blah, TH1F* hblack, int NL, int NSp, int NTotal, int rocn){
+    /**
+     * This method calculates the decoding offsets from a histogram.
+     * @param blah: is the histogram with the encoded levels. Tipically it is CR because it has homogeneous peaks as it is used to decide left pixel or right pixel
+     * @param hblack: is the black histogram used to estimate the real width of the levels
+     * @param NL: is the number of Levels to fit. 3 is used as default
+     * @param NSp: is the number of peaks on each Level. Noticeable when the timing was not set up correctly. For CR it should be 6.
+     * @param NTotal: is the total number of Levels in the histogram. For CR it should be 6 (default)
+     * @return A pointer to the fitted function.
+     * */
+    int NSp2 = NSp + 1; // assume there is an extra peak to help the fitter. The extra peak will have a lower scaling constant much smaller than the other ones.
     float sigmaSp = float(hblack->GetRMS());
-    TString *blast = GetFitString(NL, NSp, float(sigmaSp / 2.));
+    TString *blast = GetFitString(NL, NSp2, float(sigmaSp * 2));
     int entries = int(blah->GetEntries());
     float maxh = float(blah->GetMaximum());
     float fracth = 20;
     int binl(int(blah->FindFirstBinAbove(0))), binh(int(blah->FindLastBinAbove(0)));
-    float xmin(float(blah->GetBinLowEdge(binl))), xmax(float(blah->GetBinLowEdge(binh + 1)));
+//    float xmin(float(blah->GetBinLowEdge(binl))), xmax(float(blah->GetBinLowEdge(binh + 1)));
     // Find levels limits
-    int binl0(FindFirstBinAbove(blah, maxh / fracth, binl, binh)), binh0(FindLastBinAbove(blah, maxh / fracth, binl, binh));
+//    int binl0(FindFirstBinAbove(blah, maxh / fracth, binl, binh)), binh0(FindLastBinAbove(blah, maxh / fracth, binl, binh));
+    int binl0(blah->FindFirstBinAbove(maxh / fracth)), binh0(blah->FindLastBinAbove(maxh / fracth));
     float xmin0(float(blah->GetBinLowEdge(binl0))), xmax0(float(blah->GetBinLowEdge(binh0 + 1)));
     // Find an estimate for l1; the spacing between clusters
     float widthp(float(2 * sigmaSp * TMath::Sqrt(2 * TMath::Log(fracth)))); // From FWPercent(p) = 2 * sigma * sqrt(2 * Ln(1/p)) for p = 1/fracth
-    float l1(float((xmax0 - xmin0) / (NTotal - 1.) - widthp / 2));
+    float l1(float((xmax0 - xmin0) / (NTotal - 1.) - 2 * widthp));
     // Find First cluster limits
     int binlN(0), binhN(0), binhP(FindLastBinAbove(blah, maxh / fracth, binl0 + 1, int(blah->FindBin(xmin0 + l1))));
     float xminN(0), xmaxN(0), xmaxP(float(blah->GetBinLowEdge(binhP + 1)));
@@ -464,11 +494,11 @@ TF1* FileWriterTreeTelescope::SetFit(TH1F* blah, TH1F* hblack, int NL, int NSp, 
         xmaxP = xmaxN;
     }
     // Guess the offset on each cluster due to bad timing setting, a more accurate spacing between clusters, and the first position of the first cluster
-    float delta0((xmax10 - xmin0 - widthp) / float(NSp - 1));
+    float delta0((xmax10 - xmin0 - widthp) / float(NSp2 - 1));
     float l1Guess((xminN - xmin0) / float(NL - 1));
     float p0(xmin0 + widthp / 2);
     // Create Fitting function
-    TF1* tempf = new TF1("blaf1", blast->Data(), xmin0, xmaxN);
+    TF1* tempf = new TF1(TString::Format("blaf1_%d",rocn).Data(), blast->Data(), xmin0, xmaxN);
     tempf->SetNpx(1000);
     tempf->SetParLimits(0, xmin0 - 50, xmin0 + delta0 / 4 + widthp);
     tempf->SetParLimits(1, 0, 1.5 * delta0);
@@ -479,12 +509,14 @@ TF1* FileWriterTreeTelescope::SetFit(TH1F* blah, TH1F* hblack, int NL, int NSp, 
     tempf->SetParameter(2, l1Guess);
     tempf->SetParameter(3, sigmaSp);
     for(int m = 0; m < NL; m++){
-        for(int n = 0; n < NSp; n++){
-            tempf->SetParLimits(4 + NSp * m + n, 0, entries);
-            tempf->SetParameter(4 + NSp * m + n, 0.8 * maxh);
-            tempf->SetParLimits(4 + NSp * (NL + m) + n, -1, 1);
-            tempf->SetParameter(4 + NSp * (NL + m) + n, 0.01);
+        for(int n = 0; n < NSp2; n++){
+            tempf->SetParLimits(4 + NSp2 * m + n, 0, entries);
+            tempf->SetParameter(4 + NSp2 * m + n, 0.8 * maxh);
+            tempf->SetParLimits(4 + NSp2 * (NL + m) + n, -1, 1);
+            tempf->SetParameter(4 + NSp2 * (NL + m) + n, 0.01);
         }
+//        tempf->SetParLimits(4 + NSp2 * NL + m, -1, 1);
+//        tempf->SetParameter(4 + NSp2 * NL + m, 0.01);
     }
     return tempf;
 }

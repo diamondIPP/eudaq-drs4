@@ -62,21 +62,15 @@ namespace eudaq {
     std::map< std::string, VCALDict> vcal_vals;
     TF1 * fFitfunction;
       std::vector<TH1F *> hEncode;
-      std::vector<TH1F *> hBlack;
       std::vector<TH1F *> hUblack;
+      std::vector<TH1F *> hBlack;
       std::vector<TH1F *> hc0;
       std::vector<TH1F *> hc1;
       std::vector<TH1F *> hr0;
       std::vector<TH1F *> hr1;
       std::vector<TH1F *> hcr;
-      std::vector<TH1F *> hl1;
-      std::vector<TH1F *> hls;
-      std::vector<TH1F *> hDeltas;
-      std::vector<TH1F *> hEncodeShift;
       std::vector<TProfile *> pblack;
       std::vector<TProfile *> pUblack;
-      std::vector<TProfile *> pls;
-      std::vector<TProfile *> pl1;
       std::vector<TH2F *> h2c0;
       std::vector<TH2F *> h2c1;
       std::vector<TH2F *> h2r0;
@@ -139,7 +133,7 @@ namespace eudaq {
         std::cout << std::endl;
         level1Vector.resize(4, float(0));
         level1Vector = m_conv_cfg->Get("decoding_l1_v", level1Vector);
-        std::cout << "Using decoding Level1 offsets: ";
+        std::cout << "Using decoding Level1: ";
         for(std::vector<float>::iterator decOit = level1Vector.begin(); decOit != level1Vector.end(); decOit++) {
             std::cout << *decOit << ", ";
         }
@@ -158,21 +152,15 @@ namespace eudaq {
 	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
 
         hEncode.clear();
+        hUblack.clear();
+        hBlack.clear();
         hc0.clear();
         hc1.clear();
         hr0.clear();
         hr1.clear();
         hcr.clear();
-        hDeltas.clear();
-        hEncodeShift.clear();
-        hBlack.clear();
-        hUblack.clear();
-        hl1.clear();
-        hls.clear();
         pblack.clear();
         pUblack.clear();
-        pls.clear();
-        pl1.clear();
         h2c0.clear();
         h2c1.clear();
         h2r0.clear();
@@ -185,21 +173,15 @@ namespace eudaq {
       if(dutBla.CompareTo(TString(m_detector)) == 0) {
           for (size_t it = 0; it < m_nplanes; it++) {
               hEncode.push_back(new TH1F(TString::Format("encoded_%d", int(it)), TString::Format("encoded_%d", int(it)), 1000, -500, 500));
+              hUblack.push_back(new TH1F(TString::Format("uBlack_%d", int(it)), TString::Format("uBlack_%d", int(it)), 1000, -500, 500));
+              hBlack.push_back(new TH1F(TString::Format("black_%d", int(it)), TString::Format("black_%d", int(it)), 1000, -500, 500));
               hc0.push_back(new TH1F(TString::Format("c0_%d", int(it)), TString::Format("c0_%d", int(it)), 1000, -500, 500));
               hc1.push_back(new TH1F(TString::Format("c1_%d", int(it)), TString::Format("c1_%d", int(it)), 1000, -500, 500));
               hr0.push_back(new TH1F(TString::Format("r0_%d", int(it)), TString::Format("r0_%d", int(it)), 1000, -500, 500));
               hr1.push_back(new TH1F(TString::Format("r1_%d", int(it)), TString::Format("r1_%d", int(it)), 1000, -500, 500));
               hcr.push_back(new TH1F(TString::Format("cr_%d", int(it)), TString::Format("cr_%d", int(it)), 1000, -500, 500));
-              hDeltas.push_back(new TH1F(TString::Format("deltas_%d", int(it)), TString::Format("deltas_%d", int(it)), 1025, -512.5, 512.5));
-              hEncodeShift.push_back(new TH1F(TString::Format("encodedShift_%d", int(it)), TString::Format("encodedShift_%d", int(it)), 1000, -500, 500));
-              hBlack.push_back(new TH1F(TString::Format("black_%d", int(it)), TString::Format("black_%d", int(it)), 1000, -500, 500));
-              hUblack.push_back(new TH1F(TString::Format("uBlack_%d", int(it)), TString::Format("uBlack_%d", int(it)), 1000, -500, 500));
-              hl1.push_back(new TH1F(TString::Format("l1_%d", int(it)), TString::Format("l1_%d", int(it)), 1000, -500, 500));
-              hls.push_back(new TH1F(TString::Format("ls_%d", int(it)), TString::Format("ls_%d", int(it)), 1000, -500, 500));
               pblack.push_back(new TProfile(TString::Format("pblack_%d", int(it)), TString::Format("pblack_%d", int(it)), 10000, 0, 1000000, -500, 500));
               pUblack.push_back(new TProfile(TString::Format("pUblack_%d", int(it)), TString::Format("pUblack_%d", int(it)), 10000, 0, 1000000, -500, 500));
-              pls.push_back(new TProfile(TString::Format("pls_%d", int(it)), TString::Format("pls_%d", int(it)), 10000, 0, 1000000, 0, 500));
-              pl1.push_back(new TProfile(TString::Format("pl1_%d", int(it)), TString::Format("pl1_%d", int(it)), 10000, 0, 1000000, 0, 500));
               h2c0.push_back(new TH2F(TString::Format("h2c0_%d", int(it)), TString::Format("h2c0_%d", int(it)), 10000, 0, 1000000, 1000, -500, 500));
               h2c1.push_back(new TH2F(TString::Format("h2c1_%d", int(it)), TString::Format("h2c1_%d", int(it)), 10000, 0, 1000000, 1000, -500, 500));
               h2r0.push_back(new TH2F(TString::Format("h2r0_%d", int(it)), TString::Format("h2r0_%d", int(it)), 10000, 0, 1000000, 1000, -500, 500));
@@ -249,22 +231,10 @@ namespace eudaq {
                 hr1[it]->Write();
             for (size_t it = 0; it < hcr.size(); it++)
                 hcr[it]->Write();
-            for (size_t it = 0; it < hl1.size(); it++)
-                hl1[it]->Write();
-            for (size_t it = 0; it < hls.size(); it++)
-                hls[it]->Write();
-            for (size_t it = 0; it < hDeltas.size(); it++)
-                hDeltas[it]->Write();
-            for (size_t it = 0; it < hEncodeShift.size(); it++)
-                hEncodeShift[it]->Write();
             for (size_t it = 0; it < pblack.size(); it++)
                 pblack[it]->Write();
             for (size_t it = 0; it < pUblack.size(); it++)
                 pUblack[it]->Write();
-            for (size_t it = 0; it < pls.size(); it++)
-                pls[it]->Write();
-            for (size_t it = 0; it < pl1.size(); it++)
-                pl1[it]->Write();
             for (size_t it = 0; it < h2c0.size(); it++)
                 h2c0[it]->Write();
             for (size_t it = 0; it < h2c1.size(); it++)
@@ -297,22 +267,10 @@ namespace eudaq {
                 delete hr1[it];
             for (size_t it = 0; it < hcr.size(); it++)
                 delete hcr[it];
-            for (size_t it = 0; it < hl1.size(); it++)
-                delete hl1[it];
-            for (size_t it = 0; it < hls.size(); it++)
-                delete hls[it];
-            for (size_t it = 0; it < hDeltas.size(); it++)
-                delete hDeltas[it];
-            for (size_t it = 0; it < hEncodeShift.size(); it++)
-                delete hEncodeShift[it];
             for (size_t it = 0; it < pblack.size(); it++)
                 delete pblack[it];
             for (size_t it = 0; it < pUblack.size(); it++)
                 delete pUblack[it];
-            for (size_t it = 0; it < pls.size(); it++)
-                delete pls[it];
-            for (size_t it = 0; it < pl1.size(); it++)
-                delete pl1[it];
             for (size_t it = 0; it < h2c0.size(); it++)
                 delete h2c0[it];
             for (size_t it = 0; it < h2c1.size(); it++)
@@ -463,22 +421,10 @@ namespace eudaq {
                   hr1[it]->Write();
               for (size_t it = 0; it < hcr.size(); it++)
                   hcr[it]->Write();
-              for (size_t it = 0; it < hl1.size(); it++)
-                  hl1[it]->Write();
-              for (size_t it = 0; it < hls.size(); it++)
-                  hls[it]->Write();
-              for (size_t it = 0; it < hDeltas.size(); it++)
-                  hDeltas[it]->Write();
-              for (size_t it = 0; it < hEncodeShift.size(); it++)
-                  hEncodeShift[it]->Write();
               for (size_t it = 0; it < pblack.size(); it++)
                   pblack[it]->Write();
               for (size_t it = 0; it < pUblack.size(); it++)
                   pUblack[it]->Write();
-              for (size_t it = 0; it < pls.size(); it++)
-                  pls[it]->Write();
-              for (size_t it = 0; it < pl1.size(); it++)
-                  pl1[it]->Write();
               for (size_t it = 0; it < h2c0.size(); it++)
                   h2c0[it]->Write();
               for (size_t it = 0; it < h2c1.size(); it++)
@@ -511,22 +457,10 @@ namespace eudaq {
                   delete hr1[it];
               for (size_t it = 0; it < hcr.size(); it++)
                   delete hcr[it];
-              for (size_t it = 0; it < hl1.size(); it++)
-                  delete hl1[it];
-              for (size_t it = 0; it < hls.size(); it++)
-                  delete hls[it];
-              for (size_t it = 0; it < hDeltas.size(); it++)
-                  delete hDeltas[it];
-              for (size_t it = 0; it < hEncodeShift.size(); it++)
-                  delete hEncodeShift[it];
               for (size_t it = 0; it < pblack.size(); it++)
                   delete pblack[it];
               for (size_t it = 0; it < pUblack.size(); it++)
                   delete pUblack[it];
-              for (size_t it = 0; it < pls.size(); it++)
-                  delete pls[it];
-              for (size_t it = 0; it < pl1.size(); it++)
-                  delete pl1[it];
               for (size_t it = 0; it < h2c0.size(); it++)
                   delete h2c0[it];
               for (size_t it = 0; it < h2c1.size(); it++)
@@ -586,6 +520,7 @@ namespace eudaq {
 //            std::cout << level1Vector.at(it) << ", ";
 //        std::cout << std::endl;
         decoder.setLevel1s(std::vector<float>(level1Vector.begin(), level1Vector.end()));
+        decoder.setAlphas(std::vector<float>(decodingAlphasVector.begin(), decodingAlphasVector.end()));
         if(decodingOffsetVector.empty()) {
             decoder.setOffset(decodingOffset);
         }
@@ -627,37 +562,26 @@ namespace eudaq {
                       hEncode[roc]->Fill(tempc0[itbla]);
                       hc0[roc]->Fill(tempc0[itbla]);
                       h2c0[roc]->Fill(in.GetEventNumber(), tempc0[itbla]);
-                      hEncodeShift[roc]->Fill(tempc0[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempc1.size(); itbla++) {
                       hEncode[roc]->Fill(tempc1[itbla]);
                       hc1[roc]->Fill(tempc1[itbla]);
                       h2c1[roc]->Fill(in.GetEventNumber(), tempc1[itbla]);
-                      hEncodeShift[roc]->Fill(tempc1[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempr0.size(); itbla++) {
                       hEncode[roc]->Fill(tempr0[itbla]);
                       hr0[roc]->Fill(tempr0[itbla]);
                       h2r0[roc]->Fill(in.GetEventNumber(), tempr0[itbla]);
-                      hEncodeShift[roc]->Fill(tempr0[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempr1.size(); itbla++) {
                       hEncode[roc]->Fill(tempr1[itbla]);
                       hr1[roc]->Fill(tempr1[itbla]);
                       h2r1[roc]->Fill(in.GetEventNumber(), tempr1[itbla]);
-                      hEncodeShift[roc]->Fill(tempr1[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempcr.size(); itbla++) {
                       hEncode[roc]->Fill(tempcr[itbla]);
                       hcr[roc]->Fill(tempcr[itbla]);
                       h2cr[roc]->Fill(in.GetEventNumber(), tempcr[itbla]);
-                      hEncodeShift[roc]->Fill(tempcr[itbla] + int(tempblack[itbla] - tempUblack[itbla]) / 4 + int(tempblack[itbla] - tempUblack[itbla]) / 8 - tempblack[itbla]);
-                  }
-                  for(size_t itbla = 0; itbla < tempc0.size() and itbla < tempc1.size() and itbla < tempr0.size() and itbla < tempr1.size() and itbla < tempcr.size(); itbla++) {
-                      hDeltas[roc]->Fill(tempc0[itbla] - tempblack[itbla]);
-                      hDeltas[roc]->Fill(tempr1[itbla] - tempblack[itbla]);
-                      hDeltas[roc]->Fill(tempr0[itbla] - tempblack[itbla]);
-                      hDeltas[roc]->Fill(tempcr[itbla] - tempblack[itbla]);
                   }
                   for (size_t itbla = 0; itbla < tempblack.size(); itbla++) {
                       hEncode[roc]->Fill(tempblack[itbla]);
@@ -674,17 +598,11 @@ namespace eudaq {
                   for (size_t itbla = 0; itbla < templastdac.size(); itbla++){
                       h2lastDac[roc]->Fill(in.GetEventNumber(), templastdac[itbla]);
                   }
-                  for (size_t itbla = 0; (itbla < tempUblack.size()) and (tempUblack.size() == tempblack.size()); itbla++) {
-                      hl1[roc]->Fill(int(int(tempblack[itbla] - tempUblack[itbla])/int(4)));
-                      hls[roc]->Fill(int(int(tempblack[itbla] - tempUblack[itbla])/int(8)));
-                      pl1[roc]->Fill(in.GetEventNumber(), int(int(tempblack[itbla] - tempUblack[itbla])/int(4)));
-                      pls[roc]->Fill(in.GetEventNumber(), int(int(tempblack[itbla] - tempUblack[itbla])/int(8)));
-                  }
               }
           }
       }
       catch (std::exception& e){
-          EUDAQ_WARN("Decoding crashed at event " + to_string(in.GetEventNumber()) + ":");
+          EUDAQ_WARN("Decoding crashed at event (" + m_detector + ") " + to_string(in.GetEventNumber()) + ":");
           std::ofstream f;
           std::string runNumber = to_string(in.GetRunNumber());
           std::string filename = "Errors" + std::string(3 - runNumber.length(), '0') + runNumber + ".txt";
