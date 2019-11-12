@@ -221,7 +221,7 @@ namespace eudaq {
             return;
         } else if (ev.IsEORE()) {
             eudaq::PluginManager::ConvertToStandard(ev);
-            cout << "loading the last event...." << endl;
+            cout << "loaded the last event." << endl;
             return;
         }
         // Condition to evaluate only certain number of events defined in configuration file  : DA
@@ -251,8 +251,19 @@ namespace eudaq {
                 TH1F *hblack = (TH1F *) m_thdir3->Get(TString::Format("black_%d", int(roci)));
                 TH1F *hublack = (TH1F *) m_thdir3->Get(TString::Format("uBlack_%d", int(roci)));
                 TF1 *blaf1 = SetFit(blah, hblack, 3, 6, 6, int(roci));
-                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Fumili2");
-                blah->Fit(TString::Format("blaf1_%d", int(roci)).Data(), "MQ0");
+                ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(100000);
+                ROOT::Math::MinimizerOptions::SetDefaultTolerance(0.000001);
+                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2", "Migrad"); // 2.2 seconds good fitting parameters
+//                ROOT::Math::MinimizerOptions::SetDefaultMaxIterations(10000000);
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("GSLMultiFit", "GSLLM"); // 0.6 sec large chi2
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2", "Scan"); //
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2", "Simplex"); //
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Fumili2"); //
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("GSLMultiMin","BFGS2"); // Too long more than 10 mins.
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("GSLMultiMin","CONJFR"); // Too long more than 10 mins.
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("GSLMultiMin","CONJPR"); // Too long more than 10 mins.
+//                ROOT::Math::MinimizerOptions::SetDefaultMinimizer("GSLSimAn","SimAn"); // 142 sec
+                blah->Fit(TString::Format("blaf1_%d", int(roci)).Data(), "0Q");
                 auto black(float(hblack->GetMean())), uBlack(float(hublack->GetMean()));
                 auto delta(float(blaf1->GetParameter(1))), l1Spacing(float(blaf1->GetParameter(2) + blaf1->GetParameter(1)));
                 // check if the first fitted peak is the extra one

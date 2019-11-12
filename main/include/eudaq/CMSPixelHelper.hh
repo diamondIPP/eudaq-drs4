@@ -480,9 +480,10 @@ namespace eudaq {
               std::cout << "saved histograms under DecodingHistos" << std::endl;
               blaf->cd("../");
           }
-	std::cout << "Decoding statistics for detector " << m_detector << std::endl;
-	pxar::Log::ReportingLevel() = pxar::Log::FromString("INFO");
-	decoding_stats.dump();
+        std::cout << "Decoding statistics for detector " << m_detector << std::endl;
+        pxar::Log::ReportingLevel() = pxar::Log::FromString("INFO");
+        decoding_stats.dump();
+          return true;
       }
           
       // Check if we have BORE or EORE:
