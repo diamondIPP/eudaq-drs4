@@ -235,7 +235,7 @@ namespace eudaq {
         TString bla = m_tfile2->GetName();
         std::cout << "FileName is: " << bla << std::endl;
         if(m_tfile2->IsOpen()) m_tfile2->Close();
-        m_tfile3 = new TFile(bla, "READ");
+        m_tfile3 = new TFile(bla, "UPDATE");
         m_thdir3 = (TDirectory*)m_tfile3->Get("DecodingHistos");
         Level1s = new std::vector<float>;
         decOffsets = new std::vector<float>;
@@ -266,6 +266,9 @@ namespace eudaq {
                 blacks->push_back(blackCorrected);
                 Level1s->push_back(Level1);
                 decOffsets->push_back(Level1 - blackCorrected);
+                m_thdir3->cd();
+                blaf1->Write();
+                m_tfile3->cd();
             }
         }
         m_tfile3->Close();
