@@ -243,6 +243,8 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_tfile = new TFile(f_output.c_str(), "RECREATE");
     m_ttree = new TTree("tree", "a simple Tree with simple variables");
     m_thdir = m_tfile->mkdir("DecodingHistos");
+    m_tfile2 = 0; // To prevent from crashing at the destructor
+    m_tfile3 = 0; // To prevent from crashing at the destructor
 
     // Set Branch Addresses
     m_ttree->Branch("event_number", &f_event_number, "event_number/I");

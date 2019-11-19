@@ -314,6 +314,8 @@ namespace eudaq {
 
       StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
       f_event_number = sev.GetEventNumber();
+      m_tfile2 = 0;
+      m_tfile3 = 0;
 
     /** TU STUFF */
     SetTimeStamp(sev);
