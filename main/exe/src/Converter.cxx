@@ -30,17 +30,25 @@ int main(int, char ** argv) {
     std::vector<unsigned> numbers2 = parsenumbers(events.Value());
     std::sort(numbers2.begin(),numbers2.end());
     eudaq::multiFileReader reader2(!async.Value());
+      int evts = 0;
     for (size_t i = 0; i < op.NumArgs(); ++i) {
       reader2.addFileReader(op.GetArg(i), ipat.Value());
 	}
     Configuration config2("");
-    if (configFileName.Value() != ""){
+      std::string tempConvType ("Converter.");
+      tempConvType.append(type.Value());
+      if (configFileName.Value() != ""){
         std::cout << "Read config file: "<<configFileName.Value()<<std::endl;
         std::ifstream file2(configFileName.Value().c_str());
         if (file2.is_open()) {
           config2.Load(file2,"");
           std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
           config2.Set("Name",name);
+            config2.SetSection(tempConvType);
+            evts = config2.Get("max_event_number", 0);
+            evts = evts == 0? 100000 : int(evts / 10. + 0.5);
+            evts = evts < 50000? 50000 : evts;
+            config2.Set("max_event_number", evts);
         } else {
           std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
         }
@@ -104,8 +112,6 @@ int main(int, char ** argv) {
       print_banner(message.str());
       Configuration config("");
       std::string tempBla (configFileName.Value());
-      std::string tempConvType ("Converter.");
-      tempConvType.append(type.Value());
       tempBla.append(".dasb");
       if (configFileName.Value() != ""){
           std::cout << "Read base config file: "<<configFileName.Value()<<std::endl;
