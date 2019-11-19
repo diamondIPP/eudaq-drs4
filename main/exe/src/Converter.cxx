@@ -120,7 +120,8 @@ int main(int, char ** argv) {
               config.Load(file,"");
               std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
               config.Set("Name",name);
-              config.SetSection(tempConvType);
+//              config.SetSection(tempConvType);
+              config.SetSection("Converter.telescopetree"); // due to DRS4
               config.Set("decoding_l1_v", Level1s);
               config.Set("decoding_offset_v", decOffs);
               config.Set("decoding_alphas_v", alphas);

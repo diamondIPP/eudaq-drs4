@@ -1,16 +1,16 @@
 #ifdef ROOT_FOUND
 
-#include <Math/MinimizerOptions.h>
 #include "eudaq/FileNamer.hh"
 #include "eudaq/FileWriter.hh"
 #include "eudaq/PluginManager.hh"
 #include "eudaq/Logger.hh"
 #include "eudaq/FileSerializer.hh"
-
 #include "TFile.h"
+
 #include "TDirectory.h"
 #include "TTree.h"
 #include "TROOT.h"
+#include <Math/MinimizerOptions.h>
 #include "TH1F.h"
 #include "TF1.h"
 #include "TString.h"
