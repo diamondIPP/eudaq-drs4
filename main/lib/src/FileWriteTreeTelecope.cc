@@ -178,9 +178,12 @@ namespace eudaq {
     EUDAQ_INFO("Preparing the outputfile: " + foutput);
     m_tfile = new TFile(foutput.c_str(), "RECREATE");
     m_ttree = new TTree("tree", "a simple Tree with simple variables");
-    m_thdir = m_tfile->mkdir("DecodingHistos");
+      m_thdir = m_tfile->mkdir("DecodingHistos");
+      m_tfile2 = 0;
+      m_tfile3 = 0;
 
-    // Set Branch Addresses
+
+      // Set Branch Addresses
     m_ttree->Branch("event_number",&f_event_number, "event_number/I");
     m_ttree->Branch("time", &f_time, "time/D");
 
@@ -210,6 +213,8 @@ namespace eudaq {
         m_thdir2 = m_tfile2->mkdir("DecodingHistos");
         m_thdir2->cd();
         std::cout << "Created directory \"DecodingHistos\"" << std::endl;
+        m_tfile = 0;
+        m_ttree = 0;
     }
 
     void FileWriterTreeTelescope::WriteEvent2(const DetectorEvent & ev) {
@@ -314,8 +319,6 @@ namespace eudaq {
 
       StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
       f_event_number = sev.GetEventNumber();
-      m_tfile2 = 0;
-      m_tfile3 = 0;
 
     /** TU STUFF */
     SetTimeStamp(sev);
@@ -371,6 +374,13 @@ namespace eudaq {
 
 
   FileWriterTreeTelescope::~FileWriterTreeTelescope() {
+      if(m_tfile2)
+          if(m_tfile2->IsOpen())
+              m_tfile2->Close();
+
+      if(m_tfile3)
+          if(m_tfile3->IsOpen())
+              m_tfile3->Close();
       if(m_ttree) {
           std::cout << "Tree has " << m_ttree->GetEntries() << " entries" << std::endl;
       }
@@ -379,12 +389,6 @@ namespace eudaq {
               m_tfile->cd();
       if(m_ttree)
           m_ttree->Write();
-      if(m_tfile2)
-          if(m_tfile2->IsOpen())
-              m_tfile2->Close();
-      if(m_tfile3)
-          if(m_tfile3->IsOpen())
-              m_tfile3->Close();
   }
 
   uint64_t FileWriterTreeTelescope::FileBytes() const { return 0; }

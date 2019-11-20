@@ -339,6 +339,8 @@ void FileWriterTreeDRS4::StartRun2(unsigned runno){
     m_thdir2 = m_tfile2->mkdir("DecodingHistos");
     m_thdir2->cd();
     std::cout << "Created directory \"DecodingHistos\"" << std::endl;
+    m_tfile = 0;
+    m_ttree = 0;
 }
 
 /**
