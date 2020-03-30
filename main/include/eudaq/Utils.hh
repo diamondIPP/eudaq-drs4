@@ -41,9 +41,10 @@ namespace eudaq {
   std::vector<std::string> DLLEXPORT split(const std::string & str, const std::string & delim = "\t");
   std::vector<std::string> DLLEXPORT split(const std::string & str, const std::string & delim, bool dotrim);
 
- void DLLEXPORT bool2uchar(const bool* inBegin, const bool* inEnd, std::vector<unsigned char>& out);
- void DLLEXPORT uchar2bool(const unsigned char* inBegin, const unsigned char* inEnd, std::vector<bool>& out);
- void DLLEXPORT print_banner(std::string message, const char seperator = '=', uint16_t max_lenght = 100);
+  void DLLEXPORT bool2uchar(const bool* inBegin, const bool* inEnd, std::vector<unsigned char>& out);
+  void DLLEXPORT uchar2bool(const unsigned char* inBegin, const unsigned char* inEnd, std::vector<bool>& out);
+  void DLLEXPORT print_banner(std::string message, char seperator = '=', uint16_t max_lenght = 100);
+  inline float DLLEXPORT elapsed_time(clock_t t) { return float(std::clock() - t) / CLOCKS_PER_SEC; }
 
   /** Sleep for a specified number of milliseconds.
    * \param ms The number of milliseconds
@@ -56,9 +57,9 @@ namespace eudaq {
    * \return A string representing the passed in parameter.
    */
   template <typename T>
-    inline std::string to_string(const T & x, int digits = 0) {
+    inline std::string to_string(const T & x, int digits = 0, uint8_t precision = 10) {
       std::ostringstream s;
-      s << std::setfill('0') << std::setw(digits) << x;
+      s << std::setfill('0') << std::setw(digits) << std::setprecision(precision) << x;
       return s.str();
     }
 
@@ -81,18 +82,18 @@ namespace eudaq {
       }
 
   template <typename T>
-    inline std::string to_string(const std::vector<T> & x, const std::string & sep, int digits = 0) {
+    inline std::string to_string(const std::vector<T> & x, const std::string & sep, int digits = 0, uint8_t precision = 10) {
       std::ostringstream s;
-      if (x.size() > 0) s << to_string(x[0], digits);
+      if (x.size() > 0) s << to_string(x[0], digits, precision);
       for (size_t i = 1; i < x.size(); ++i) {
-        s << sep << to_string(x[i], digits);
+        s << sep << to_string(x[i], digits, precision);
       }
       return s.str();
     }
 
   template <typename T>
-    inline std::string to_string(const std::vector<T> & x, int digits = 0) {
-      return to_string(x, ",", digits);
+    inline std::string to_string(const std::vector<T> & x, int digits = 0, uint8_t precision = 10) {
+      return to_string(x, ",", digits, precision);
     }
 
   template <typename T, typename Q>
