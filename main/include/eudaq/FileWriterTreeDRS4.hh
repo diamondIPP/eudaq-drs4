@@ -40,10 +40,8 @@ namespace eudaq {
     public:
         FileWriterTreeDRS4(const std::string &);
         virtual void StartRun(unsigned);
-        virtual void StartRun2(unsigned);
         virtual void Configure();
         virtual void WriteEvent(const DetectorEvent &);
-        virtual void WriteEvent2(const DetectorEvent &);
         virtual uint64_t FileBytes() const;
         float Calculate(std::vector<float> *data, int min, int max, bool _abs = false);
 
@@ -55,10 +53,6 @@ namespace eudaq {
         virtual long GetMaxEventNumber() { return max_event_number; }
         virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
         virtual void setTU(bool tu) { hasTU = tu; }
-        virtual void TempFunction();
-        virtual std::vector<float> TempFunctionLevel1();
-        virtual std::vector<float> TempFunctionDecOff();
-        virtual std::vector<float> TempFunctionAlphas();
 
     private:
         unsigned runnumber;
@@ -94,11 +88,6 @@ namespace eudaq {
         TStopwatch w_total;
         TFile *m_tfile; // book the pointer to a file (to store the output)
         TTree *m_ttree; // book the tree (to store the needed event info)
-        TFile * m_tfile2; // book the pointer to a file (to store the otuput)
-        TFile * m_tfile3; // book the pointer to a file (to store the otuput)
-        TDirectory * m_thdir;
-        TDirectory * m_thdir2;
-        TDirectory * m_thdir3;
 
         int verbose;
         std::vector<float> * data;
@@ -118,15 +107,6 @@ namespace eudaq {
         void FillFullTime();
         inline float getTriggerTime(const uint8_t &ch, const uint16_t &bin);
         float getTimeDifference(uint8_t ch, uint16_t bin_low, uint16_t bin_up);
-
-        // Decoding stuff
-        int FindFirstBinAbove(TH1F* blah, float value, int binl, int binh);
-        int FindLastBinAbove(TH1F* blah, float value, int binl, int binh);
-
-        float GetTimeCorrectedValue(float value, float prevValue, float alpha=0.1);
-        TString* GetFitString(int NL=3, int NSp=6, float sigmaSp=2.5);
-        TF1* SetFit(TH1F* blah, TH1F* hblack, int NL=3, int NSp=6, int NTotal=6, int rocn=0);
-
 
         /** SCALAR BRANCHES */
         int f_nwfs;
@@ -193,10 +173,6 @@ namespace eudaq {
         std::vector<uint16_t> *f_row;
         std::vector<int16_t> *f_adc;
         std::vector<uint32_t> *f_charge;
-        std::vector<float> *Level1s;
-        std::vector<float> *decOffsets;
-        std::vector<float> *alphas;
-
 
         // average waveforms of channels
         TH1F *avgWF_0;
