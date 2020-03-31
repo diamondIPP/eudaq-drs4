@@ -18,6 +18,7 @@ namespace eudaq {
       Configuration(const std::string &, const std::string &, bool);
       Configuration(const Configuration & other);
       void Save(std::ostream & file) const;
+      void Save(const std::string&) const;
       void Load(std::istream & file, const std::string & section);
       void Read(std::string, std::string);
       bool SetSection(const std::string & section) const;
@@ -72,6 +73,7 @@ namespace eudaq {
       map_t m_config;
       mutable std::string m_section;
       mutable section_t * m_cur;
+      std::string m_file_name;
   };
 
   inline std::ostream & operator << (std::ostream & os, const Configuration & c) {

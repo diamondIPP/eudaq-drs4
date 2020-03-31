@@ -24,7 +24,7 @@ namespace eudaq {
     SetSection(other.m_section);
   }
 
-  Configuration::Configuration(const std::string & file_name, const std::string & section, bool /*unused*/): m_cur(&m_config[""]) {
+  Configuration::Configuration(const std::string & file_name, const std::string & section, bool /*unused*/): m_cur(&m_config[""]), m_file_name(file_name) {
 
     if (!file_name.empty()){
       std::cout << "Reading config file: " << file_name << std::endl;
@@ -59,6 +59,14 @@ namespace eudaq {
       stream << "\n";
     }
   }
+
+  void Configuration::Save(const std::string & file_name = "") const {
+
+    std::ofstream file(file_name.empty() ? m_file_name : file_name);
+    Save(file);
+    file.close();
+  }
+
 
   Configuration & Configuration::operator = (const Configuration & other) {
     m_config = other.m_config;
