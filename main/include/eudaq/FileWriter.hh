@@ -16,12 +16,10 @@ namespace eudaq {
       virtual void Configure();
       virtual void StartRun(unsigned runnumber) = 0;
       virtual void WriteEvent(const DetectorEvent &) = 0;
-      virtual void WriteEvent2(const DetectorEvent &) {};
-      virtual void StartRun2(unsigned) {};
-      virtual void TempFunction() {};
-      virtual std::vector<float> TempFunctionLevel1() {};
-      virtual std::vector<float> TempFunctionDecOff() {};
-      virtual std::vector<float> TempFunctionAlphas() {};
+      virtual void Run() {};
+      virtual std::vector<float> GetBlackOffsets() { return std::vector<float>(0); }
+      virtual std::vector<float> GetLeve1Offsets() { return std::vector<float>(0); }
+      virtual std::vector<float> GetAlphas() { return std::vector<float>(0); }
       virtual uint64_t FileBytes() const = 0;
       void SetFilePattern(const std::string & p) { m_filepattern = p; }
       // method to get max event number: DA

@@ -18,7 +18,7 @@ namespace eudaq {
     FileWriterMap()[name] = func;
   }
 
-  FileWriter * FileWriterFactory::Create(const std::string & name,Configuration *config, const std::string & params) {
+  FileWriter * FileWriterFactory::Create(const std::string & name, Configuration *config, const std::string & params) {
     map_t::const_iterator it = FileWriterMap().find(name == "" ? "native" : name);
     if (it == FileWriterMap().end()) EUDAQ_THROW("Unknown file writer: " + name);
     FileWriter *fw = (it->second)(params);
