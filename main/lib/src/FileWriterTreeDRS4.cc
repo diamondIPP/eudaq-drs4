@@ -122,7 +122,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     if(!fft_own){
         int n = 1024;
         n_samples = n + 1;
-        cout << "Creating a new VirtualFFT with " << n_samples << " Samples" << endl;
+//        cout << "Creating a new VirtualFFT with " << n_samples << " Samples" << endl;
         re_full = new Double_t[n];
         im_full = new Double_t[n];
         in = new Double_t[n];
