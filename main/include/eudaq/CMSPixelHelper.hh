@@ -40,25 +40,22 @@ using namespace pxar;
 
 namespace eudaq {
 
-  struct VCALDict {
-    int row;
-    int col;
-    float par0;
-    float par1;
-    float par2;
-    float par3;
-    float calibration_factor;
-  };
-
-
-
+struct VCALDict {
+  int row;
+  int col;
+  float par0;
+  float par1;
+  float par2;
+  float par3;
+  float calibration_factor;
+};
 
   class CMSPixelHelper {
   public:
     std::map<std::string, float > roc_calibrations = {{"psi46v2", 65}, {"psi46digv21respin", 47}, {"proc600", 47}};
     CMSPixelHelper(std::string event_type) : do_conversion(true), m_event_type(event_type){ m_conv_cfg = new Configuration(""); }
-    void set_conversion(bool val){do_conversion = val;}
-    bool get_conversion(){return do_conversion;}
+    void set_conversion(bool val) { do_conversion = val; }
+    bool get_conversion() { return do_conversion; }
     std::map< std::string, VCALDict> vcal_vals;
     TF1 * fFitfunction;
       std::vector<TH1F *> hEncode;
@@ -89,27 +86,23 @@ namespace eudaq {
       TDirectory *DecodingDirectory;
 
     void initializeFitfunction(){fFitfunction = new TF1("fitfunc", "[3]*(TMath::Erf((x-[0])/[1])+[2])",-4096,4096);}
-    float getCharge(VCALDict d, float val,float factor = 65.) const{  
-        fFitfunction->SetParameter(0, d.par0);
-        fFitfunction->SetParameter(1, d.par1);
-        fFitfunction->SetParameter(2, d.par2);
-        fFitfunction->SetParameter(3, d.par3);
 
-        float charge = d.calibration_factor * fFitfunction->GetX(val);
-        //std::cout<<"get Charge: "<<val<<" "<<d.par0<<" "<<d.par1<<" "<<d.par2<<" "<<d.par3<<" "<<charge<<std::endl;
-        return charge;
+    float getCharge(VCALDict d, float val, float factor = 65.) const {
+      fFitfunction->SetParameters(d.par0, d.par1, d.par2, d.par3);
+      return d.calibration_factor * float(fFitfunction->GetX(val));
     }
+
     virtual void SetConfig(Configuration * conv_cfg) { m_conv_cfg = conv_cfg; }
 
     void Initialize(const Event & bore, const Configuration & cnf) {
-        dutBla = TString("DUT");
+      dutBla = TString("DUT");
       DeviceDictionary* devDict;
       std::string roctype = bore.GetTag("ROCTYPE", "");
       std::string tbmtype = bore.GetTag("TBMTYPE", "tbmemulator");
 
       m_detector = bore.GetTag("DETECTOR","");
       std::string pcbtype = bore.GetTag("PCBTYPE", "");
-      m_rotated_pcb = (pcbtype.find("-rot") != std::string::npos ? true : false);
+      m_rotated_pcb = pcbtype.find("-rot") != std::string::npos;
 
       // Get the number of planes:
       m_nplanes = bore.GetTag("PLANES", 1);
@@ -122,53 +115,37 @@ namespace eudaq {
       read_PHCalibrationData(cnf);
       initializeFitfunction();
 
+      /** Decoding of the analogue telescope */
       m_conv_cfg->SetSection("Converter.telescopetree");
-      decodingOffset = m_conv_cfg->Get("decoding_offset", 0.);
-      decodingOffsetVector.resize(4, float(decodingOffset));
-      decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", decodingOffsetVector);
-        std::cout << "Using decoding offsets: ";
-        for(std::vector<float>::iterator decOit = decodingOffsetVector.begin(); decOit != decodingOffsetVector.end(); decOit++) {
-            std::cout << *decOit << ", ";
-        }
-        std::cout << std::endl;
-        level1Vector.resize(4, float(0));
-        level1Vector = m_conv_cfg->Get("decoding_l1_v", level1Vector);
-        std::cout << "Using decoding Level1: ";
-        for(std::vector<float>::iterator decOit = level1Vector.begin(); decOit != level1Vector.end(); decOit++) {
-            std::cout << *decOit << ", ";
-        }
-        std::cout << std::endl;
+      decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", std::vector<float>(16, m_conv_cfg->Get("decoding_offset", 0.)));
+      level1Vector = m_conv_cfg->Get("decoding_l1_v", std::vector<float>(16, 0.));
+      decodingAlphasVector = m_conv_cfg->Get("decoding_alphas_v", std::vector<float>(16, 0.));
+      std::cout << "Using decoding offsets: " << to_string(decodingOffsetVector, ", ", 0, 3) << std::endl;
+      std::cout << "Using decoding Level1: " << to_string(level1Vector, ", ", 0, 3) << std::endl;
+      std::cout << "Using decoding alphas: " << to_string(decodingAlphasVector, ", ", 0, 3) << std::endl;
 
-        decodingAlphasVector.resize(4, float(0));
-        decodingAlphasVector = m_conv_cfg->Get("decoding_alphas_v", decodingAlphasVector);
-        std::cout << "Using decoding alphas: ";
-        for(std::vector<float>::iterator decOit = decodingAlphasVector.begin(); decOit != decodingAlphasVector.end(); decOit++) {
-            std::cout << *decOit << ", ";
-        }
-        std::cout << std::endl;
+      std::cout << "CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type
+       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
+       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
 
-        std::cout<<"CMSPixel Converter initialized with detector " << m_detector << ", Event Type " << m_event_type
-	       << ", TBM type " << tbmtype << " (" << static_cast<int>(m_tbmtype) << ")"
-	       << ", ROC type " << roctype << " (" << static_cast<int>(m_roctype) << ")" << std::endl;
-
-        hEncode.clear();
-        hUblack.clear();
-        hBlack.clear();
-        hc0.clear();
-        hc1.clear();
-        hr0.clear();
-        hr1.clear();
-        hcr.clear();
-        pblack.clear();
-        pUblack.clear();
-        h2c0.clear();
-        h2c1.clear();
-        h2r0.clear();
-        h2r1.clear();
-        h2cr.clear();
-        h2black.clear();
-        h2uBlack.clear();
-        h2lastDac.clear();
+      hEncode.clear();
+      hUblack.clear();
+      hBlack.clear();
+      hc0.clear();
+      hc1.clear();
+      hr0.clear();
+      hr1.clear();
+      hcr.clear();
+      pblack.clear();
+      pUblack.clear();
+      h2c0.clear();
+      h2c1.clear();
+      h2r0.clear();
+      h2r1.clear();
+      h2cr.clear();
+      h2black.clear();
+      h2uBlack.clear();
+      h2lastDac.clear();
 
       if(dutBla.CompareTo(TString(m_detector)) == 0) {
           for (size_t it = 0; it < m_nplanes; it++) {
@@ -207,14 +184,8 @@ namespace eudaq {
     std::string GetStats() {
       std::cout << "Getting decoding statistics for detector " << m_detector << std::endl;
         if(dutBla.CompareTo(TString(m_detector)) == 0) {
-            TDirectory *blaf = 0;
-            if(TString::Format("DecodingHistos").CompareTo(gDirectory->GetName()) != 0) {
-                blaf = (TDirectory *) gDirectory->GetDirectory("DecodingHistos");
-            }
-            else{
-                blaf = gDirectory;
-            }
-            blaf->cd();
+            TDirectory * g_dir = std::string(gDirectory->GetName()).find("DecodingsHistos") != std::string::npos ? gDirectory : gDirectory->GetDirectory("DecodingHistos");
+            g_dir->cd();
             for (size_t it = 0; it < hEncode.size(); it++)
                 hEncode[it]->Write();
             for (size_t it = 0; it < hUblack.size(); it++)
@@ -287,8 +258,8 @@ namespace eudaq {
                 delete h2uBlack[it];
             for (size_t it = 0; it < h2lastDac.size(); it++)
                 delete h2lastDac[it];
-            std::cout << "saved histograms under DecodingHistos" << std::endl;
-            blaf->cd("../");
+            std::cout << "saved histograms in root file under DecodingHistos" << std::endl;
+            g_dir->cd("../");
         }
         return decoding_stats.getString();
     }
@@ -515,25 +486,11 @@ namespace eudaq {
       evtSource src;
       passthroughSplitter splitter;
       dtbEventDecoder decoder;
-        // todo: read this by a config file or even better, write it to the data!
-//        std::cout<<"Level1 Offsets: ";
-//        for(size_t it = 0; it < level1Vector.size(); it++)
-//            std::cout << level1Vector.at(it) << ", ";
-//        std::cout << std::endl;
-        decoder.setLevel1s(std::vector<float>(level1Vector.begin(), level1Vector.end()));
-        decoder.setAlphas(std::vector<float>(decodingAlphasVector.begin(), decodingAlphasVector.end()));
-        if(decodingOffsetVector.empty()) {
-            decoder.setOffset(decodingOffset);
-        }
-      else {
-            decoder.setOffset(std::vector<float>(decodingOffsetVector.begin(), decodingOffsetVector.end()));
-        }
-//        std::cout<<"Decoder Offsets: ";
-//        for(size_t it = 0; it < decodingOffsetVector.size(); it++)
-//            std::cout << decodingOffsetVector.at(it) << ", ";
-//        std::cout << std::endl;
-        decoder.SetBlackVectors(*uBlackV, *blackV, *levelSV, *decodingOffsetVector2);
-        dataSink<pxar::Event*> Eventpump;
+      decoder.setLevel1s(std::vector<float>(level1Vector.begin(), level1Vector.end()));
+      decoder.setAlphas(std::vector<float>(decodingAlphasVector.begin(), decodingAlphasVector.end()));
+      decoder.setBlackOffsets(decodingOffsetVector);
+      decoder.SetBlackVectors(*uBlackV, *blackV, *levelSV, *decodingOffsetVector2);
+      dataSink<pxar::Event*> Eventpump;
       pxar::Event* evt ;
         int n=0;
         try{
@@ -777,20 +734,16 @@ namespace eudaq {
     mutable pxar::statistics decoding_stats;
     bool do_conversion;
     Configuration * m_conv_cfg;
-    uint8_t decodingOffset;
     std::vector<float> decodingOffsetVector;
     std::vector<float> decodingAlphasVector;
-        std::vector<float> level1Vector;
+    std::vector<float> level1Vector;
+
     static std::vector<uint16_t> TransformRawData(const std::vector<unsigned char> & block) {
-
-      // Transform data of form char* to vector<int16_t>
+      /** Transform data of form char* to vector<int16_t> */
       std::vector<uint16_t> rawData;
-
-      int size = block.size();
-      if(size < 2) { return rawData; }
-
+      if(block.size() < 2) { return rawData; }
       int i = 0;
-      while(i < size-1) {
+      while(i < block.size() - 1) {
         uint16_t temp = ((uint16_t)block.data()[i+1] << 8) | block.data()[i];
         rawData.push_back(temp);
         i+=2;
@@ -798,7 +751,6 @@ namespace eudaq {
       }
       return rawData;
     }
-
   };
 
 }
