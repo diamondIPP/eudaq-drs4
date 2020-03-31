@@ -24,6 +24,22 @@ namespace eudaq {
     SetSection(other.m_section);
   }
 
+  Configuration::Configuration(const std::string & file_name, const std::string & section, bool /*unused*/): m_cur(&m_config[""]) {
+
+    if (!file_name.empty()){
+      std::cout << "Reading config file: " << file_name << std::endl;
+      std::ifstream file(file_name.c_str());
+      if (file.is_open()) {
+        Load(file, section);
+        std::string name = file_name.substr(0, file_name.find('.'));
+        Set("Name", name);
+      } else {
+        std::cout << "Unable to open file '" << file_name << "'" << std::endl;
+      }
+      file.close();
+    }
+  }
+
   std::string Configuration::Name() const {
     map_t::const_iterator it = m_config.find("");
     if (it == m_config.end()) return "";
