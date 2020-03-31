@@ -1,16 +1,15 @@
 #include <eudaq/PluginManager.hh>
-#include "eudaq/FileReader.hh"
 #include "eudaq/FileWriter.hh"
 #include "eudaq/OptionParser.hh"
 #include "eudaq/Logger.hh"
 #include "eudaq/MultiFileReader.hh"
+#include "iomanip"
 
 using namespace eudaq;
 unsigned dbg = 0;
 
-int main(int, char ** argv) {
-  std::clock_t    start;
-  start = std::clock();
+int main(int /*unused*/, char ** argv) {
+  std::clock_t start = std::clock();
 
   eudaq::OptionParser op("EUDAQ File Converter", "1.0", "", 1);
   eudaq::Option<std::string> type(op, "t", "type", "native", "name", "Output file type");
@@ -28,158 +27,101 @@ int main(int, char ** argv) {
     op.Parse(argv);
     EUDAQ_LOG_LEVEL(level.Value());
     std::vector<unsigned> numbers2 = parsenumbers(events.Value());
-    std::sort(numbers2.begin(),numbers2.end());
+    std::sort(numbers2.begin(), numbers2.end());
     eudaq::multiFileReader reader2(!async.Value());
-      int evts = 0;
     for (size_t i = 0; i < op.NumArgs(); ++i) {
       reader2.addFileReader(op.GetArg(i), ipat.Value());
-	}
-    Configuration config2("");
-      std::string tempConvType ("Converter.");
-      tempConvType.append(type.Value());
-      if (configFileName.Value() != ""){
-        std::cout << "Read config file: "<<configFileName.Value()<<std::endl;
-        std::ifstream file2(configFileName.Value().c_str());
-        if (file2.is_open()) {
-          config2.Load(file2,"");
-          std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
-          config2.Set("Name",name);
-            config2.SetSection(tempConvType);
-            evts = config2.Get("max_event_number", 0);
-            evts = evts == 0? 100000 : int(evts / 10. + 0.5);
-            evts = evts < 50000? 50000 : evts;
-            config2.Set("max_event_number", evts);
-        } else {
-          std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
-        }
-        file2.close();
     }
-      std::shared_ptr<eudaq::FileWriter> writer2(FileWriterFactory::Create(type.Value(),&config2));
-      writer2->setTU(reader2.hasTUEvent());
-      writer2->SetConfig(&config2);
-      writer2->SetFilePattern(opat.Value());
-      writer2->StartRun2(reader2.RunNumber());
-      ProgressBar bla2(uint32_t(writer2->GetMaxEventNumber()));
-	    uint32_t event_nr = 0;
+    /** -----------------------------------------------
+     * First step: Find analogue decoding in 100k events:
+     * -----------------------------------------------*/
+    print_banner("STEP 1: Calculating decoding offsets ...", '~');
+    Configuration config(configFileName.Value(), "Converter.telescopetree", true);
+    if (config.Get("decoding_offset_v", "").empty()) {  // only run the decoder if the config file does not already have entries
+      std::shared_ptr<eudaq::FileWriter> decoder(FileWriterFactory::Create("cmsdecoder", &config));
+      decoder->StartRun(reader2.RunNumber());
+      ProgressBar pbar(uint32_t(decoder->GetMaxEventNumber()));
+      uint32_t event_nr = 0;
 
       do {
-        if ( !numbers2.empty() && reader2.GetDetectorEvent().GetEventNumber()>numbers2.back() ) {
+        if (!numbers2.empty() && reader2.GetDetectorEvent().GetEventNumber() > numbers2.back()) {
           break;
-        } else if (reader2.GetDetectorEvent().IsBORE() || reader2.GetDetectorEvent().IsEORE() || numbers2.empty() ||
-                  std::find(numbers2.begin(), numbers2.end(), reader2.GetDetectorEvent().GetEventNumber()) != numbers2.end()) {
-          writer2->WriteEvent2(reader2.GetDetectorEvent());
-          if(dbg>0)std::cout<< "writing one more event" << std::endl;
-          ++event_nr;
-          if (writer2->GetMaxEventNumber()){
-              if(event_nr == writer2->GetMaxEventNumber() + 1)
-                  writer2->GetStats(reader2.GetDetectorEvent());
-            bla2.update(event_nr);
-          }
-          else
-          if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
         }
-      } while (reader2.NextEvent() && (writer2->GetMaxEventNumber() <= 0 || event_nr <= writer2->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
-      // Calculate Level1, decodeing offsets and timing compensations (alphas)
-      writer2->TempFunction();
+        if (reader2.GetDetectorEvent().IsBORE() || reader2.GetDetectorEvent().IsEORE() || numbers2.empty() ||
+            std::find(numbers2.begin(), numbers2.end(), reader2.GetDetectorEvent().GetEventNumber()) != numbers2.end()) {
+          decoder->WriteEvent(reader2.GetDetectorEvent());
+          if (dbg > 0) { std::cout << "writing one more event" << std::endl; }
+          ++event_nr;
+          if (event_nr == decoder->GetMaxEventNumber() + 1) { decoder->GetStats(reader2.GetDetectorEvent()); }
+          pbar.update(event_nr);
+        }
+      } while (reader2.NextEvent() && (decoder->GetMaxEventNumber() <= 0 || event_nr <=
+                                                                            decoder->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
 
-      std::vector<float> Level1s = writer2->TempFunctionLevel1();
-      std::cout << "Calculated Levels 1: ";
-      for(size_t it = 0; it < Level1s.size(); it++)
-          std::cout << float(Level1s.at(it)) << ", ";
-      std::cout << std::endl;
+      decoder->Run(); // Calculate Level1, decoding offsets and timing compensations (alphas)
 
-      std::vector<float> decOffs = writer2->TempFunctionDecOff();
-      std::cout << "Offsets decOffsets: ";
-      for(size_t it = 0; it < decOffs.size(); it++)
-          std::cout << float(decOffs.at(it)) << ", ";
-      std::cout << std::endl;
+      /** ------------------------------------------------------
+       * Get and save the decoding parameters to the config file */
+      std::vector<float> black_offsets = decoder->GetBlackOffsets();
+      std::vector<float> level1_offsets = decoder->GetLeve1Offsets();
+      std::vector<float> alphas = decoder->GetAlphas();
+      std::cout << "Calculated decoding offets: " << to_string(black_offsets, ", ", 0, 3) << std::endl;
+      std::cout << "Calculated levels 1: " << to_string(level1_offsets, ", ", 0, 2) << std::endl;
+      std::cout << "Calculated time compensations (alphas): " << to_string(alphas, ", ", 0, 2) << std::endl;
+      config.SetSection("Converter.telescopetree");
+      config.Set("decoding_offset_v", to_string(black_offsets, ",", 0, 3));
+      config.Set("decoding_l1_v", to_string(level1_offsets, ",", 0, 2));
+      config.Set("decoding_alphas_v", to_string(alphas, ",", 0, 2));
+      config.Save();
+      config.SetSection("Converter." + type.Value());
+      decoder.reset();
+    }
+    std::cout << "\n... STEP 1 done in " << std::setprecision(1) << elapsed_time(start) << " s" << std::endl;
+    start = clock();
 
-      std::vector<float> alphas = writer2->TempFunctionAlphas();
-      std::cout << "Timing compensation alphas: ";
-      for(size_t it = 0; it < alphas.size(); it++)
-          std::cout << float(alphas.at(it)) << ", ";
-      std::cout << std::endl;
-
-      writer2.reset();
+    /** -----------------------------------------------
+     * Second step: Conversion
+     * -----------------------------------------------*/
       std::vector<unsigned> numbers = parsenumbers(events.Value());
-      std::sort(numbers.begin(),numbers.end());
+      std::sort(numbers.begin(), numbers.end());
       eudaq::multiFileReader reader(!async.Value());
       for (size_t i = 0; i < op.NumArgs(); ++i) {
           reader.addFileReader(op.GetArg(i), ipat.Value());
       }
-      std::stringstream message;
-      message << "STARTING EUDAQ " << to_string(type.Value()) << " CONVERTER";
-      print_banner(message.str());
-      Configuration config("");
-      std::string tempBla (configFileName.Value());
-      tempBla.append(".dasb");
-      if (configFileName.Value() != ""){
-          std::cout << "Read base config file: "<<configFileName.Value()<<std::endl;
-          std::ifstream file(configFileName.Value().c_str());
-          if (file.is_open()) {
-              config.Load(file,"");
-              std::string name = configFileName.Value().substr(0, configFileName.Value().find("."));
-              config.Set("Name",name);
-//              config.SetSection(tempConvType);
-              config.SetSection("Converter.telescopetree"); // due to DRS4
-              config.Set("decoding_l1_v", Level1s);
-              config.Set("decoding_offset_v", decOffs);
-              config.Set("decoding_alphas_v", alphas);
-              std::ofstream filebla(tempBla.c_str());
-              config.Save(filebla);
-          } else {
-              std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
-          }
-          file.close();
-      }
-      Configuration config3("");
-      if(tempBla != ""){
-          std::cout << "Read modified config file: "<<tempBla<<std::endl;
-          std::ifstream filebla2(tempBla.c_str());
-          if (filebla2.is_open()) {
-              config3.Load(filebla2,"");
-              std::string name = tempBla.substr(0, configFileName.Value().find("."));
-              config3.Set("Name",name);
-              config3.SetSection(tempConvType);
-//              config3.PrintKeys(tempConvType);
-              config3.Print();
-          } else {
-              std::cout<<"Unable to open file '" << configFileName.Value() << "'" << std::endl;
-          }
-          filebla2.close();
-      }
 
-      std::shared_ptr<eudaq::FileWriter> writer(FileWriterFactory::Create(type.Value(),&config3));
+      print_banner("STARTING EUDAQ " + to_string(type.Value()) + " CONVERTER");
+
+      std::shared_ptr<eudaq::FileWriter> writer(FileWriterFactory::Create(type.Value(), &config));
       writer->setTU(reader.hasTUEvent());
-      writer->SetConfig(&config3);
+//      writer->SetConfig(&config);
       writer->SetFilePattern(opat.Value());
       writer->StartRun(reader.RunNumber());
-      ProgressBar bla(uint32_t(writer->GetMaxEventNumber()));
-      event_nr = 0;
+      auto pbar = ProgressBar(uint32_t(writer->GetMaxEventNumber()));
+      auto event_nr = 0;
       do {
-        if ( !numbers.empty() && reader.GetDetectorEvent().GetEventNumber()>numbers.back() ) {
-          break;
-        } else if (reader.GetDetectorEvent().IsBORE() || reader.GetDetectorEvent().IsEORE() || numbers.empty() ||
-                  std::find(numbers.begin(), numbers.end(), reader.GetDetectorEvent().GetEventNumber()) != numbers.end()) {
+        if ( !numbers.empty() && reader.GetDetectorEvent().GetEventNumber()>numbers.back() )
+        { break; }
+        if (reader.GetDetectorEvent().IsBORE() || reader.GetDetectorEvent().IsEORE() || numbers.empty() ||
+        std::find(numbers.begin(), numbers.end(), reader.GetDetectorEvent().GetEventNumber()) != numbers.end()) {
           writer->WriteEvent(reader.GetDetectorEvent());
-          if(dbg>0)std::cout<< "writing one more event" << std::endl;
+          if(dbg>0) { std::cout<< "writing one more event" << std::endl; }
           ++event_nr;
-          if (writer->GetMaxEventNumber()){
+          if (writer->GetMaxEventNumber() != 0){
             if (event_nr == writer->GetMaxEventNumber() + 1)
-              writer->GetStats(reader.GetDetectorEvent());
-            bla.update(event_nr);
+            { writer->GetStats(reader.GetDetectorEvent()); }
+            pbar.update(event_nr);
           }
           else
-          if (event_nr % 1000 == 0) std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush;
+          if (event_nr % 1000 == 0) { std::cout<<"\rProcessing event: "<< std::setfill('0') << std::setw(7) << event_nr << " " << std::flush; }
         }
       } while (reader.NextEvent() && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
-    if(dbg>0)std::cout<< "no more events to read" << std::endl;
+    if(dbg>0) { std::cout<< "no more events to read" << std::endl; }
     
   } catch (...) {
-	    std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
+	    std::cout << "Time: " << elapsed_time(start) << " s" << std::endl;
     return op.HandleMainException();
   }
-    std::cout << "Time: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
-  if(dbg>0)std::cout<< "almost done with Converter. exiting" << std::endl;
+    std::cout << "Time: " << elapsed_time(start) << " s" << std::endl;
+  if(dbg>0) { std::cout<< "almost done with Converter. exiting" << std::endl; }
   return 0;
 }
