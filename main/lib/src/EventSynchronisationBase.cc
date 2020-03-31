@@ -66,7 +66,7 @@ void SyncBase::addBOREEvent(int fileIndex, const eudaq::DetectorEvent& BOREvent 
 			else
 				m_ProducerId2Eventqueue[getUniqueID(fileIndex,i)] = id++;
 			m_TUs_found++;
-			cout << "Found TU with id " << id << endl;
+//			cout << "Found TU with id " << id << endl;
 		}
 		else{
 
