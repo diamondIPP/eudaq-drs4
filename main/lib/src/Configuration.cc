@@ -60,12 +60,20 @@ namespace eudaq {
     }
   }
 
-  void Configuration::Save(const std::string & file_name = "") const {
+  void Configuration::Save(const std::string & file_name) const {
 
-    std::ofstream file(file_name.empty() ? m_file_name : file_name);
+    std::ofstream file(file_name);
     Save(file);
     file.close();
   }
+
+  void Configuration::Save() const {
+
+    std::ofstream file(m_file_name);
+    Save(file);
+    file.close();
+  }
+
 
 
   Configuration & Configuration::operator = (const Configuration & other) {

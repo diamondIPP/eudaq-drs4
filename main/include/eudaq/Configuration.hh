@@ -19,6 +19,7 @@ namespace eudaq {
       Configuration(const Configuration & other);
       void Save(std::ostream & file) const;
       void Save(const std::string&) const;
+      void Save() const;
       void Load(std::istream & file, const std::string & section);
       void Read(std::string, std::string);
       bool SetSection(const std::string & section) const;
