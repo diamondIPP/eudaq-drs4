@@ -15,9 +15,11 @@ namespace eudaq {
     public:
       Configuration(const std::string & config = "", const std::string & section = "");
       Configuration(std::istream & conffile, const std::string & section = "");
+      Configuration(const std::string &, const std::string &, bool);
       Configuration(const Configuration & other);
       void Save(std::ostream & file) const;
       void Load(std::istream & file, const std::string & section);
+      void Read(std::string, std::string);
       bool SetSection(const std::string & section) const;
       bool SetSection(const std::string & section);
       unsigned NSections(){return m_config.size();}
