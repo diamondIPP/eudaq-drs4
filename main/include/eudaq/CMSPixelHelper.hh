@@ -80,7 +80,6 @@ struct VCALDict {
       std::vector<float> *uBlackV;
       std::vector<int16_t> *levelSV;
       std::vector<float> *decodingOffsetVector2;
-      TString dutBla;
 
       TFile *DecodingFile;
       TDirectory *DecodingDirectory;
@@ -95,7 +94,6 @@ struct VCALDict {
     virtual void SetConfig(Configuration * conv_cfg) { m_conv_cfg = conv_cfg; }
 
     void Initialize(const Event & bore, const Configuration & cnf) {
-      dutBla = TString("DUT");
       DeviceDictionary* devDict;
       std::string roctype = bore.GetTag("ROCTYPE", "");
       std::string tbmtype = bore.GetTag("TBMTYPE", "tbmemulator");
@@ -111,12 +109,13 @@ struct VCALDict {
       m_tbmtype = devDict->getInstance()->getDevCode(tbmtype);
 
       if (m_roctype == 0x0)
-	      EUDAQ_ERROR("Roctype" + to_string((int) m_roctype) + " not propagated correctly to CMSPixelConverterPlugin");
+        { EUDAQ_ERROR("Roctype" + to_string((int) m_roctype) + " not propagated correctly to CMSPixelConverterPlugin"); }
       read_PHCalibrationData(cnf);
       initializeFitfunction();
 
       /** Decoding of the analogue telescope */
       m_conv_cfg->SetSection("Converter.telescopetree");
+      do_decoding = m_conv_cfg->Get("decoding_offset_v", "").empty() and TString("DUT").CompareTo(TString(m_detector)) == 0;
       decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", std::vector<float>(16, m_conv_cfg->Get("decoding_offset", 0.)));
       level1Vector = m_conv_cfg->Get("decoding_l1_v", std::vector<float>(16, 0.));
       decodingAlphasVector = m_conv_cfg->Get("decoding_alphas_v", std::vector<float>(16, 0.));
@@ -147,7 +146,7 @@ struct VCALDict {
       h2uBlack.clear();
       h2lastDac.clear();
 
-      if(dutBla.CompareTo(TString(m_detector)) == 0) {
+      if(do_decoding) {
           for (size_t it = 0; it < m_nplanes; it++) {
               hEncode.push_back(new TH1F(TString::Format("encoded_%d", int(it)), TString::Format("encoded_%d", int(it)), 1000, -500, 500));
               hUblack.push_back(new TH1F(TString::Format("uBlack_%d", int(it)), TString::Format("uBlack_%d", int(it)), 1000, -500, 500));
@@ -181,87 +180,89 @@ struct VCALDict {
             decodingOffsetVector2->at(it) = decodingOffsetVector[it];
     }
 
+    void WriteDecoding() {
+      TDirectory * g_dir = std::string(gDirectory->GetName()).find("DecodingHistos") != std::string::npos ? gDirectory : gDirectory->GetDirectory("DecodingHistos");
+      g_dir->cd();
+      for (size_t it = 0; it < hEncode.size(); it++)
+        hEncode[it]->Write();
+      for (size_t it = 0; it < hUblack.size(); it++)
+        hUblack[it]->Write();
+      for (size_t it = 0; it < hBlack.size(); it++)
+        hBlack[it]->Write();
+      for (size_t it = 0; it < hc0.size(); it++)
+        hc0[it]->Write();
+      for (size_t it = 0; it < hc1.size(); it++)
+        hc1[it]->Write();
+      for (size_t it = 0; it < hr0.size(); it++)
+        hr0[it]->Write();
+      for (size_t it = 0; it < hr1.size(); it++)
+        hr1[it]->Write();
+      for (size_t it = 0; it < hcr.size(); it++)
+        hcr[it]->Write();
+      for (size_t it = 0; it < pblack.size(); it++)
+        pblack[it]->Write();
+      for (size_t it = 0; it < pUblack.size(); it++)
+        pUblack[it]->Write();
+      for (size_t it = 0; it < h2c0.size(); it++)
+        h2c0[it]->Write();
+      for (size_t it = 0; it < h2c1.size(); it++)
+        h2c1[it]->Write();
+      for (size_t it = 0; it < h2r0.size(); it++)
+        h2r0[it]->Write();
+      for (size_t it = 0; it < h2r1.size(); it++)
+        h2r1[it]->Write();
+      for (size_t it = 0; it < h2cr.size(); it++)
+        h2cr[it]->Write();
+      for (size_t it = 0; it < h2black.size(); it++)
+        h2black[it]->Write();
+      for (size_t it = 0; it < h2uBlack.size(); it++)
+        h2uBlack[it]->Write();
+      for (size_t it = 0; it < h2lastDac.size(); it++)
+      h2lastDac[it]->Write();
+      for (size_t it = 0; it < hEncode.size(); it++)
+        delete hEncode[it];
+      for (size_t it = 0; it < hUblack.size(); it++)
+        delete hUblack[it];
+      for (size_t it = 0; it < hBlack.size(); it++)
+        delete hBlack[it];
+      for (size_t it = 0; it < hc0.size(); it++)
+        delete hc0[it];
+      for (size_t it = 0; it < hc1.size(); it++)
+        delete hc1[it];
+      for (size_t it = 0; it < hr0.size(); it++)
+        delete hr0[it];
+      for (size_t it = 0; it < hr1.size(); it++)
+        delete hr1[it];
+      for (size_t it = 0; it < hcr.size(); it++)
+        delete hcr[it];
+      for (size_t it = 0; it < pblack.size(); it++)
+        delete pblack[it];
+      for (size_t it = 0; it < pUblack.size(); it++)
+        delete pUblack[it];
+      for (size_t it = 0; it < h2c0.size(); it++)
+        delete h2c0[it];
+      for (size_t it = 0; it < h2c1.size(); it++)
+        delete h2c1[it];
+      for (size_t it = 0; it < h2r0.size(); it++)
+        delete h2r0[it];
+      for (size_t it = 0; it < h2r1.size(); it++)
+        delete h2r1[it];
+      for (size_t it = 0; it < h2cr.size(); it++)
+        delete h2cr[it];
+      for (size_t it = 0; it < h2black.size(); it++)
+        delete h2black[it];
+      for (size_t it = 0; it < h2uBlack.size(); it++)
+        delete h2uBlack[it];
+      for (size_t it = 0; it < h2lastDac.size(); it++)
+        delete h2lastDac[it];
+      std::cout << "saved histograms in root file under DecodingHistos" << std::endl;
+      g_dir->cd("../");
+    }
+
     std::string GetStats() {
       std::cout << "Getting decoding statistics for detector " << m_detector << std::endl;
-        if(dutBla.CompareTo(TString(m_detector)) == 0) {
-            TDirectory * g_dir = std::string(gDirectory->GetName()).find("DecodingsHistos") != std::string::npos ? gDirectory : gDirectory->GetDirectory("DecodingHistos");
-            g_dir->cd();
-            for (size_t it = 0; it < hEncode.size(); it++)
-                hEncode[it]->Write();
-            for (size_t it = 0; it < hUblack.size(); it++)
-                hUblack[it]->Write();
-            for (size_t it = 0; it < hBlack.size(); it++)
-                hBlack[it]->Write();
-            for (size_t it = 0; it < hc0.size(); it++)
-                hc0[it]->Write();
-            for (size_t it = 0; it < hc1.size(); it++)
-                hc1[it]->Write();
-            for (size_t it = 0; it < hr0.size(); it++)
-                hr0[it]->Write();
-            for (size_t it = 0; it < hr1.size(); it++)
-                hr1[it]->Write();
-            for (size_t it = 0; it < hcr.size(); it++)
-                hcr[it]->Write();
-            for (size_t it = 0; it < pblack.size(); it++)
-                pblack[it]->Write();
-            for (size_t it = 0; it < pUblack.size(); it++)
-                pUblack[it]->Write();
-            for (size_t it = 0; it < h2c0.size(); it++)
-                h2c0[it]->Write();
-            for (size_t it = 0; it < h2c1.size(); it++)
-                h2c1[it]->Write();
-            for (size_t it = 0; it < h2r0.size(); it++)
-                h2r0[it]->Write();
-            for (size_t it = 0; it < h2r1.size(); it++)
-                h2r1[it]->Write();
-            for (size_t it = 0; it < h2cr.size(); it++)
-                h2cr[it]->Write();
-            for (size_t it = 0; it < h2black.size(); it++)
-                h2black[it]->Write();
-            for (size_t it = 0; it < h2uBlack.size(); it++)
-                h2uBlack[it]->Write();
-            for (size_t it = 0; it < h2lastDac.size(); it++)
-                h2lastDac[it]->Write();
-            for (size_t it = 0; it < hEncode.size(); it++)
-                delete hEncode[it];
-            for (size_t it = 0; it < hUblack.size(); it++)
-                delete hUblack[it];
-            for (size_t it = 0; it < hBlack.size(); it++)
-                delete hBlack[it];
-            for (size_t it = 0; it < hc0.size(); it++)
-                delete hc0[it];
-            for (size_t it = 0; it < hc1.size(); it++)
-                delete hc1[it];
-            for (size_t it = 0; it < hr0.size(); it++)
-                delete hr0[it];
-            for (size_t it = 0; it < hr1.size(); it++)
-                delete hr1[it];
-            for (size_t it = 0; it < hcr.size(); it++)
-                delete hcr[it];
-            for (size_t it = 0; it < pblack.size(); it++)
-                delete pblack[it];
-            for (size_t it = 0; it < pUblack.size(); it++)
-                delete pUblack[it];
-            for (size_t it = 0; it < h2c0.size(); it++)
-                delete h2c0[it];
-            for (size_t it = 0; it < h2c1.size(); it++)
-                delete h2c1[it];
-            for (size_t it = 0; it < h2r0.size(); it++)
-                delete h2r0[it];
-            for (size_t it = 0; it < h2r1.size(); it++)
-                delete h2r1[it];
-            for (size_t it = 0; it < h2cr.size(); it++)
-                delete h2cr[it];
-            for (size_t it = 0; it < h2black.size(); it++)
-                delete h2black[it];
-            for (size_t it = 0; it < h2uBlack.size(); it++)
-                delete h2uBlack[it];
-            for (size_t it = 0; it < h2lastDac.size(); it++)
-                delete h2lastDac[it];
-            std::cout << "saved histograms in root file under DecodingHistos" << std::endl;
-            g_dir->cd("../");
-        }
-        return decoding_stats.getString();
+      if (do_decoding) { WriteDecoding(); }
+      return decoding_stats.getString();
     }
 
     void read_PHCalibrationData(const Configuration & cnf){
@@ -367,7 +368,7 @@ struct VCALDict {
       if (out.IsEORE()) {
           std::cout << "is eore" << std::endl;
 	// Set decoder to INFO level for statistics printout:
-          if(dutBla.CompareTo(TString(m_detector)) == 0) {
+          if(do_decoding) {
               TDirectory *blaf = 0;
               if(TString::Format("DecodingHistos").CompareTo(gDirectory->GetName()) != 0) {
                   blaf = (TDirectory *) gDirectory->GetDirectory("DecodingHistos");
@@ -506,7 +507,7 @@ struct VCALDict {
 
             decoding_stats += decoder.getStatistics();
             UpdateHeaderVectors(decoder, uBlackV, blackV, levelSV, decodingOffsetVector2);
-          if(dutBla.CompareTo(TString(m_detector)) == 0) {
+          if(do_decoding) {
               for (size_t roc = 0; roc < m_nplanes; roc++) {
                   std::vector<int16_t> tempc0 = decoder.Getc0Vect(roc);
                   std::vector<int16_t> tempc1 = decoder.Getc1Vect(roc);
@@ -733,6 +734,7 @@ struct VCALDict {
     std::string m_event_type;
     mutable pxar::statistics decoding_stats;
     bool do_conversion;
+    bool do_decoding;
     Configuration * m_conv_cfg;
     std::vector<float> decodingOffsetVector;
     std::vector<float> decodingAlphasVector;
