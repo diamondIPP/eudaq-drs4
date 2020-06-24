@@ -17,6 +17,7 @@ parser.add_argument('-s', nargs='?', default='1')
 parser.add_argument('-t', nargs='?', default='telescopetree')
 parser.add_argument('-o', action='store_true')
 parser.add_argument('-p', nargs='?', default=None, help='full run path')
+parser.add_argument('-c', nargs='?', default='converter_waveform_integrals.conf', help='full run path')
 args = parser.parse_args()
 
 trees = ['caentree', 'drs4tree', 'telescopetree', 'waveformtree']
@@ -28,7 +29,7 @@ location = config.get('MAIN', 'location')
 raw_dir = config.get('MAIN', 'raw directory')
 data_dir = config.get('MAIN', 'data directory')
 eudaq_dir = get_dir()
-conf_file_dir = join(eudaq_dir, 'conf', config.get('MAIN', 'config dir').strip(), 'converter_waveform_integrals.conf')
+conf_file_dir = join(eudaq_dir, 'conf', config.get('MAIN', 'config dir').strip(), args.c)
 
 tc_dir = get_tc(data_dir, args.tc, location)
 run_file_path = get_run_path(args.run, tc_dir, raw_dir) if args.p is None else args.p
