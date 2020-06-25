@@ -60,7 +60,6 @@ namespace eudaq {
         long max_event_number;
         uint16_t save_waveforms;
         uint16_t active_regions;
-        uint16_t n_active_channels;
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
         int IsPulserEvent(const StandardWaveform *wf);
@@ -95,10 +94,12 @@ namespace eudaq {
         // Book variables for the Event_to_TTree conversion
         unsigned m_noe;
         uint16_t n_channels;
+        uint16_t n_active_channels;
         int n_pixels;
         std::vector<signed char> polarities;
         std::vector<signed char> pulser_polarities;
         std::vector<signed char> spectrum_polarities;
+        float rise_time;
 
         // drs4 timing calibration
         std::map<uint8_t, std::vector<float> > tcal;
@@ -147,6 +148,7 @@ namespace eudaq {
         std::vector<Int_t> *IntegralPeaks;
         std::vector<float> *IntegralPeakTime;
         std::vector<float> *IntegralLength;
+        float * v_cft;  // constant fraction time
 
         // general waveform information
         std::vector<bool> *v_is_saturated;

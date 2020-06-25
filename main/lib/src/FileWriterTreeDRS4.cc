@@ -12,7 +12,7 @@ namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
-: m_tfile(0), m_ttree(0), m_noe(0), n_channels(4), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false) {
+: m_tfile(0), m_ttree(0), m_noe(0), n_channels(4), n_active_channels(0), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false), rise_time(5) {
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
@@ -48,6 +48,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     IntegralPeaks = new std::vector<Int_t>;
     IntegralPeakTime = new std::vector<float>;
     IntegralLength  = new std::vector<float>;
+    v_cft = new float[n_channels];
 
     // general waveform information
     v_is_saturated = new vector<bool>;
@@ -149,10 +150,11 @@ void FileWriterTreeDRS4::Configure(){
     EUDAQ_INFO("Configuring FileWriterTreeDRS4");
 
     max_event_number = m_config->Get("max_event_number", 0);
+    rise_time = m_config->Get("rise_time", float(5));
 
     // spectrum and fft
     peak_noise_pos = m_config->Get("peak_noise_pos", m_config->Get("pedestal_ab_region", make_pair(20, 20)).first);
-    spec_sigma = m_config->Get("spectrum_sigma", 5);
+    spec_sigma = m_config->Get("spectrum_sigma", float(5));
     spec_decon_iter = m_config->Get("spectrum_deconIterations", 3);
     spec_aver_win = m_config->Get("spectrum_averageWindow", 5);
     spec_markov = m_config->Get("spectrum_markov", true);
@@ -266,11 +268,12 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("wf_isDA", &f_isDa);
 
     // integrals
-    m_ttree->Branch("IntegralValues",&IntegralValues);
-    m_ttree->Branch("TimeIntegralValues",&TimeIntegralValues);
-    m_ttree->Branch("IntegralPeaks",&IntegralPeaks);
-    m_ttree->Branch("IntegralPeakTime",&IntegralPeakTime);
-    m_ttree->Branch("IntegralLength",&IntegralLength);
+    m_ttree->Branch("IntegralValues", &IntegralValues);
+    m_ttree->Branch("TimeIntegralValues", &TimeIntegralValues);
+    m_ttree->Branch("IntegralPeaks", &IntegralPeaks);
+    m_ttree->Branch("IntegralPeakTime", &IntegralPeakTime);
+    m_ttree->Branch("IntegralLength", &IntegralLength);
+    m_ttree->Branch("cft", v_cft, TString::Format("cft[%d]/f", n_active_channels));
 
     // DUT
     m_ttree->Branch("is_saturated", &v_is_saturated);
@@ -735,6 +738,7 @@ void FileWriterTreeDRS4::calc_noise(uint8_t iwf) {
 
 void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
 
+    uint8_t i = 0;
     for (auto channel: *regions){
       const StandardWaveform * wf = &sev.GetWaveform(channel.first);
       channel.second->GetRegion(0)->SetPeakPostion(5);
@@ -742,6 +746,8 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
         signed char polarity = (string(region->GetName()).find("pulser") != string::npos) ? channel.second->GetPulserPolarity() : channel.second->GetPolarity();
         uint16_t peak_pos = wf->getIndex(region->GetLowBoarder(), region->GetHighBoarder(), polarity);
         region->SetPeakPostion(peak_pos);
+        if (string(region->GetName()) == "signal_b"){  // TODO change this naming or define a definite signal region
+          v_cft[i++] = wf->get_cft(region->GetLowBoarder(), region->GetHighBoarder(), rise_time * 2); }
         for (auto integral: region->GetIntegrals()){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);
