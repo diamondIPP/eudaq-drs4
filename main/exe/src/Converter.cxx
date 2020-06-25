@@ -104,7 +104,6 @@ int main(int /*unused*/, char ** argv) {
         if (reader.GetDetectorEvent().IsBORE() || reader.GetDetectorEvent().IsEORE() || numbers.empty() ||
         std::find(numbers.begin(), numbers.end(), reader.GetDetectorEvent().GetEventNumber()) != numbers.end()) {
           writer->WriteEvent(reader.GetDetectorEvent());
-          if(dbg>0) { std::cout<< "writing one more event" << std::endl; }
           ++event_nr;
           if (writer->GetMaxEventNumber() != 0){
             if (event_nr == writer->GetMaxEventNumber() + 1)

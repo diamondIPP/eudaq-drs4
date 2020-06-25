@@ -75,46 +75,36 @@ public:
 	// Here, the data from the RawDataEvent is extracted into a StandardEvent.
 	// The return value indicates whether the conversion was successful.
 	// Again, this is just an example, adapted it for the actual data layout.
-	virtual bool GetStandardSubEvent(StandardEvent & sev,
-			const Event & ev) const {
-//		std::cout<<"\nDRS4::GetStandardSubEvent"<<std::endl;
-		const RawDataEvent & in_raw = dynamic_cast<const RawDataEvent &>(ev);
-		int nblocks = in_raw.NumBlocks();
-//		std::cout<<"Number of Blocks: "<<nblocks<<std::endl;
+	virtual bool GetStandardSubEvent(StandardEvent & sev, const Event & ev) const {
+
+		const auto & in_raw = dynamic_cast<const RawDataEvent &>(ev);
+		int n_blocks = in_raw.NumBlocks();
+    if (sev.IsEORE() and n_blocks == 0) {
+      std::cout << "received empty DRS4 EORE" << std::endl;
+      return true; }
 		// If the event type is used for different sensors
 		// they can be differentiated here
 		// Create a StandardPlane representing one sensor plane
 		uint8_t id = 0;
-		// Get Trigger cell
-		RawDataEvent::data_t data = in_raw.GetBlock(id++);
-		uint16_t trigger_cell = static_cast<uint16_t>(*((int*) &data[0]));
-		// Get Timestamp
-		data = in_raw.GetBlock(id++);
+		RawDataEvent::data_t data = in_raw.GetBlock(id++);  // Trigger cell
+		auto trigger_cell = static_cast<uint16_t>(*((int*) &data[0]));
+		data = in_raw.GetBlock(id++); // Get Timestamp
 		uint64_t timestamp = *((uint64_t*) &data[0]);
 //		sev.SetTimestamp(timestamp);
-
 		float min_waves[m_n_channels];
 		float max_waves[m_n_channels];
-		//Get Raw data
-//		std::cout<<"Read Event: "<<nblocks<<" "<<m_n_channels<<" @ "<<timestamp<<std::endl;
-		for (id = id; id < nblocks;){
-			// Get Header
-//			std::cout<<"Get Header:"<<std::endl;
-			data = in_raw.GetBlock(id++);
+
+		for (id = id; id < n_blocks;){  // Get Raw data
+			data = in_raw.GetBlock(id++); // Get Header
 			char buffer [5];
 			std::memcpy(&buffer,&(data[0]), 4);
 			buffer[4]='\0';
 			int ch = atoi(&buffer[1])-1;
-//			std::cout<<"buffer: "<<buffer<<"\t=> ch:"<<ch<<std::endl;
-//			std::cout<<"Get Event Data of CH_"<<ch+1<<" - "<<m_channel_names.at(ch)<<std::endl;
 
 			//Get Waveform
 			data = in_raw.GetBlock(id++);
 			size_t wave_size = data.size();
 			int n_samples = int(wave_size / sizeof(unsigned short));
-//			std::cout<<"CH: "<<ch<<" with "
-//					<<data.size()<<" -> "<<n_samples<<"  .";//<<std::endl;
-//			std::cout<<"Trigger cell "<<trigger_cell<<", ";
 
 			unsigned short *raw_wave_array = (unsigned short*) &data[0];
 			float wave_array[n_samples];
@@ -123,7 +113,6 @@ public:
 				wave_array[i] = (raw_wave_array[i] / 65536. + range/1000.0 - 0.5)*1000.;
 //			min_waves[ch] = *std::min_element(wave_array,wave_array+n_samples);
 //			max_waves[ch] = *std::max_element(wave_array,wave_array+n_samples);
-//			std::cout<<"From: "<< min_waves[ch] << " mV to " << max_waves[ch] << " mV"<<std::endl;
 			//conversion of time:
 //			 for (j=0,time[chn_index][i]=0 ; j<i ; j++)
 //			               time[chn_index][i] += bin_width[chn_index][(j+eh.trigger_cell) % 1024];
@@ -136,11 +125,7 @@ public:
 			wf.SetTimeStamp(timestamp);
 			wf.SetTriggerCell(trigger_cell);
 			sev.AddWaveform(wf);
-//			std::cout<<"CH"<<ch<<": "<<wf<<std::endl;
-			// Indicate that data was successfully converted
 		}
-//		std::cout<<sev<<std::endl;
-//		std::cout<<"Standard Event with "<<sev.NumWaveforms()<<" Waveforms."<<std::endl;
 		return true;
 	}
 
