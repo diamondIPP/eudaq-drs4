@@ -389,26 +389,30 @@ namespace eudaq {
 
   std::vector<size_t > range(size_t begin, size_t end=SIZE_MAX, int32_t step=1);
 
-    class ProgressBar {
+  inline float get_p1(float x0, float x1, float y0, float y1) { return x0 != x1 ? (y0 - y1) / (x0 - x1) : 0; }
+  inline float get_p0(float x, float y, float p1) { return y - x * p1; }
+  float interpolate_x(float x0, float x1, float y0, float y1, float y=0);
 
-    private:
-        uint32_t nEvents;
-        uint32_t currentEvent;
-        bool useETA;
-        struct winsize w;
-        uint8_t barLength;
-        uint16_t updateFrequency;
-        clock_t lastTime;
-        uint8_t nCycles;
-        float timePerCycle;
+  class ProgressBar {
 
-    public:
-        ProgressBar(uint32_t, bool use_ETA=true, uint16_t update=100);
-        ~ProgressBar() { };
-        void update(uint32_t=0);
-        void averageTime();
-        float getTime();
-    };
+  private:
+    uint32_t nEvents;
+    uint32_t currentEvent;
+    bool useETA;
+    struct winsize w;
+    uint8_t barLength;
+    uint16_t updateFrequency;
+    clock_t lastTime;
+    uint8_t nCycles;
+    float timePerCycle;
+
+  public:
+    ProgressBar(uint32_t, bool use_ETA=true, uint16_t update=100);
+    ~ProgressBar() { };
+    void update(uint32_t=0);
+    void averageTime();
+    float getTime();
+  };
 
   std::string DLLEXPORT join(std::string s1, std::string s2);
 

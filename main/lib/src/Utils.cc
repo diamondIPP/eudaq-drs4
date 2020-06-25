@@ -292,4 +292,10 @@ namespace eudaq {
         tmp.push_back(i);
       return tmp;
     }
+
+  float interpolate_x(float x0, float x1, float y0, float y1, float y){
+    /** interpolate straight line for two given points at y:  y = p1*x + p0 */
+    float p1 = get_p1(x0, x1, y0, y1);
+    return p1 > 0 ? (y - get_p0(x0, y0, p1)) / p1 : 0;
+  }
 }
