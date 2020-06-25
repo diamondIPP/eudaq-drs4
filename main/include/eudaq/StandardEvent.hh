@@ -13,7 +13,7 @@ namespace eudaq {
 class DLLEXPORT StandardWaveform : public Serializable{
 public:
 	StandardWaveform(unsigned id, const std::string & type, const std::string & sensor = "");
-	StandardWaveform(Deserializer &);
+	explicit StandardWaveform(Deserializer &);
 	StandardWaveform();
 	void Serialize(Serializer &) const;
 	void SetNSamples(unsigned n_samples);
@@ -67,6 +67,8 @@ public:
 	uint16_t getIndex(uint16_t min, uint16_t max, signed char pol) const {
 		return (pol * 1 > 0) ? getIndexMax(min, max) : getIndexMin(min, max);
 	}
+
+	float get_cft(uint16_t min, uint16_t max, uint8_t delay=4, float factor=.5) const;  // return the constant fraction time of the signal in [min, max]
 
     std::pair<int,float> getAbsMaxAndValue(int min, int max) const{
         int index = getIndexAbsMax(min,max);
