@@ -747,7 +747,7 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
         uint16_t peak_pos = wf->getIndex(region->GetLowBoarder(), region->GetHighBoarder(), polarity);
         region->SetPeakPostion(peak_pos);
         if (string(region->GetName()) == "signal_b"){  // TODO change this naming or define a definite signal region
-          v_cft[i++] = wf->get_cft(region->GetLowBoarder(), region->GetHighBoarder(), rise_time * 2); }
+          v_cft[i++] = wf->getCFT(region->GetLowBoarder(), region->GetHighBoarder(), rise_time * 2); }
         for (auto integral: region->GetIntegrals()){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);

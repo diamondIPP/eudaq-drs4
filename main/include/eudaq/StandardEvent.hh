@@ -68,7 +68,7 @@ public:
 		return (pol * 1 > 0) ? getIndexMax(min, max) : getIndexMin(min, max);
 	}
 
-	float get_cft(uint16_t min, uint16_t max, uint8_t delay=4, float factor=.5) const;  // return the constant fraction time of the signal in [min, max]
+	float getCFT(uint16_t min, uint16_t max, uint8_t delay=4, float factor=.5) const;  // return the constant fraction time of the signal in [min, max]
 
     std::pair<int,float> getAbsMaxAndValue(int min, int max) const{
         int index = getIndexAbsMax(min,max);

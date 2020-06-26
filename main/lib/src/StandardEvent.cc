@@ -295,13 +295,13 @@ float StandardWaveform::getMedian(uint32_t min, uint32_t max) const
     return median;
 }
 
-  float StandardWaveform::get_cft(uint16_t min, uint16_t max, uint8_t delay, float factor) const {
+  float StandardWaveform::getCFT(uint16_t min, uint16_t max, uint8_t delay, float factor) const {
     /** subtract the delayed and reduced waveform and find the zero crossing point */
     vector<float> v0(m_samples.begin() + min, m_samples.begin() + max);
     bool last_is_neg = false;
     uint8_t i_cross = 1;
     for (uint8_t i(0); i < uint8_t(max - min); i++) {
-      v0.at(i) -= m_samples.at(min + i + delay) * factor;
+      v0.at(i) = float(m_polarity) * (v0.at(i) - m_samples.at(min + i + delay) * factor);
       if (i > 0 and last_is_neg and v0.at(i) > 0){  // find zero crossing
         i_cross = i;
         break; }
