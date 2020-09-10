@@ -41,7 +41,7 @@ private:
   std::vector<pxar::pixelConfig> GetConfMaskBits();
   std::vector<pxar::pixelConfig> GetConfTrimming(std::vector<pxar::pixelConfig> maskbits, int16_t i2c = -1);
 
-  std::string prepareFilename(std::string filename, std::string n);
+  std::string prepareFilename(const std::string & name, const std::string & n);
   std::vector<masking> GetConfMask();
   std::string readHash(std::string hexMask, char i2c);
 

@@ -27,14 +27,8 @@ std::vector<int32_t> CMSPixelProducer::split(const std::string &s, char delim) {
   return elems;
 }
 
-std::string CMSPixelProducer::prepareFilename(std::string filename, std::string n) {
-
-  size_t datpos = filename.find(".dat");
-  if(datpos != std::string::npos) {
-    filename.insert(datpos,string("_C") + n);
-  }
-  else { filename += string("_C") + n + string(".dat"); }
-  return filename;
+std::string CMSPixelProducer::prepareFilename(const std::string & name, const std::string & n) {
+  return m_config.Get("directory", "") + name + "Parameters" + m_config.Get("trim_value", "") + "_C" + n + ".dat";
 }
 
 std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16_t i2c, bool tbm) {
@@ -43,13 +37,13 @@ std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16
 
   std::string filename;
   // Read TBM register file, Core A:
-  if(tbm && i2c < 1) { filename = prepareFilename(m_config.Get("tbmFile",""),"0a"); }
+  if(tbm && i2c < 1) { filename = prepareFilename("tbm","0a"); }
   // Read TBM register file, Core B:
-  else if(tbm && i2c >= 1) { filename = prepareFilename(m_config.Get("tbmFile",""),"0b"); }
+  else if(tbm && i2c >= 1) { filename = prepareFilename("tbm","0b"); }
   // Read ROC DAC file, no I2C address indicator is given, assuming filename is correct "as is":
   else if(i2c < 0) { filename = m_config.Get("dacFile", ""); }
   // Read ROC DAC file, I2C address is given, appending a "_Cx" with x = I2C:
-  else { filename = prepareFilename(m_config.Get("dacFile",""),std::to_string(i2c)); }
+  else { filename = prepareFilename("dac", std::to_string(i2c)); }
 
   std::vector<std::pair<std::string,uint8_t> > dacs;
   std::ifstream file(filename);
@@ -133,7 +127,7 @@ std::vector<pxar::pixelConfig> CMSPixelProducer::GetConfTrimming(std::vector<pxa
   // No I2C address indicator is given, assuming filename is correct "as is":
   if(i2c < 0) { filename = m_config.Get("trimFile", ""); }
   // I2C address is given, appending a "_Cx" with x = I2C:
-  else { filename = prepareFilename(m_config.Get("trimFile",""),std::to_string(i2c)); }
+  else { filename = prepareFilename("trim", std::to_string(i2c)); }
 
   std::vector<pxar::pixelConfig> pixels;
   std::ifstream file(filename);
@@ -180,7 +174,8 @@ std::vector<pxar::pixelConfig> CMSPixelProducer::GetConfTrimming(std::vector<pxa
 
 vector<masking> CMSPixelProducer::GetConfMask(){
 
-    string filename = m_config.Get("maskFile", "");
+    string mask_name = m_config.Get("mask_name", "");
+    string filename = mask_name.empty() ? m_config.Get("maskFile", "") : m_config.Get("directory", "") + mask_name;
     vector<masking>  mask;
     ifstream file(filename);
 
