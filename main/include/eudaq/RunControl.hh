@@ -45,6 +45,7 @@ namespace eudaq {
       void InitLog(const ConnectionInfo & id);
       void InitData(const ConnectionInfo & id);
       void InitOther(const ConnectionInfo & id);
+      std::string prepareTPCAddress(const ConnectionInfo & id, std::string dataport);
       void SendCommand(const std::string & cmd, const std::string & param = "",
           const ConnectionInfo & id = ConnectionInfo::ALL);
       std::string SendReceiveCommand(const std::string & cmd, const std::string & param = "",

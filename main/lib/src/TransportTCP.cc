@@ -494,7 +494,7 @@ namespace eudaq {
 #ifdef WIN32
 	const char * host = getenv("computername");
 #else
-	const char * host = getenv("HOSTNAME");
+	const char * host = getenv("HOSTNAME");  // TODO: THIS DOES NOT WORK! FIX IT! maybe getifaddrs from ifaddr.h
 #endif
 
       if (!host) host = "localhost";

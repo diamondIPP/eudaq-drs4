@@ -309,33 +309,7 @@ namespace eudaq {
     // no name indicates default DC -- init global var
     if (isDefaultDC) m_idata = thisDCIndex;
 
-    status = m_cmdserver->SendReceivePacket<eudaq::Status>("SERVER", id, 1000000);
-    std::string dsAddrReported = status.GetTag("_SERVER");
-    if (dsAddrReported == "") EUDAQ_THROW("Invalid response from DataCollector");
-
-    // determine data server remote IP ADDRESS from actual connection origin
-    std::string dataip = "tcp://127.0.0.1";
-    // strip off the port number
-    size_t pos = id.GetRemote().find(":");
-    if (pos != std::string::npos) {
-      dataip = "tcp://";
-      dataip += std::string(id.GetRemote(), 0, pos);
-    }
-
-    // determine data server remote PORT from number reported by data server
-    std::string dataport = "44001";
-    // strip off the protocol and IP
-    pos = dsAddrReported.find("://");
-    if (pos != std::string::npos)
-      pos = dsAddrReported.find(":",pos+3);
-    else
-      pos = dsAddrReported.find(":");
-    if (pos != std::string::npos) {
-      dataport = std::string(dsAddrReported, pos+1);
-    }
-
-    // combine IP from connection with port number reported by data server
-    std::string thisDataAddr = dataip;  thisDataAddr += ":"; thisDataAddr += dataport;
+    std::string thisDataAddr = prepareTPCAddress(id, "44001");
     std::cout << "DataServer responded: full server address determined to be  = '" << thisDataAddr << "'" << std::endl;
 
     std::pair<std::map<size_t,std::string>::iterator,bool> ret;
@@ -381,9 +355,8 @@ namespace eudaq {
       }
     }
     if (m_ilog == (size_t)-1) EUDAQ_THROW("No LogCollector is connected");
-    eudaq::Status status = m_cmdserver->SendReceivePacket<eudaq::Status>("SERVER", id, 1000000);
 
-    m_logaddr = status.GetTag("_SERVER");
+    m_logaddr = prepareTPCAddress(id, "44002");
     std::cout << "LogServer responded: " << m_logaddr << std::endl;
     if (m_logaddr == "") EUDAQ_THROW("Invalid response from LogCollector");
     EUDAQ_LOG_CONNECT("RunControl", "", m_logaddr);
@@ -414,6 +387,24 @@ namespace eudaq {
     if (!foundDC && m_idata != (size_t)-1) {
       SendCommand("DATA", m_dataaddr[m_idata], id);
     }
+  }
+
+  std::string RunControl::prepareTPCAddress(const ConnectionInfo & id, std::string dataport) {
+    eudaq::Status status = m_cmdserver->SendReceivePacket<eudaq::Status>("SERVER", id, 1000000);
+    std::string status_addr = status.GetTag("_SERVER");
+
+    // data port
+    // strip off the protocol and IP
+    size_t pos = status_addr.find("://");
+    pos = pos != std::string::npos ? status_addr.find(':', pos + 3) : status_addr.find(':');
+    if (pos != std::string::npos) { dataport = std::string(status_addr, pos + 1); }
+
+    // data ip
+    std::string dataip = "tcp://127.0.0.1";
+
+    pos = id.GetRemote().find(':'); // strip off the port number
+    if (pos != std::string::npos) { dataip = "tcp://" + std::string(id.GetRemote(), 0, pos); }
+    return dataip + ":" + dataport;
   }
 
 }
