@@ -35,19 +35,18 @@ void CMSPixelProducer::ReadPxarConfig() {
   string line;
   map<string, string> config;
   while(getline(file, line) != nullptr) {
+    if (line.empty()) { continue; }
     if (line.at(0) == '#' or line.at(0) == ' ' or line.at(0) == '-' or line.size() < 3)  { continue; }
-    size_t pos = line.find_first_of(' ');
-    config[string(line, pos)] = string(line, pos + 1, line.size());
+    size_t pos = line.find_first_of(": ");
+    config[line.substr(0, pos)] = line.substr(pos + 1);
   }
   m_pxar_config = config;
-  for (auto i: m_pxar_config)
-    cout << i.first << ": " << i.second << endl;
 }
 
 std::vector<int8_t> CMSPixelProducer::GetI2Cs() {
   /** get i2cs from pxar configParameters.dat */
   vector<int8_t> i2cs;
-  for (const auto & i2c: eudaq::split(eudaq::split(m_pxar_config.at("nRocs"), "i2c:").at(1), ",")) {
+  for (const auto & i2c: eudaq::split(eudaq::split(m_pxar_config.at("nRocs"), ":").at(1), ",")) {
     i2cs.emplace_back(stoi(i2c)); }
   if (i2cs.empty()) { EUDAQ_ERROR("Did not understand i2cs from pxar configParameters.dat!"); }
   return i2cs;
@@ -107,10 +106,6 @@ std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16
       if(m_config.Get(name, -1) != -1) {
         // value = m_config.Get(name, -1);
         std::vector<int32_t> values = split(m_config.Get(name, "-1"),' ');
-        //  for (int i = 0; i < values.size(); i++)
-        //    std::cout << values[i] << ", ";
-        std::cout << std::endl;
-        std::cout << values.size() << std::endl;
         if (values.size() > 1) value = values[i2c];
         else value = values[0];
         std::cout << "Overwriting DAC " << name << " from file value: " << old_value << " -> " << value << std::endl;
@@ -118,7 +113,7 @@ std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16
         overwritten_dacs++;
             }
 
-      dacs.push_back(make_pair(name, value));
+      dacs.emplace_back(name, value);
       m_alldacs.append(name + " " + std::to_string(value) + "; ");
     }
 

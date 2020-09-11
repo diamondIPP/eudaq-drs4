@@ -58,7 +58,8 @@ CMSPixelProducer::CMSPixelProducer(const std::string & name, const std::string &
     m_detector(""),
     m_event_type(""),
     m_alldacs(""),
-    m_last_mask_filename("")
+    m_last_mask_filename(""),
+    m_pxar_config()
 {
   if(m_producerName.find("REF") != std::string::npos) {
     m_detector = "REF";
@@ -81,13 +82,13 @@ CMSPixelProducer::CMSPixelProducer(const std::string & name, const std::string &
     m_detector = "DUT";
     m_event_type = EVENT_TYPE_DUT;
   }
-  ReadPxarConfig();
 }
 
 void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
 
   std::cout << "Configuring: " << config.Name() << std::endl;
   m_config = config;
+  ReadPxarConfig();
   bool confTrimming(false), confDacs(false);
   // declare config vectors
   std::vector<std::pair<std::string,uint8_t> > sig_delays;
@@ -182,9 +183,7 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
     
     /** Set different wbcs */
       std::vector<int32_t> wbc_values = split(config.Get("wbc","wbcaddresses","-1"),' ');
-      std::cout << "WBC ADDRESSES:" << std::endl;
-      for (int i =0; i != wbc_values.size(); i++)
-        std::cout << wbc_values[i] << std::endl;
+      cout << "WBC ADDRESSES: " << listVector(wbc_values) << endl;
 
     // Read the type of carrier PCB used ("desytb", "desytb-rot"):
     m_pcbtype = config.Get("pcbtype","desytb");
