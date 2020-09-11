@@ -3,14 +3,9 @@
 #       PYTHON SCRIPT TO START ALL RUNNING EUDAQ PROCESSES
 #       created in 2018 by M. Reichmann (remichae@phys.ethz.ch)
 # -------------------------------------------------------
-from screeninfo import get_monitors
-from os.path import dirname, realpath, join
 from os import chmod, chdir
+from screeninfo import get_monitors
 from KILLRUN import *
-from argparse import ArgumentParser
-from ConfigParser import ConfigParser
-from glob import glob
-from datetime import datetime
 
 
 class EudaqStart:
@@ -116,6 +111,10 @@ class EudaqStart:
         sleep(2)
         self.XPos += int(get_width(tit) + self.Spacing + (get_x('DataCollector') if not self.XPos else 0))
 
+    def get_wbc_cmd(self):
+        data_path = join('/home', get_user(self.BeamPC), self.Config.get('DIR', 'telescope'))
+        return 'iclix {} -T {}'.format(data_path, self.Config.get('DIR', 'trim value'))
+
     def run(self):
         warning('\nStarting subprocesses ...')
         self.start_runcontrol()
@@ -126,7 +125,7 @@ class EudaqStart:
         self.start_beam_device('CMS Pixel Telescope', 'cmstelold', 'StartCMSPixelOld.sh')
         self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDigOld.sh')
         self.start_beam_device('Clock Generator', 'clock', 'clockgen.sh')
-        self.start_beam_device('WBC Scan', 'wbc', 'wbcScan.sh', src=True)
+        self.start_beam_device('WBC Scan', 'wbc', self.get_wbc_cmd(), script_dir=join('software', 'eudaq', 'scripts'), src=True)
         self.start_beam_device('WBC Scan DUT', 'wbcdut', 'wbcScanDUT.sh', src=True)
         self.start_beam_device('DRS4 Producer', 'drs4', 'StartDRS4.sh')
         self.start_beam_device('DRS4 Osci', 'drsgui', 'drsosc', script_dir=join('software', 'DRS4'))
