@@ -53,6 +53,7 @@ private:
   bool m_maskingFromConf;
   std::string m_last_mask_filename;
   eudaq::Configuration m_config;
+  std::map<int8_t, int8_t> m_i2c_map;
 
   // Add one mutex to protect calls to pxarCore:
   std::mutex m_mutex;

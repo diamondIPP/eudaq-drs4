@@ -46,12 +46,13 @@ void CMSPixelProducer::ReadPxarConfig() {
 std::vector<int8_t> CMSPixelProducer::GetI2Cs() {
   /** get i2cs from pxar configParameters.dat */
   vector<int8_t> i2cs;
+  uint8_t i(0);
   for (const auto & i2c: eudaq::split(eudaq::split(m_pxar_config.at("nRocs"), ":").at(1), ",")) {
-    i2cs.emplace_back(stoi(i2c)); }
+    i2cs.emplace_back(stoi(i2c));
+    m_i2c_map[(stoi(i2c))] = i++; }
   if (i2cs.empty()) { EUDAQ_ERROR("Did not understand i2cs from pxar configParameters.dat!"); }
   return i2cs;
 }
-
 
 std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16_t i2c, bool tbm) {
 
@@ -105,9 +106,8 @@ std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16
       int old_value = value;
       if(m_config.Get(name, -1) != -1) {
         // value = m_config.Get(name, -1);
-        std::vector<int32_t> values = split(m_config.Get(name, "-1"),' ');
-        if (values.size() > 1) value = values[i2c];
-        else value = values[0];
+        auto values = split(m_config.Get(name, "-1"),' ');
+        value = values.size() > 1 ? values.at(m_i2c_map.at(i2c)) : values[0];
         std::cout << "Overwriting DAC " << name << " from file value: " << old_value << " -> " << value << std::endl;
         EUDAQ_INFO("Overwriting DAC " + name + " from file value: " + std::to_string(old_value) + " -> " + std::to_string(value));
         overwritten_dacs++;

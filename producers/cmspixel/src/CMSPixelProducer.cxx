@@ -59,7 +59,8 @@ CMSPixelProducer::CMSPixelProducer(const std::string & name, const std::string &
     m_event_type(""),
     m_alldacs(""),
     m_last_mask_filename(""),
-    m_pxar_config()
+    m_pxar_config(),
+    m_i2c_map()
 {
   if(m_producerName.find("REF") != std::string::npos) {
     m_detector = "REF";
