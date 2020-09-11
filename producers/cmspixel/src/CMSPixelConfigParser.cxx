@@ -29,20 +29,26 @@ std::string CMSPixelProducer::prepareFilename(const std::string & name, const st
   return m_config.Get("directory", "") + name + "Parameters" + m_config.Get("trim_value", "") + "_C" + n + ".dat";
 }
 
-std::vector<int8_t> CMSPixelProducer::GetI2Cs() {
-  /** read i2cs from pxar configParameters.dat */
-
+void CMSPixelProducer::ReadPxarConfig() {
+  /** get parameters from pxar configParameters.dat */
   ifstream file(m_config.Get("directory", "") + "configParameters.dat");
   string line;
-  vector<int8_t> i2cs;
+  map<string, string> config;
   while(getline(file, line) != nullptr) {
-    if (line.at(0) == '#') { continue; }
-    if (line.find("i2c") != string::npos) {
-      for (const auto & i2c: eudaq::split(eudaq::split(line, "i2c:").at(1), ",")) {
-        i2cs.emplace_back(stoi(i2c)); }
-      break;
-    }
+    if (line.at(0) == '#' or line.at(0) == ' ' or line.at(0) == '-' or line.size() < 3)  { continue; }
+    size_t pos = line.find_first_of(' ');
+    config[string(line, pos)] = string(line, pos + 1, line.size());
   }
+  m_pxar_config = config;
+  for (auto i: m_pxar_config)
+    cout << i.first << ": " << i.second << endl;
+}
+
+std::vector<int8_t> CMSPixelProducer::GetI2Cs() {
+  /** get i2cs from pxar configParameters.dat */
+  vector<int8_t> i2cs;
+  for (const auto & i2c: eudaq::split(eudaq::split(m_pxar_config.at("nRocs"), "i2c:").at(1), ",")) {
+    i2cs.emplace_back(stoi(i2c)); }
   if (i2cs.empty()) { EUDAQ_ERROR("Did not understand i2cs from pxar configParameters.dat!"); }
   return i2cs;
 }

@@ -21,18 +21,13 @@ class CMSPixelProducer : public eudaq::Producer {
 
 public:
   CMSPixelProducer(const std::string & name, const std::string & runcontrol, const std::string & verbosity);
-  virtual void OnConfigure(const eudaq::Configuration & config);
-  virtual void OnStartRun(unsigned runnumber);
-  virtual void OnStopRun();
-  virtual void OnTerminate();
+  void OnConfigure(const eudaq::Configuration & config) override;
+  void OnStartRun(unsigned runnumber) override;
+  void OnStopRun() override;
+  void OnTerminate() override;
   void ReadoutLoop();
 
 private:
-  void ReadInSingleEventWriteBinary();
-  void ReadInSingleEventWriteASCII();
-  void ReadInFullBufferWriteBinary();
-  void ReadInFullBufferWriteASCII();
-
   // Helper function to read DACs from file which is provided via eudaq config:
   std::vector<std::pair<std::string,uint8_t> > GetConfDACs(int16_t i2c = -1, bool tbm = false);
   static std::vector<int32_t> &split(const std::string &s, char delim, std::vector<int32_t> &elems);
@@ -45,8 +40,9 @@ private:
   std::string prepareFilename(const std::string & name, const std::string & n);
   std::vector<masking> GetConfMask();
   std::string readHash(std::string hexMask, char i2c);
+  void ReadPxarConfig();
 
-
+  std::map<std::string, std::string> m_pxar_config;
   unsigned m_run, m_ev, m_ev_filled, m_ev_runningavg_filled;
   unsigned m_tlu_waiting_time;
   unsigned m_roc_resetperiod;

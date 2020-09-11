@@ -43,7 +43,7 @@ CMSPixelProducer::CMSPixelProducer(const std::string & name, const std::string &
     m_nplanes(1),
     m_terminated(false),
     m_running(false),
-    m_api(NULL),
+    m_api(nullptr),
     m_verbosity(verbosity),
     m_trimmingFromConf(false),
     m_pattern_delay(0),
@@ -81,6 +81,7 @@ CMSPixelProducer::CMSPixelProducer(const std::string & name, const std::string &
     m_detector = "DUT";
     m_event_type = EVENT_TYPE_DUT;
   }
+  ReadPxarConfig();
 }
 
 void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
