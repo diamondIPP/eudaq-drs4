@@ -165,7 +165,7 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
   }
   try {
     // Check for multiple ROCs using the I2C parameter:
-    std::vector<int32_t> i2c_addresses = split(config.Get("i2c","i2caddresses","-1"),' ');
+    std::vector<int8_t> i2c_addresses = GetI2Cs();
     std::cout << "Found " << i2c_addresses.size() << " I2C addresses: " << pxar::listVector(i2c_addresses) << std::endl;
 
     // Set the type of the TBM and read registers if any:

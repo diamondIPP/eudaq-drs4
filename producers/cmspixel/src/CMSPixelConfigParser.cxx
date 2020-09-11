@@ -1,6 +1,5 @@
 #include "CMSPixelProducer.hh"
 
-#include "dictionaries.h"
 #include "helper.h"
 #include "eudaq/Logger.hh"
 
@@ -15,12 +14,11 @@ std::vector<int32_t> &CMSPixelProducer::split(const std::string &s, char delim, 
   std::stringstream ss(s);
   std::string item;
   int32_t def = 0;
-  while (std::getline(ss, item, delim)) {
+  while (getline(ss, item, delim) != nullptr) {
     elems.push_back(eudaq::from_string(item,def));
   }
   return elems;
 }
-
 std::vector<int32_t> CMSPixelProducer::split(const std::string &s, char delim) {
   std::vector<int32_t> elems;
   split(s, delim, elems);
@@ -30,6 +28,25 @@ std::vector<int32_t> CMSPixelProducer::split(const std::string &s, char delim) {
 std::string CMSPixelProducer::prepareFilename(const std::string & name, const std::string & n) {
   return m_config.Get("directory", "") + name + "Parameters" + m_config.Get("trim_value", "") + "_C" + n + ".dat";
 }
+
+std::vector<int8_t> CMSPixelProducer::GetI2Cs() {
+  /** read i2cs from pxar configParameters.dat */
+
+  ifstream file(m_config.Get("directory", "") + "configParameters.dat");
+  string line;
+  vector<int8_t> i2cs;
+  while(getline(file, line) != nullptr) {
+    if (line.at(0) == '#') { continue; }
+    if (line.find("i2c") != string::npos) {
+      for (const auto & i2c: eudaq::split(eudaq::split(line, "i2c:").at(1), ",")) {
+        i2cs.emplace_back(stoi(i2c)); }
+      break;
+    }
+  }
+  if (i2cs.empty()) { EUDAQ_ERROR("Did not understand i2cs from pxar configParameters.dat!"); }
+  return i2cs;
+}
+
 
 std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16_t i2c, bool tbm) {
 
