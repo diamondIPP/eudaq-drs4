@@ -96,24 +96,26 @@ class EudaqStart:
     def start_tu(self):
         self.start_xterm('TU', '{d} -r {p}'.format(d=join(self.EUDAQDir, 'bin', 'TUProducer.exe'), p=self.Port))
 
-    def get_script_cmd(self, name, script_dir='scripts', src=False):
-        ssh_cmd = '' if self.BeamPC is None else 'ssh -tY {} '.format(self.BeamPC)
+    def get_script_cmd(self, name, script_dir='scripts'):
+        ssh_cmd = '' if self.BeamPC is None else 'ssh -tY {}'.format(self.BeamPC)
         script_path = join('~', script_dir) if self.BeamPC is None else join('/home', get_user(self.BeamPC), script_dir)
-        return '"{}{}{}"'.format('source etc/profile; ' if src else '', ssh_cmd, join(script_path, name) if name is not None else '')
+        return '"{} bash -ic \'{}\'"'.format(ssh_cmd, join(script_path, name) if name is not None else '')
 
-    def start_beam_device(self, name, device, script_name=None, script_dir='scripts', src=False):
+    def start_beam_device(self, name, device, script_name=None, script_dir='scripts'):
         if device in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', device):
-            self.start_xterm(name, self.get_script_cmd(script_name, script_dir, src))
+            self.start_xterm(name, self.get_script_cmd(script_name, script_dir))
 
     def start_xterm(self, tit, cmd):
         warning('  Starting {}'.format(tit))
+        print(cmd)
         system('xterm -xrm "XTerm.vt100.allowTitleOps: false" -geom {w}x{h}+{x}+{y} -hold -T "{t}" -e {c} &'.format(w=self.W, h=self.H, x=self.XPos, y=int(self.MaxH * 3. / 4), t=tit, c=cmd))
         sleep(2)
         self.XPos += int(get_width(tit) + self.Spacing + (get_x('DataCollector') if not self.XPos else 0))
 
     def get_wbc_cmd(self):
-        data_path = join('/home', get_user(self.BeamPC), self.Config.get('DIR', 'telescope'))
-        return 'iclix {} -T {}'.format(data_path, self.Config.get('DIR', 'trim value'))
+        tel_data = self.Config.get('DIR', 'telescope')
+        data_path = join('/home', get_user(self.BeamPC), tel_data)
+        return 'iclix.py\ {}\ -T\ {}'.format(data_path, self.Config.get('DIR', 'trim value'))
 
     def run(self):
         warning('\nStarting subprocesses ...')
@@ -125,8 +127,8 @@ class EudaqStart:
         self.start_beam_device('CMS Pixel Telescope', 'cmstelold', 'StartCMSPixelOld.sh')
         self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDigOld.sh')
         self.start_beam_device('Clock Generator', 'clock', 'clockgen.sh')
-        self.start_beam_device('WBC Scan', 'wbc', self.get_wbc_cmd(), script_dir=join('software', 'eudaq', 'scripts'), src=True)
-        self.start_beam_device('WBC Scan DUT', 'wbcdut', 'wbcScanDUT.sh', src=True)
+        self.start_beam_device('WBC Scan', 'wbc', self.get_wbc_cmd(), script_dir=join('software', 'eudaq-drs4', 'scripts'))
+        self.start_beam_device('WBC Scan DUT', 'wbcdut', 'wbcScanDUT.sh')
         self.start_beam_device('DRS4 Producer', 'drs4', 'StartDRS4.sh')
         self.start_beam_device('DRS4 Osci', 'drsgui', 'drsosc', script_dir=join('software', 'DRS4'))
         self.start_beam_device('CAEN Producer', 'caen', 'StartVME.sh')
@@ -147,7 +149,7 @@ class EudaqStart:
 
 
 if __name__ == '__main__':
-    
+
     p = ArgumentParser()
     p.add_argument('-t', '--test', action='store_true', help='test mode without running the processes')
     p.add_argument('-m', '--mask', action='store_true', help='create mask')
