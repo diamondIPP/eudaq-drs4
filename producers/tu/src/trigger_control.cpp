@@ -54,8 +54,8 @@ using namespace libconfig;
   int trigger_control::set_prescaler_delay(int delay)          { return set_value("g", delay); }
   int trigger_control::set_pulser_delay(int delay)             { return set_value("j", delay); }
   int trigger_control::enable(bool state)                      { return set_value("k", state ? 7 : 0); }
-  int trigger_control::set_handshake_mask(int mask)            { return set_value("l", mask, handshake_mask); }
-  int trigger_control::set_handshake_delay(int delay)          { return set_value("m", delay, handshake_delay); }
+  int trigger_control::set_handshake_mask(int mask)            { return set_value("l", mask); }
+  int trigger_control::set_handshake_delay(int delay)          { return set_value("m", delay); }
   int trigger_control::set_pulser(double freq, int width)      { return set_value("o", freq, "p", width); }
   int trigger_control::set_coincidence_edge_width(int width)   { return set_value("q", width, coincidence_edge_width); }
   int trigger_control::set_coincidence_pulse_width(int width)  { return set_value("r", width, coincidence_pulse_width); }
@@ -100,22 +100,6 @@ using namespace libconfig;
         sprintf(cmd_str,"/a?q=%d",coincidence_edge_width);
         return this->http_backend(cmd_str);
     }
-
-    int trigger_control::send_handshake_delay(){
-        char cmd_str[128];
-        sprintf(cmd_str,"/a?m=%d",this->handshake_delay );
-        return this->http_backend(cmd_str);
-    }
-
-    int trigger_control::send_handshake_mask(){
-        char cmd_str[128];
-        sprintf(cmd_str,"/a?l=%d",this->handshake_mask);
-        return this->http_backend(cmd_str);
-    }
-
-
-
-
 
     /*************************************************************************
      * read_back
