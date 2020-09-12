@@ -132,18 +132,15 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
   viewConn->setItemDelegate(&m_delegate);
   /** main config */
   for (auto item: QDir("../conf/", "main*.ini").entryList()) {
-    item.chop(4);
-    cmbConfig->addItem(item);
-  }
+    cmbConfig->addItem(item.remove(".ini")); }
   cmbConfig->setEditText(cmbConfig->itemText(0));
 
   /** auxiliary config */
-  for (auto item: QDir("../conf/", "*.ini").entryList()){
-    if (item.contains("main")) { continue; }
-    item.chop(4);
-    cmbAuxConfig->addItem(item);
-  }
-//  cmbAuxConfig->setEditText(cmbAuxConfig->itemText(0));
+  for (auto item: QDir("../conf/", "*.ini").entryList()) {
+    if (item.contains("main") or item.contains("flux")) { continue; }
+    cmbAuxConfig->addItem(item.remove(".ini")); }
+  cmbAuxConfig->setEditText("");
+  cmbAuxConfig->setCurrentText("");
 
   /** flux config */
   QSettings flux_settings("../conf/flux.ini", QSettings::IniFormat);
