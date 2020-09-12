@@ -130,16 +130,22 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
 
   viewConn->setModel(&m_run);
   viewConn->setItemDelegate(&m_delegate);
-  QDir dir("../conf/", "*.conf");
-  for (size_t i = 0; i < dir.count(); ++i) {
-    QString item = dir[i];
-    if (item.toStdString().find("converter") != std::string::npos) {  //exclude the converter config files
-      continue;
-    }
-    item.chop(5);
+  /** main config */
+  for (auto item: QDir("../conf/", "main*.ini").entryList()) {
+    item.chop(4);
     cmbConfig->addItem(item);
   }
   cmbConfig->setEditText(cmbConfig->itemText(0));
+
+  /** auxiliary config */
+  for (auto item: QDir("../conf/", "*.ini").entryList()){
+    if (item.contains("main")) { continue; }
+    item.chop(4);
+    cmbAuxConfig->addItem(item);
+  }
+//  cmbAuxConfig->setEditText(cmbAuxConfig->itemText(0));
+
+  /** flux config */
   QSettings flux_settings("../conf/flux.ini", QSettings::IniFormat);
   std::vector<int> fluxes;
   for (const auto & iflux: flux_settings.childGroups()) {

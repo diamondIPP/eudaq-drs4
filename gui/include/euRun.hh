@@ -2,6 +2,7 @@
 #include "RunControlModel.hh"
 #include "eudaq/RunControl.hh"
 #include "eudaq/Utils.hh"
+#include "../../build/gui/ui_euRun.h"
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QCloseEvent>
@@ -70,7 +71,6 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
 
 		void SetStateSlot(int state) {
 			btnConfig->setEnabled(state != ST_RUNNING);
-			btnTerminate->setEnabled(state != ST_RUNNING);
 			btnStart->setEnabled(state == ST_READY);
 			btnStop->setEnabled(state == ST_RUNNING);
 		}
@@ -103,7 +103,7 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
     //}
     void on_btnStart_clicked(bool cont = false) {
       m_runstarttime = 0.0;
-      StartRun(cont ? "Continued" : txtRunmsg->displayText().toStdString());
+      StartRun(cont ? "Continued" : "");
       EmitStatus("RUN", to_string(m_runnumber));
       emit StatusChanged("EVENT", "0");
       emit StatusChanged("TRIG", "0");

@@ -81,7 +81,7 @@ namespace eudaq {
 
   void RunControl::Configure(const std::string & param, std::map<std::string, int> extras) {
 
-    std::string filename = "../conf/" + (param.empty() ? "default" : param) + ".conf";
+    std::string filename = "../conf/" + (param.empty() ? "default" : param) + ".ini";
     EUDAQ_INFO("Configuring (" + param + ")");
     std::ifstream file(filename.c_str());
     if (file.is_open()) {
