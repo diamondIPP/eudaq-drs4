@@ -21,7 +21,7 @@ namespace eudaq {
       void Save(const std::string&) const;
       void Save() const;
       void Load(std::istream & file, const std::string & section);
-      void Read(std::string, std::string);
+      void Read(const std::string &, const std::string & section = "");
       bool SetSection(const std::string & section) const;
       bool SetSection(const std::string & section);
       unsigned NSections(){return m_config.size();}

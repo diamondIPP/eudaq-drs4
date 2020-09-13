@@ -119,6 +119,24 @@ namespace eudaq {
     SetSection(section);
   }
 
+  void Configuration::Read(const std::string & name, const std::string & section) {
+
+    std::ifstream file(name);
+    std::string line;
+    std::string cur_section;
+    while (std::getline(file, line) != nullptr){
+      line = trim(line);
+      if (line.empty() or line.at(0) == ';' or line.at(0) == '#') { continue; }
+      size_t equal_pos = line.find('=');
+      if (equal_pos == std::string::npos) {
+        if (line.front() == '[' and line.back() == ']'){
+          cur_section = trim(line, "[]"); }
+      } else {
+        m_config.at(cur_section).at(trim(line.substr(0, equal_pos))) = trim(line.substr(equal_pos + 1)); }
+    }
+    SetSection(section);
+  }
+
   bool Configuration::SetSection(const std::string & section) const {
     map_t::const_iterator i = m_config.find(section);
     if (i == m_config.end()) return false;
