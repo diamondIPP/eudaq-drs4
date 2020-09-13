@@ -54,7 +54,7 @@ class EudaqStart:
         return config
 
     def load_n_windows(self):
-        return 2 + sum(self.Config.getboolean('DEVICE', option) for option in self.Config.options('DEVICE'))
+        return max(1 + sum(self.Config.getboolean('DEVICE', option) for option in self.Config.options('DEVICE')), 2)
 
     def get_max_pos(self):
         system('xterm -xrm "XTerm.vt100.allowTitleOps: false" -geom 100x30+0+0 -T "Max Pos" &')
@@ -94,7 +94,8 @@ class EudaqStart:
         self.start_xterm('DataCollector', cmd)
 
     def start_tu(self):
-        self.start_xterm('TU', '{d} -r {p}'.format(d=join(self.EUDAQDir, 'bin', 'TUProducer.exe'), p=self.Port))
+        if self.device_is_active('tu'):
+            self.start_xterm('TU', '{d} -r {p}'.format(d=join(self.EUDAQDir, 'bin', 'TUProducer.exe'), p=self.Port))
 
     def get_script_cmd(self, name, script_dir='scripts'):
         ssh_cmd = '' if self.BeamPC is None else 'ssh -tY {}'.format(self.BeamPC)
@@ -102,7 +103,7 @@ class EudaqStart:
         return '"{} bash -ic \'{}\'"'.format(ssh_cmd, join(script_path, name) if name is not None else '')
 
     def start_beam_device(self, name, device, script_name=None, script_dir='scripts'):
-        if device in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', device):
+        if self.device_is_active(device):
             self.start_xterm(name, self.get_script_cmd(script_name, script_dir))
 
     def start_xterm(self, tit, cmd):
@@ -146,6 +147,9 @@ class EudaqStart:
         string += 'cornBot 2 {} {}\ncornTop 2 {} {}\n\n'.format(x2[0].rjust(2), y2[0].rjust(2), x2[1].rjust(2), y2[1].rjust(2))
         system('ssh -tY {} "echo \'{}\' > {}"'.format(self.BeamPC, string, file_path))
         print file_name
+
+    def device_is_active(self, name):
+        return name in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', name)
 
 
 if __name__ == '__main__':
