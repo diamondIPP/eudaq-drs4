@@ -77,27 +77,8 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun, public eudaq::RunCo
 
   void on_btnTerminate_clicked() { close(); }
 
-  void on_btnConfig_clicked() {
+  void on_btnConfig_clicked();
 
-      std::string settings = cmbConfig->currentText().toStdString();
-      QSettings fluxes("../conf/flux.ini", QSettings::IniFormat);
-      fluxes.beginGroup(cmbFlux->currentText());
-      std::map<std::string, int> extras;
-      for (auto key: fluxes.allKeys())
-          extras[key.toStdString()] = fluxes.value(key).toInt();
-      Configure(settings, extras);
-      SetState(ST_READY);
-      dostatus = true;
-      //Reset Scalers
-      EmitStatus("SCALERS", "-,-,-,-");
-      EmitStatus("PARTICLES", "0");
-      EmitStatus("TRIG", "0");
-      EmitStatus("EVENT","0");
-      EmitStatus("FILEBYTES","0 MB");
-      EmitStatus("MEANRATE","NAN Hz");
-      EmitStatus("RATE","NAN Hz");
-      EmitStatus("FULLRATE","NAN Hz");
-  }
     //void on_btnReset_clicked() {
     //  Reset();
     //}
