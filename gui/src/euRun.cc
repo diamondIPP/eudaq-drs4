@@ -7,6 +7,7 @@
 #include "Colours.hh"
 #include "config.h" // for version symbols
 
+using namespace std;
 
 euRunApplication::euRunApplication(int& argc, char** argv) :
     QApplication(argc, argv) {}
@@ -132,7 +133,7 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
   viewConn->setItemDelegate(&m_delegate);
 
   /** main config */
-  for (auto item: QDir("../conf/", "main*.ini").entryList()) {
+  for (auto item: QDir("../conf/", "*main*.ini").entryList()) {
     cmbConfig->addItem(item.remove(".ini")); }
   cmbConfig->setEditText(cmbConfig->itemText(0));
 
@@ -227,6 +228,30 @@ void RunControlGUI::OnConnect(const eudaq::ConnectionInfo & id) {
 void RunControlGUI::EmitStatus(const char * name, const std::string & val) {
   if (val.empty()) { return; }
   emit StatusChanged(name, val.c_str());
+}
+
+void RunControlGUI::on_btnConfig_clicked() {
+  /** button to configure eudaq */
+
+  string main_settings = cmbConfig->currentText().toStdString();
+  string aux_settings = cmbAuxConfig->currentText().toStdString();
+  QSettings fluxes("../conf/flux.ini", QSettings::IniFormat);
+  fluxes.beginGroup(cmbFlux->currentText());
+  std::map<std::string, int> extras;
+  for (const auto & key: fluxes.allKeys()) {
+    extras[key.toStdString()] = fluxes.value(key).toInt(); }
+  Configure(main_settings, aux_settings, extras);
+  SetState(ST_READY);
+  dostatus = true;
+  //Reset Scalers
+  EmitStatus("SCALERS", "-,-,-,-");
+  EmitStatus("PARTICLES", "0");
+  EmitStatus("TRIG", "0");
+  EmitStatus("EVENT","0");
+  EmitStatus("FILEBYTES","0 MB");
+  EmitStatus("MEANRATE","NAN Hz");
+  EmitStatus("RATE","NAN Hz");
+  EmitStatus("FULLRATE","NAN Hz");
 }
 
 

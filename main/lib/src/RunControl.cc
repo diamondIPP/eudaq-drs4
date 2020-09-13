@@ -79,7 +79,7 @@ namespace eudaq {
     }
   }
 
-  void RunControl::Configure(const std::string & param, std::map<std::string, int> extras) {
+  void RunControl::Configure(const std::string & param, const std::string & aux_param, const std::map<std::string, int> & extras) {
 
     std::string filename = "../conf/" + (param.empty() ? "default" : param) + ".ini";
     EUDAQ_INFO("Configuring (" + param + ")");
@@ -87,9 +87,13 @@ namespace eudaq {
     if (file.is_open()) {
       Configuration config(file);
       config.Set("Name", param);
+      if (aux_param.size() > 1) {
+        config.Read("../conf/" + aux_param + ".ini");
+        EUDAQ_INFO("Overwriting main config with " + aux_param + ".ini");
+        config.Set("Name", param + " + " + aux_param); }
       config.SetSection("Producer.TU");
-      for (auto pair: extras)
-        config.Set(pair.first, pair.second);
+      for (const auto & pair: extras) {
+        config.Set(pair.first, pair.second); }
       Configure(config);
     } else {
       EUDAQ_ERROR("Unable to open file '" + filename + "'");
