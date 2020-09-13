@@ -84,7 +84,7 @@ std::vector<std::pair<std::string,uint8_t> > CMSPixelProducer::GetConfDACs(int16
       linestream >> dummy >> name >> value;
 
       // Check if the first part read was really the register:
-      if(name == "") {
+      if(name.empty()) {
 	// Rereading with only DAC name and value, no register:
 	std::stringstream newstream(line);
 	newstream >> name >> value;
@@ -188,8 +188,6 @@ std::vector<pxar::pixelConfig> CMSPixelProducer::GetConfTrimming(std::vector<pxa
   return pixels;
 } // GetConfTrimming
 
-/**get Maskfile*/
-
 vector<masking> CMSPixelProducer::GetConfMask(){
 
     string mask_name = m_config.Get("mask_name", "");
@@ -218,6 +216,30 @@ vector<masking> CMSPixelProducer::GetConfMask(){
     cout << "\033[1;32;48mFILENAME: \033[0m" <<  filename << "\n";
 
     return mask;
+}
+
+std::vector<std::pair<std::string, uint8_t> > CMSPixelProducer::GetTestBoardDelays() {
+  /** read in the testboard parameters from the pxar config file and overwrite provided option in the eudaq config file */
+  string filename = m_config.Get("directory", "") + m_pxar_config.at("tbParameters");
+  EUDAQ_INFO("Reading testboard delays from file: " + filename);
+  ifstream file(filename);
+  string line, name;
+  int dummy, value, overwritten_dacs(0);
+  vector<pair<string, uint8_t> > delays;
+  while (getline(file, line) != nullptr) {
+    stringstream ss(line);
+    ss >> dummy >> name >> value;
+    if (name.empty()) { continue; }
+    if (m_config.Get(name, -1) != -1) {
+      std::cout << "Overwriting testboard delay " << name << " from file value: " << value << " -> " << m_config.Get(name, -1) << endl;
+      EUDAQ_INFO("Overwriting testboard delay " + name + " from file value: " + to_string(value) + " -> " + m_config.Get(name, ""));
+      value = m_config.Get(name, -1);
+      overwritten_dacs++;
+    }
+    delays.emplace_back(name, value);
+  }
+  EUDAQ_EXTRA("Successfully read " + std::to_string(delays.size()) + " testboard delays from file, " + to_string(overwritten_dacs) + " overwritten by config.");
+  return delays;
 }
 
 
