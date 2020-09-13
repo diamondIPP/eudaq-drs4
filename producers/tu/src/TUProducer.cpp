@@ -376,14 +376,15 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		if(tc->send_coincidence_pulse_width() != 0){throw(-1);}
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
-		std::cout << "--> Setting handshake settings..";
+		cout << "--> Setting handshake settings.." << endl;
 		int hs_del = conf.Get("handshake_delay", 0);
 		if(tc->set_handshake_delay(hs_del) != 0){throw(-1);}
 
 		int hs_mask = conf.Get("handshake_mask", 0);
 		if(tc->set_handshake_mask(hs_mask) != 0) { throw(tu_program_exception("Invalid handshake mask!")); }
+    cout << "     mask:  " << hs_mask << endl;
+    cout << "     delay: " << int(hs_del * 2.5) << " ..." << BOLDGREEN << " [OK] " << CLEAR;
 		EUDAQ_INFO("Setting handshake mask to " + to_string(hs_mask) + " with delay of " + to_string(hs_del * 2.5));
-		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 		std::cout << "--> Set trigger delays ... ";
 		int trigdel1 = conf.Get("trig_1_delay", 40);
@@ -415,9 +416,6 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		  std::cout << "Plane " << i_delay + 1 << " delay [ns]: " << tc->get_plane_delay(i_delay) * delay_width << std::endl;
 		}
 		std::cout << "Pad delay [ns]: " << tc->get_pad_delay() * delay_width << std::endl << std::endl;
-
-		std::cout << "Handshake delay [ns]: " << tc->get_handshake_delay()*2.5 << std::endl;
-		std::cout << "Handshake mask: " << tc->get_handshake_mask() << std::endl << std::endl;
 
 		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
 		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl;
