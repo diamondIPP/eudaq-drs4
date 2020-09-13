@@ -113,10 +113,11 @@ class EudaqStart:
         sleep(2)
         self.XPos += int(get_width(tit) + self.Spacing + (get_x('DataCollector') if not self.XPos else 0))
 
-    def get_wbc_cmd(self):
-        tel_data = self.Config.get('DIR', 'telescope')
-        data_path = join('/home', get_user(self.BeamPC), tel_data)
-        return 'iclix.py\ {}\ -T\ {}'.format(data_path, self.Config.get('DIR', 'trim value'))
+    def get_wbc_cmd(self, tel=True, old=False):
+        data_str = self.Config.get('DIR', 'telescope' if tel else 'dut')
+        data_path = join('/home', get_user(self.BeamPC), data_str)
+        old_str = '\ -o' if old else ''
+        return 'iclix.py\ {}\ -T\ {}{}'.format(data_path, self.Config.get('TRIM', 'telescope' if tel else 'dut'), old_str)
 
     def run(self):
         warning('\nStarting subprocesses ...')
@@ -129,7 +130,8 @@ class EudaqStart:
         self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDigOld.sh')
         self.start_beam_device('Clock Generator', 'clock', 'clockgen.sh')
         self.start_beam_device('WBC Scan', 'wbc', self.get_wbc_cmd(), script_dir=join('software', 'eudaq-drs4', 'scripts'))
-        self.start_beam_device('WBC Scan DUT', 'wbcdut', 'wbcScanDUT.sh')
+        self.start_beam_device('Pixel WBC Scan Tel', 'wbcpixtel', self.get_wbc_cmd(old=True), script_dir=join('software', 'eudaq-drs4', 'scripts'))
+        self.start_beam_device('Pixel WBC Scan DUT', 'wbcpixdut', self.get_wbc_cmd(old=True, tel=False), script_dir=join('software', 'eudaq-drs4', 'scripts'))
         self.start_beam_device('DRS4 Producer', 'drs4', 'StartDRS4.sh')
         self.start_beam_device('DRS4 Osci', 'drsgui', 'drsosc', script_dir=join('software', 'DRS4'))
         self.start_beam_device('CAEN Producer', 'caen', 'StartVME.sh')
