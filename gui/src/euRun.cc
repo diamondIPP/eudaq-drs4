@@ -139,7 +139,7 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
 
   /** auxiliary config */
   for (auto item: QDir("../conf/", "*.ini").entryList()) {
-    if (item.contains("main") or item.contains("flux")) { continue; }
+    if (item.contains("main") or item.contains("flux") or item.contains("default")) { continue; }
     cmbAuxConfig->addItem(item.remove(".ini")); }
   cmbAuxConfig->setEditText("");
   cmbAuxConfig->setCurrentText("");
