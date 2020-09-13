@@ -50,7 +50,7 @@ class EudaqStart:
         main_config = file_name.split('-')[0]
         config.read(join(self.Dir, 'config', '{}.ini'.format(main_config)))
         if '-' in file_name:
-            config.read(join(self.Dir, 'config', '{}.ini'.format(file_name)))  # only overwrites different settings
+            config.read(join(self.Dir, 'config', '{}.ini'.format('-'.join(file_name.split('-')[1:]))))  # only overwrites different settings
         return config
 
     def load_n_windows(self):
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     p = ArgumentParser()
     p.add_argument('-t', '--test', action='store_true', help='test mode without running the processes')
     p.add_argument('-m', '--mask', action='store_true', help='create mask')
-    p.add_argument('config', nargs='?', default='psi-pad', help='main config file name (without .ini)')
+    p.add_argument('config', nargs='?', default='psi-pad', help='config file name (also without .ini), combine main files (eth, psi, cern) with sub config, e.g. psi-wbc')
     args = p.parse_args()
 
     z = EudaqStart(args.config, mask=args.mask)
