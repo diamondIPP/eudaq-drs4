@@ -36,6 +36,7 @@ private:
   std::vector<pxar::pixelConfig> GetConfMaskBits();
   std::vector<pxar::pixelConfig> GetConfTrimming(std::vector<pxar::pixelConfig> maskbits, int16_t i2c = -1);
   std::vector<int8_t> GetI2Cs();
+  std::vector<std::pair<std::string, uint8_t> > GetTestBoardDelays();
 
   std::string prepareFilename(const std::string & name, const std::string & n);
   std::vector<masking> GetConfMask();

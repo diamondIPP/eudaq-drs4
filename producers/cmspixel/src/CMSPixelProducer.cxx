@@ -92,7 +92,6 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
   ReadPxarConfig();
   bool confTrimming(false), confDacs(false);
   // declare config vectors
-  std::vector<std::pair<std::string,uint8_t> > sig_delays;
   std::vector<std::pair<std::string,double> > power_settings;
   std::vector<std::pair<std::string,uint8_t> > pg_setup;
   std::vector<std::vector<std::pair<std::string,uint8_t> > > tbmDACs;
@@ -125,17 +124,6 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
   m_tlu_waiting_time = config.Get("tlu_waiting_time", 4000);
   EUDAQ_INFO(string("Waiting " + std::to_string(m_tlu_waiting_time) + "ms before stopping DAQ after run stop."));
 
-  // DTB delays
-  sig_delays.push_back(std::make_pair("clk",config.Get("clk",4)));
-  sig_delays.push_back(std::make_pair("ctr",config.Get("ctr",4)));
-  sig_delays.push_back(std::make_pair("sda",config.Get("sda",19)));
-  sig_delays.push_back(std::make_pair("tin",config.Get("tin",9)));
-  sig_delays.push_back(std::make_pair("deser160phase",config.Get("deser160phase",4)));
-  sig_delays.push_back(std::make_pair("level",config.Get("level",15)));
-  sig_delays.push_back(std::make_pair("triggerlatency",config.Get("triggerlatency",86)));
-  sig_delays.push_back(std::make_pair("tindelay",config.Get("tindelay",13)));
-  sig_delays.push_back(std::make_pair("toutdelay",config.Get("toutdelay",10)));
-  sig_delays.push_back(std::make_pair("triggertimeout",config.Get("triggertimeout",65000)));
   //Power settings:
   power_settings.push_back( std::make_pair("va",config.Get("va",1.8)) );
   power_settings.push_back( std::make_pair("vd",config.Get("vd",2.5)) );
@@ -222,7 +210,7 @@ void CMSPixelProducer::OnConfigure(const eudaq::Configuration & config) {
     m_api = new pxar::pxarCore(m_usbId, m_verbosity);
 
     // Initialize the testboard:
-    if(!m_api->initTestboard(sig_delays, power_settings, pg_setup)) {
+    if(!m_api->initTestboard(GetTestBoardDelays(), power_settings, pg_setup)) {
       EUDAQ_ERROR(string("Firmware mismatch."));
       throw pxar::pxarException("Firmware mismatch");
     }
