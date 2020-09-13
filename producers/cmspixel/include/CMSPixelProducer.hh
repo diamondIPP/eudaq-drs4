@@ -40,12 +40,15 @@ private:
 
   std::vector<pxar::pixelConfig> GetConfMaskBits();
   std::vector<pxar::pixelConfig> GetConfTrimming(std::vector<pxar::pixelConfig> maskbits, int16_t i2c = -1);
+  std::vector<int8_t> GetI2Cs();
+  std::vector<std::pair<std::string, uint8_t> > GetTestBoardDelays();
 
-  std::string prepareFilename(std::string filename, std::string n);
+  std::string prepareFilename(const std::string & name, const std::string & n);
   std::vector<masking> GetConfMask();
   std::string readHash(std::string hexMask, char i2c);
+  void ReadPxarConfig();
 
-
+  std::map<std::string, std::string> m_pxar_config;
   unsigned m_run, m_ev, m_ev_filled, m_ev_runningavg_filled;
   unsigned m_tlu_waiting_time;
   unsigned m_roc_resetperiod;
@@ -56,6 +59,7 @@ private:
   bool m_maskingFromConf;
   std::string m_last_mask_filename;
   eudaq::Configuration m_config;
+  std::map<int8_t, int8_t> m_i2c_map;
 
   // Add one mutex to protect calls to pxarCore:
   std::mutex m_mutex;
