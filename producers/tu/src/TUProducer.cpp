@@ -342,6 +342,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
   		std::cout << "--> Setting prescaler and delay.." << std::endl;
 		int scal = conf.Get("prescaler", 1);
 		int predel = conf.Get("prescaler_delay", 5); //must be >4
+		EUDAQ_INFO("Setting a prescaler of " + to_string(scal) + " with a delay of " + to_string(predel));
 		if(tc->set_prescaler(scal) != 0){throw(-1);}
 		if(tc->set_prescaler_delay(predel) != 0){throw(-1);}
 		std::cout << "      Prescaler: " << scal << std::endl;
@@ -378,11 +379,10 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 		std::cout << "--> Setting handshake settings..";
 		int hs_del = conf.Get("handshake_delay", 0);
 		if(tc->set_handshake_delay(hs_del) != 0){throw(-1);}
-		if(tc->send_handshake_delay() != 0){throw(-1);}
 
 		int hs_mask = conf.Get("handshake_mask", 0);
-		if(tc->set_handshake_mask(hs_mask) != 0){throw(-1);}
-		if(tc->send_handshake_mask() != 0){throw(-1);}
+		if(tc->set_handshake_mask(hs_mask) != 0) { throw(tu_program_exception("Invalid handshake mask!")); }
+		EUDAQ_INFO("Setting handshake mask to " + to_string(hs_mask) + " with delay of " + to_string(hs_del * 2.5));
 		std::cout << BOLDGREEN << " [OK] " << CLEAR;
 
 		std::cout << "--> Set trigger delays ... ";

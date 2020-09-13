@@ -80,7 +80,7 @@
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>Select configuration to use</string>
+          <string>Select main configuration to use</string>
          </property>
          <property name="editable">
           <bool>true</bool>
@@ -94,6 +94,28 @@
         </widget>
        </item>
        <item row="2" column="1">
+       <widget class="QComboBox" name="cmbAuxConfig">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="toolTip">
+         <string>Select auxiliary configuration to use</string>
+        </property>
+        <property name="editable">
+         <bool>true</bool>
+        </property>
+        <property name="maxVisibleItems">
+         <number>16</number>
+        </property>
+        <property name="insertPolicy">
+         <enum>QComboBox::InsertAlphabetically</enum>
+        </property>
+       </widget>
+      </item>
+       <item row="3" column="1">
         <widget class="QComboBox" name="cmbFlux">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -115,13 +137,6 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="txtRunmsg">
-         <property name="toolTip">
-          <string>An optional message to add to the Run</string>
-         </property>
-        </widget>
-       </item>
        <item row="4" column="1">
         <widget class="QLineEdit" name="txtLogmsg">
          <property name="toolTip">
@@ -129,7 +144,7 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="2">
+       <item row="4" column="2">
         <widget class="QPushButton" name="btnLog">
          <property name="enabled">
           <bool>false</bool>
@@ -152,14 +167,14 @@
        <item row="2" column="0">
         <widget class="QLabel" name="lblFlux">
          <property name="text">
-          <string>Flux: </string>
+          <string>Aux Config: </string>
          </property>
         </widget>
        </item>
        <item row="3" column="0">
         <widget class="QLabel" name="lblRunmsg">
          <property name="text">
-          <string>Run: </string>
+          <string>Flux: </string>
          </property>
         </widget>
        </item>
@@ -170,7 +185,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
+       <item row="3" column="2">
         <widget class="QPushButton" name="btnStop">
          <property name="enabled">
           <bool>false</bool>
@@ -183,19 +198,19 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="2">
-        <widget class="QPushButton" name="btnTerminate">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>Terminate the DAQ session</string>
-         </property>
-         <property name="text">
-          <string>Terminate</string>
-         </property>
-        </widget>
-       </item>
+<!--       <item row="5" column="2">-->
+<!--        <widget class="QPushButton" name="btnTerminate">-->
+<!--         <property name="enabled">-->
+<!--          <bool>false</bool>-->
+<!--         </property>-->
+<!--         <property name="toolTip">-->
+<!--          <string>Terminate the DAQ session</string>-->
+<!--         </property>-->
+<!--         <property name="text">-->
+<!--          <string>Terminate</string>-->
+<!--         </property>-->
+<!--        </widget>-->
+<!--       </item>-->
        <item row="1" column="2">
         <widget class="QPushButton" name="btnConfig">
          <property name="enabled">

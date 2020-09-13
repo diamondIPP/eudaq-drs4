@@ -75,6 +75,8 @@ def remove_letters(string):
 
 def get_tc(data_dir, tc, location):
     data_paths = glob(join(data_dir, '{}*'.format(location)))
+    if not data_paths:
+        critical('There is no data in {}! Need to mount?'.format(join(data_dir, '{}*'.format(location))))
     if tc is None:
         return max(data_paths)
     tc = datetime.strptime(tc, '%Y%m')

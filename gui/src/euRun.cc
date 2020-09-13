@@ -130,26 +130,26 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
 
   viewConn->setModel(&m_run);
   viewConn->setItemDelegate(&m_delegate);
-  QDir dir("../conf/", "*.conf");
-  for (size_t i = 0; i < dir.count(); ++i) {
-    QString item = dir[i];
-    if (item.toStdString().find("converter") != std::string::npos) {  //exclude the converter config files
-      continue;
-    }
-    item.chop(5);
-    cmbConfig->addItem(item);
-  }
+
+  /** main config */
+  for (auto item: QDir("../conf/", "main*.ini").entryList()) {
+    cmbConfig->addItem(item.remove(".ini")); }
   cmbConfig->setEditText(cmbConfig->itemText(0));
+
+  /** auxiliary config */
+  for (auto item: QDir("../conf/", "*.ini").entryList()) {
+    if (item.contains("main") or item.contains("flux")) { continue; }
+    cmbAuxConfig->addItem(item.remove(".ini")); }
+  cmbAuxConfig->setEditText("");
+  cmbAuxConfig->setCurrentText("");
+
+  /** flux config */
   QSettings flux_settings("../conf/flux.ini", QSettings::IniFormat);
-  std::vector<int> fluxes;
-  for (const auto & iflux: flux_settings.childGroups()) {
-    fluxes.push_back(iflux.toInt());
-  }
-  std::sort(fluxes.begin(), fluxes.end());
-  for (auto iflux: fluxes) {
-    cmbFlux->addItem(QString(std::to_string(iflux).c_str()));
-  }
-  cmbFlux->setEditText(QString(std::to_string(fluxes.at(0)).c_str()));
+  QMap<int, QString> m;
+  for (const auto & str: flux_settings.childGroups()) { m[str.toInt()] = str; }  // sorting numerically
+  cmbFlux->addItems(m.values());
+  cmbFlux->setEditText(m.values().at(0));
+
   QSize fsize = frameGeometry().size();
   if (geom.x() == -1) { geom.setX(x()); }
   geom.setY(geom.y() == -1 ? y() : geom.y() + MAGIC_NUMBER);
