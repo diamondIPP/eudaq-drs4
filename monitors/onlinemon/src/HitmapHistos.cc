@@ -114,7 +114,7 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
     else
     {
       _totSingle = new TH1I(out2, out,256,0,255);
-      _totSingle->SetBit(TH1::kCanRebin);
+      _totSingle->SetCanExtend(TH1::kXaxis);
     }
 
 
@@ -155,7 +155,7 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
     _efficencyPerEvent = new TProfile(out2, out,50,0,50);
     SetHistoAxisLabely(_efficencyPerEvent,"#varepsilon_{Plane}");
     SetHistoAxisLabelx(_efficencyPerEvent,"Event No.");
-    _efficencyPerEvent->SetBit(TH1::kCanRebin);
+    _efficencyPerEvent->SetCanExtend(TH1::kXaxis);
     _efficencyPerEvent->SetStats(false);
     _efficencyPerEvent->SetMaximum(1.1);
     _efficencyPerEvent->SetMinimum(0);
@@ -165,7 +165,7 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
     _pixelChargeProfile = new TProfile(out2, out,100,0,20000);
     SetHistoAxisLabely(_pixelChargeProfile,"avrg. Pixel Charge");
     SetHistoAxisLabelx(_pixelChargeProfile,"Event No.");
-    _pixelChargeProfile->SetBit(TH1::kCanRebin);
+    _pixelChargeProfile->SetCanExtend(TH1::kXaxis);
     _pixelChargeProfile->SetStats(false);
     _pixelChargeProfile->SetMinimum(0);
 
@@ -174,7 +174,7 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
     _clusterChargeProfile = new TProfile(out2, out,100,0,20000);
     SetHistoAxisLabely(_clusterChargeProfile,"avrg. Cluster Charge");
     SetHistoAxisLabelx(_clusterChargeProfile,"Event No.");
-    _clusterChargeProfile->SetBit(TH1::kCanRebin);
+    _clusterChargeProfile->SetCanExtend(TH1::kXaxis);
     _clusterChargeProfile->SetStats(false);
     _clusterChargeProfile->SetMinimum(0);
 
@@ -183,7 +183,7 @@ HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.g
     _histoMap["clusterChargeTimeProfile"] = new TProfile(out2, out,100,0,20000);
     SetHistoAxisLabely(_histoMap["clusterChargeTimeProfile"],"avrg. Cluster Charge");
     SetHistoAxisLabelx(_histoMap["clusterChargeTimeProfile"],"Time / s");
-    _histoMap["clusterChargeTimeProfile"]->SetBit(TH1::kCanRebin);
+    _histoMap["clusterChargeTimeProfile"]->SetCanExtend(TH1::kXaxis);
     _histoMap["clusterChargeTimeProfile"]->SetStats(false);
     _histoMap["clusterChargeTimeProfile"]->SetMinimum(0);
     _histoMap["clusterChargeTimeProfile"]->GetXaxis()->SetTimeDisplay(1);

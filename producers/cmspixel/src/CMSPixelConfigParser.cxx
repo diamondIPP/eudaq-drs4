@@ -14,7 +14,7 @@ std::vector<int32_t> &CMSPixelProducer::split(const std::string &s, char delim, 
   std::stringstream ss(s);
   std::string item;
   int32_t def = 0;
-  while (getline(ss, item, delim) != nullptr) {
+  while (getline(ss, item, delim)) {
     elems.push_back(eudaq::from_string(item,def));
   }
   return elems;
@@ -34,7 +34,7 @@ void CMSPixelProducer::ReadPxarConfig() {
   ifstream file(m_config.Get("directory", "") + "configParameters.dat");
   string line;
   map<string, string> config;
-  while(getline(file, line) != nullptr) {
+  while(getline(file, line)) {
     if (line.empty()) { continue; }
     if (line.at(0) == '#' or line.at(0) == ' ' or line.at(0) == '-' or line.size() < 3)  { continue; }
     size_t pos = line.find_first_of(": ");
@@ -226,7 +226,7 @@ std::vector<std::pair<std::string, uint8_t> > CMSPixelProducer::GetTestBoardDela
   string line, name;
   int dummy, value, overwritten_dacs(0);
   vector<pair<string, uint8_t> > delays;
-  while (getline(file, line) != nullptr) {
+  while (getline(file, line)) {
     stringstream ss(line);
     ss >> dummy >> name >> value;
     if (name.empty()) { continue; }

@@ -16,10 +16,10 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
-    gROOT->ProcessLine("#include <pair>");
+//    gROOT->ProcessLine("#include <pair>");
     gROOT->ProcessLine("#include <map>");
 //    gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >", "vector;string;map");
-    gInterpreter->GenerateDictionary("vector<vector<Float_t> >;vector<vector<UShort_t> >");
+    gInterpreter->GenerateDictionary("vector<vector<float> >;vector<vector<uint16> >", "vector");
     //Polarities of signals, default is positive signals
     polarities.resize(4, 1);
     pulser_polarities.resize(4, 1);

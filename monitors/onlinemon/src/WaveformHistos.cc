@@ -58,7 +58,7 @@ void WaveformHistos::InitHistos() {
     hName = TString::Format("hCategoryVsEventNo_%s_%d",_sensor.c_str(),_id);
     hTitle = TString::Format("%s %d:Categroy Vs Event No.; Event No.; Category",_sensor.c_str(),_id);
     histos["CategoryVsEvent"] = new TH2F(hName,hTitle,500,0,1000,7,-1,6);
-    histos["CategoryVsEvent"]->SetBit(TH1::kCanRebin);
+    histos["CategoryVsEvent"]->SetCanExtend(TH1::kXaxis);
     /*
         UNKNOWN_EVENT = -1,
         GOOD_EVENT=0,

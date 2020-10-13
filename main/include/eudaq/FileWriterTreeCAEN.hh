@@ -187,8 +187,8 @@ namespace eudaq {
         std::vector<std::pair<float, float> >* noise;
         std::map<uint8_t, std::deque<float> *> noise_vectors;
         void calc_noise(uint8_t);
-        std::vector<float> data_pos;
-        std::vector<float> decon;
+        std::vector<double> data_pos;
+        std::vector<double> decon;
         std::vector<std::vector<uint16_t> *> peaks_x;
         std::vector<std::vector<float> *> peaks_x_time;
         std::vector<std::vector<float> *> peaks_y;

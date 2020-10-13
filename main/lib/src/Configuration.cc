@@ -124,7 +124,7 @@ namespace eudaq {
     std::ifstream file(name);
     std::string line;
     std::string cur_section;
-    while (std::getline(file, line) != nullptr){
+    while (std::getline(file, line)){
       line = trim(line);
       if (line.empty() or line.at(0) == ';' or line.at(0) == '#') { continue; }
       size_t equal_pos = line.find('=');
