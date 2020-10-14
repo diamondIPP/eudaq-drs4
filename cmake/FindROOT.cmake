@@ -182,7 +182,6 @@ MACRO (ROOT_GENERATE_DICTIONARY_OLD )
   set(INFILES "")
 
    foreach (_current_FILE ${ARGN})
-     MESSAGE(" ${_current_FILE}")
      IF (${_current_FILE} MATCHES "^.*\\.h$")
        IF (${_current_FILE} MATCHES "^.*Link.*$")
          set(LINKDEF_FILE ${_current_FILE})
@@ -205,16 +204,9 @@ MACRO (ROOT_GENERATE_DICTIONARY_OLD )
 
    endforeach (_current_FILE ${ARGN})
 
-  MESSAGE("INFILES: ${INFILES}")
-  MESSAGE("OutFILE: ${OUTFILE}")
-  MESSAGE("LINKDEF_FILE: ${LINKDEF_FILE}")
-  MESSAGE("INCLUDE_DIRS: ${INCLUDE_DIRS}")
 
    STRING(REGEX REPLACE "(^.*).cxx" "\\1.h" bla "${OUTFILE}")
-   MESSAGE("BLA: ${bla}")
    SET (OUTFILES ${OUTFILE} ${bla})
-   MESSAGE("COMMAND: ${ROOT_CINT_EXECUTABLE}")
-   MESSAGE("ARGS:    -f ${OUTFILE} -c -p -DHAVE_CONFIG_H ${INCLUDE_DIRS} ${INFILES} ${LINKDEF_FILE} ")
 
    ADD_CUSTOM_COMMAND(OUTPUT ${OUTFILES}
       COMMAND ${ROOT_CINT_EXECUTABLE}
