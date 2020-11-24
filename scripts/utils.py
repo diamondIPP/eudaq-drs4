@@ -3,12 +3,12 @@
 #       Utility methods for the EUDAQ Scripts
 #       created on April 11th 2019 by M. Reichmann (remichae@phys.ethz.ch)
 # -------------------------------------------------------
-from commands import getstatusoutput
+from subprocess import getstatusoutput
 from time import sleep
 from glob import glob
 from os.path import join, isfile, dirname, realpath
 from datetime import datetime
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 
 RED = '\033[91m'
@@ -22,16 +22,16 @@ def get_t_str():
 
 
 def warning(txt):
-    print '{} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC)
+    print('{} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC))
 
 
 def critical(txt):
-    print 'CRITICAL: {} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC)
+    print('CRITICAL: {} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC))
     exit(2)
 
 
 def finished(txt):
-    print '{} --> {}{}{}{}'.format(get_t_str(), BOLD, GREEN, txt, ENDC)
+    print('{} --> {}{}{}{}'.format(get_t_str(), BOLD, GREEN, txt, ENDC))
 
 
 def get_output(command, process=''):
@@ -70,7 +70,7 @@ def get_user(host):
 
 
 def remove_letters(string):
-    return filter(lambda x: x.isdigit(), string)
+    return ''.join(x for x in string if x.isdigit())
 
 
 def get_tc(data_dir, tc, location):

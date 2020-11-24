@@ -33,12 +33,13 @@ conf_file_dir = join(eudaq_dir, 'conf', config.get('MAIN', 'config dir').strip()
 
 tc_dir = get_tc(data_dir, args.tc, location)
 run_file_path = get_run_path(args.run, tc_dir, raw_dir) if args.p is None else args.p
+print(basename(run_file_path))
 run = int((remove_letters(basename(run_file_path))))
 
 warning('Converting run {0}'.format(run))
 cmd_list = [join(eudaq_dir, 'bin', 'Converter.exe'), '-t', args.t, '-c', conf_file_dir, run_file_path]
 # cmd = '{eudaq}/bin/Converter.exe -t {tree} -c {conf}/converter_waveform_integrals.conf {raw}/{file}'.format(eudaq=eudaq_dir, conf=conf_dir, tree=args.t, raw=raw_path, file=run_str)
-print 'executing:', ' '.join(cmd_list)
+print('executing:', ' '.join(cmd_list))
 max_tries = 10
 tries = 0
 while tries < max_tries:  # the command crashes randomly...
