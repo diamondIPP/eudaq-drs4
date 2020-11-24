@@ -324,6 +324,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("row", &f_row);
     m_ttree->Branch("adc", &f_adc);
     m_ttree->Branch("charge", &f_charge);
+    m_ttree->Branch("trigger_phase", &f_trig_phase, "trigger_phase/b");
     verbose = 1;
     
     EUDAQ_INFO("Done with creating Branches!");
@@ -454,10 +455,10 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
     // ---------- save all info for the telescope -------------------------
     // --------------------------------------------------------------------
+    f_trig_phase = sev.GetPlane(0).GetTrigPhase();  // there is only one trigger phase for the whole telescope (one DTB)
     for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
         const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
         std::vector<double> cds = plane.GetPixels<double>();
-
         for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
             f_plane->emplace_back(iplane);
             f_col->push_back(uint16_t(plane.GetX(ipix)));
