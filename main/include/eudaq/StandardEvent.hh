@@ -82,6 +82,7 @@ public:
     float getPeakToPeak(int min, int max) const{return getSpreadInRange(min,max);}
     float getIntegral(uint16_t min, uint16_t max, bool _abs=false) const;
     float getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const;
+    float getIntegral(uint16_t peak_pos, std::pair<uint16_t, uint16_t> range, float sspeed) const;
 		std::vector<float> getCalibratedTimes(std::vector<float>*) const;
     float getTriggerTime(std::vector<float>*) const;
     float getPeakFit(uint16_t, uint16_t, signed char) const;

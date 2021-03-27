@@ -72,6 +72,10 @@ float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const
   return integral / (float) (max - (int) min);
 }
 
+float StandardWaveform::getIntegral(uint16_t peak_pos, std::pair<uint16_t, uint16_t> range, float sspeed) const {
+  return getIntegral(max(peak_pos - range.first, 0), min(peak_pos + range.second, int(m_n_samples)), peak_pos, sspeed);
+}
+
 float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const {
 
   high_bin = min(high_bin, uint16_t(m_n_samples - 1));

@@ -25,6 +25,7 @@ class WaveformIntegral:public TObject{
         void SetTimeIntegral(float integral) { time_integral = integral; }
         float GetIntegral(){ return !calculated ? std::numeric_limits<float>::quiet_NaN() : integral; }
         float GetTimeIntegral(){ return time_integral; }
+        std::pair<uint16_t, uint16_t> GetRange() { return std::make_pair(down_range, up_range); }
         virtual ~WaveformIntegral();
         void Reset();
         void Print() const {Print(std::cout,true);}
