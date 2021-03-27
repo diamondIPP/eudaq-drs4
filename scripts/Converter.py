@@ -8,7 +8,7 @@ from argparse import ArgumentParser
 from os import remove
 from utils import *
 from os.path import basename
-from subprocess import check_call, CalledProcessError
+from subprocess import check_call
 
 parser = ArgumentParser()
 parser.add_argument('run', nargs='?', default=None)
@@ -42,14 +42,7 @@ cmd_list = [join(eudaq_dir, 'bin', 'Converter.exe'), '-t', args.t, '-c', conf_fi
 print('executing:', ' '.join(cmd_list))
 max_tries = 10
 tries = 0
-while tries < max_tries:  # the command crashes randomly...
-    try:
-        check_call(cmd_list)
-        break
-    except CalledProcessError:
-        tries += 1
-    except KeyboardInterrupt:
-        break
+check_call(cmd_list)
 
 finished('Finished converting run {}'.format(run))
 if isfile('Errors{}.txt'.format(run)):
