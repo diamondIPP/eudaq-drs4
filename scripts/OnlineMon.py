@@ -26,13 +26,12 @@ run_file_path = get_run_path(args.run, tc_dir, raw_dir)
 run = int((remove_letters(basename(run_file_path))))
 warning('STARTING Onlinemonitor for run {r} from test campaign {tc}'.format(r=run, tc=basename(tc_dir), d=raw_dir))
 
-conf_file = join(eudaq_dir, 'conf', 'old', 'converter_waveform_integrals.conf')
+conf_file = join(eudaq_dir, 'conf', 'converter_waveform_integrals.conf')
 if not isfile(run_file_path):
     critical('the file in {} does not exist!'.format(run_file_path))
 
 exe = join(eudaq_dir, 'bin', 'OnlineMon.exe')
 cmd = '{} -sc 1 -u 500 -f {p} -c {c} -x {x}'.format(exe, p=run_file_path, c=conf_file, x=args.x)
-print cmd
-print
+print(cmd, '\n')
 system(cmd)
 finished('Finished Onlinemonitor for run {}'.format(run))
