@@ -49,6 +49,8 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     IntegralPeakTime = new std::vector<float>;
     IntegralLength  = new std::vector<float>;
     v_cft = new float[n_channels];
+    f_bucket = new bool[n_channels];
+    f_ped_bucket = new bool[n_channels];
 
     // general waveform information
     v_is_saturated = new vector<bool>;
@@ -274,6 +276,8 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("IntegralPeakTime", &IntegralPeakTime);
     m_ttree->Branch("IntegralLength", &IntegralLength);
     m_ttree->Branch("cft", v_cft, TString::Format("cft[%d]/f", n_active_channels));
+    m_ttree->Branch("bucket", f_bucket, TString::Format("bucket[%d]/O", n_active_channels));
+    m_ttree->Branch("ped bucket", f_ped_bucket, TString::Format("ped_bucket[%d]/O", n_active_channels));
 
     // DUT
     m_ttree->Branch("is_saturated", &v_is_saturated);
@@ -748,12 +752,20 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
         uint16_t peak_pos = wf->getIndex(region->GetLowBoarder(), region->GetHighBoarder(), polarity);
         region->SetPeakPostion(peak_pos);
         if (string(region->GetName()) == "signal_b"){  // TODO change this naming or define a definite signal region
-          v_cft[i++] = wf->getCFT(region->GetLowBoarder(), region->GetHighBoarder(), rise_time * 2); }
+          v_cft[i] = wf->getCFT(region->GetLowBoarder(), region->GetHighBoarder(), rise_time * 2); }
         for (auto integral: region->GetIntegrals()){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);
           integral->SetPeakPosition(peak_pos, wf->GetNSamples());
           integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, 2.0));
+          if (string(region->GetName()) == "signal_b" and name == "peakintegral2"){
+            int bw = 40;
+            float int2 = abs(wf->getIntegral(wf->getIndex(region->GetLowBoarder() + bw, region->GetHighBoarder() + bw, polarity), integral->GetRange(), 2.0));
+            float intm1 = abs(wf->getIntegral(wf->getIndex(region->GetLowBoarder() - 2 * bw, region->GetHighBoarder() - 2 * bw, polarity), integral->GetRange(), 2.0));
+            float thresh = GetNoiseThreshold(channel.first, 2);
+            f_bucket[i] = int2 > thresh and abs(integral->GetTimeIntegral()) < thresh; // sig < thresh and bucket 2 > thresh
+            f_ped_bucket[i++] = intm1 > GetNoiseThreshold(channel.first, 4);
+          }
           if (name.find("peaktopeak")!=std::string::npos){
             integral->SetIntegral(wf->getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else if (name.find("median")!=name.npos){
@@ -982,6 +994,11 @@ void FileWriterTreeDRS4::ReadIntegralRegions() {
       regions->at(ch.first)->AddRegion(region);
     }
   }
+}
+
+float FileWriterTreeDRS4::GetNoiseThreshold(uint8_t i_wf, float n_sigma) {
+  /** :returns:  threshold based on the current noise */
+  return float(polarities.at(i_wf)) * noise->at(i_wf).first + n_sigma * noise->at(i_wf).second;
 }
 
 #endif // ROOT_FOUND

@@ -79,6 +79,7 @@ namespace eudaq {
         void SetScalers(StandardEvent);
         void ReadIntegralRanges();
         void ReadIntegralRegions();
+        float GetNoiseThreshold(uint8_t, float=2);
         bool hasTU;
 
         // clocks for checking execution time
@@ -149,6 +150,8 @@ namespace eudaq {
         std::vector<float> *IntegralPeakTime;
         std::vector<float> *IntegralLength;
         float * v_cft;  // constant fraction time
+        bool * f_bucket;
+        bool * f_ped_bucket;
 
         // general waveform information
         std::vector<bool> *v_is_saturated;
