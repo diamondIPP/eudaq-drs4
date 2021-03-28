@@ -121,7 +121,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     avgWF_3_sig = new TH1F("avgWF_3_sig","avgWF_3_sig", 1024, 0, 1024);
 
     spec = new TSpectrum(25);
-    fft_own = 0;
+    fft_own = nullptr;
     if(!fft_own){
         int n = 1024;
         n_samples = n + 1;
@@ -277,7 +277,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("IntegralLength", &IntegralLength);
     m_ttree->Branch("cft", v_cft, TString::Format("cft[%d]/f", n_active_channels));
     m_ttree->Branch("bucket", f_bucket, TString::Format("bucket[%d]/O", n_active_channels));
-    m_ttree->Branch("ped bucket", f_ped_bucket, TString::Format("ped_bucket[%d]/O", n_active_channels));
+    m_ttree->Branch("ped_bucket", f_ped_bucket, TString::Format("ped_bucket[%d]/O", n_active_channels));
 
     // DUT
     m_ttree->Branch("is_saturated", &v_is_saturated);
