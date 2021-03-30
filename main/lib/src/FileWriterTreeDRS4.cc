@@ -1,6 +1,8 @@
 #ifdef ROOT_FOUND
 
 #include "eudaq/FileWriterTreeDRS4.hh"
+#include "TROOT.h"
+
 
 using namespace std;
 using namespace eudaq;
@@ -761,9 +763,10 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
           if (string(region->GetName()) == "signal_b" and name == "peakintegral2"){
             int bw = 40;
             float int2 = abs(wf->getIntegral(wf->getIndex(region->GetLowBoarder() + bw, region->GetHighBoarder() + bw, polarity), integral->GetRange(), 2.0));
-            float intm1 = abs(wf->getIntegral(wf->getIndex(region->GetLowBoarder() - 2 * bw, region->GetHighBoarder() - 2 * bw, polarity), integral->GetRange(), 2.0));
             float thresh = GetNoiseThreshold(channel.first, 2);
             f_bucket[i] = int2 > thresh and abs(integral->GetTimeIntegral()) < thresh; // sig < thresh and bucket 2 > thresh
+            int16_t low(region->GetLowBoarder() - 2 * bw), high(region->GetHighBoarder() - 2 * bw);
+            float intm1 = low < 0 ? 0 : abs(wf->getIntegral(wf->getIndex(low, high, polarity), integral->GetRange(), 2.0));
             f_ped_bucket[i++] = intm1 > GetNoiseThreshold(channel.first, 4);
           }
           if (name.find("peaktopeak")!=std::string::npos){

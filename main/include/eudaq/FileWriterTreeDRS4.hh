@@ -30,7 +30,6 @@
 #include "TPolyMarker.h"
 #include "TMath.h"
 #include "TString.h"
-#include "TROOT.h"
 #include <Math/MinimizerOptions.h>
 #include "TDirectory.h"
 
