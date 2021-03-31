@@ -2,6 +2,19 @@
 
 #include "eudaq/FileWriterTreeDRS4.hh"
 #include "TROOT.h"
+#include "TTree.h"
+#include "TVirtualFFT.h"
+#include "TFile.h"
+#include "TH1F.h"
+#include "TSystem.h"
+#include "TInterpreter.h"
+#include "TMacro.h"
+#include "TF1.h"
+#include "TCanvas.h"
+#include "TSpectrum.h"
+#include "TMath.h"
+#include "TString.h"
+#include <Math/MinimizerOptions.h>
 
 
 using namespace std;
@@ -14,7 +27,7 @@ namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
-: m_tfile(0), m_ttree(0), m_noe(0), n_channels(4), n_active_channels(0), n_pixels(90*90+60*60), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false), rise_time(5) {
+: m_tfile(0), m_ttree(0), n_channels(4), n_active_channels(0), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false), rise_time(5) {
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");

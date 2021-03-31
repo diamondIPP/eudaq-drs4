@@ -13,45 +13,31 @@
 #include "WaveformSignalRegion.hh"
 #include "WaveformSignalRegions.hh"
 #include "include/SimpleStandardEvent.hh"
-// ROOT imports
 
-#include "TVirtualFFT.h"
+// ROOT imports
 #include "TStopwatch.h"
-#include "TFile.h"
-#include "TTree.h"
-#include "TH1F.h"
-#include "TSystem.h"
-#include "TInterpreter.h"
-#include "TMacro.h"
-#include "TF1.h"
-#include "TGraph.h"
-#include "TCanvas.h"
-#include "TSpectrum.h"
-#include "TPolyMarker.h"
-#include "TMath.h"
-#include "TString.h"
-#include <Math/MinimizerOptions.h>
-#include "TDirectory.h"
+class TTree;
+class TH1F;
+class TSpectrum;
+class TVirtualFFT;
+class TMacro;
 
 namespace eudaq {
 
     class FileWriterTreeDRS4 : public FileWriter {
     public:
-        FileWriterTreeDRS4(const std::string &);
-        virtual void StartRun(unsigned);
-        virtual void Configure();
-        virtual void WriteEvent(const DetectorEvent &);
-        virtual uint64_t FileBytes() const;
+        explicit FileWriterTreeDRS4(const std::string &);
+        void StartRun(unsigned) override;
+        void Configure() override;
+        void WriteEvent(const DetectorEvent &) override;
+        uint64_t FileBytes() const override;
         float Calculate(std::vector<float> *data, int min, int max, bool _abs = false);
 
-//        float CalculatePeak(std::vector<float> * data, int min, int max);
-//        std::pair<int, float> FindMaxAndValue(std::vector<float> * data, int min, int max);
-
         float avgWF(float, float, int);
-        virtual ~FileWriterTreeDRS4();
-        virtual long GetMaxEventNumber() { return max_event_number; }
-        virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
-        virtual void setTU(bool tu) { hasTU = tu; }
+        ~FileWriterTreeDRS4() override;
+        long GetMaxEventNumber() override { return max_event_number; }
+        std::string GetStats(const DetectorEvent &dev) override { return PluginManager::GetStats(dev); }
+        void setTU(bool tu) override { hasTU = tu; }
 
     private:
         unsigned runnumber;
@@ -63,14 +49,14 @@ namespace eudaq {
         void ResizeVectors(size_t n_channels);
         int IsPulserEvent(const StandardWaveform *wf);
         void ExtractForcTiming(std::vector<float> *);
-        void FillRegionIntegrals(const StandardEvent sev);
+        void FillRegionIntegrals(StandardEvent sev);
         void FillRegionVectors();
         void FillTotalRange(uint8_t iwf, const StandardWaveform *wf);
         void UpdateWaveforms(uint8_t iwf);
         void FillSpectrumData(uint8_t iwf);
         void DoSpectrumFitting(uint8_t iwf);
         void DoFFTAnalysis(uint8_t iwf);
-        bool UseWaveForm(uint16_t bitmask, uint8_t iwf) { return ((bitmask & 1 << iwf) == 1 << iwf); }
+        static bool UseWaveForm(uint16_t bitmask, uint8_t iwf) { return ((bitmask & 1 << iwf) == 1 << iwf); }
         std::string GetBitMask(uint16_t bitmask);
         std::string GetPolarities(std::vector<signed char> pol);
         void SetTimeStamp(StandardEvent);
@@ -92,10 +78,8 @@ namespace eudaq {
         std::vector<float> * data;
         std::vector<std::string> sensor_name;
         // Book variables for the Event_to_TTree conversion
-        unsigned m_noe;
         uint16_t n_channels;
         uint16_t n_active_channels;
-        int n_pixels;
         std::vector<signed char> polarities;
         std::vector<signed char> pulser_polarities;
         std::vector<signed char> spectrum_polarities;
