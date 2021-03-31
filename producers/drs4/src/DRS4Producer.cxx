@@ -272,7 +272,7 @@ void DRS4Producer::OnConfigure(const eudaq::Configuration& conf) {
 
 		double sampling_frequency = m_config.Get("sampling_frequency",5);
 		bool wait_for_PLL_lock = m_config.Get("wait_for_PLL_lock",true);
-		cout<<"Set Freqeuncy: "<<sampling_frequency<<" | Wait for PLL lock" <<wait_for_PLL_lock<<endl;
+		cout << "Set sampling frequency: " << sampling_frequency << " | Wait for PLL lock" << wait_for_PLL_lock << endl;
 		/* set sampling frequency */
 		m_b->SetFrequency(sampling_frequency, wait_for_PLL_lock);
 
