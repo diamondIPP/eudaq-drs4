@@ -17,7 +17,7 @@ parser.add_argument('-s', nargs='?', default='1')
 parser.add_argument('-t', nargs='?', default='telescopetree')
 parser.add_argument('-o', action='store_true')
 parser.add_argument('-p', nargs='?', default=None, help='full run path')
-parser.add_argument('-c', nargs='?', default='converter_waveform_integrals.conf', help='full run path')
+parser.add_argument('-c', nargs='?', default='converter.ini', help='relative config file path')
 args = parser.parse_args()
 
 trees = ['caentree', 'drs4tree', 'telescopetree', 'waveformtree']
