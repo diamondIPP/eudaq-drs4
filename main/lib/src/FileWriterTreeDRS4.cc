@@ -27,13 +27,12 @@ namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
-: m_tfile(0), m_ttree(0), n_channels(4), n_active_channels(0), histo(0), spec(0), fft_own(0), runnumber(0), hasTU(false), rise_time(5) {
+: bunch_width_(19.76), sampling_speed_(2), m_tfile(0), m_ttree(0), n_channels(4), n_active_channels(0), histo(0), spec(0),
+  fft_own(0), runnumber(0), hasTU(false), rise_time(5) {
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
-//    gROOT->ProcessLine("#include <pair>");
     gROOT->ProcessLine("#include <map>");
-//    gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >", "vector;string;map");
     gInterpreter->GenerateDictionary("vector<vector<float> >;vector<vector<uint16> >", "vector");
     //Polarities of signals, default is positive signals
     polarities.resize(4, 1);
@@ -94,9 +93,10 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     wf_thr = {125, 10, 40, 300};
 
     // spectrum vectors
-    noise = new vector<pair<float, float> >;
-    noise->resize(4);
-    for (uint8_t i = 0; i < 4; i++) noise_vectors[i] = new deque<float>;
+    noise_.resize(n_channels);
+    int_noise_.resize(n_channels);
+    int_noise_vectors.resize(n_channels);
+    noise_vectors.resize(n_channels);
     decon.resize(1024, 0);
     peaks_x.resize(4, new std::vector<uint16_t>);
     peaks_x_time.resize(4, new std::vector<float>);
@@ -355,7 +355,10 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
 void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     if (ev.IsBORE()) {
         PluginManager::SetConfig(ev, m_config);
-        eudaq::PluginManager::Initialize(ev);
+        PluginManager::Initialize(ev);
+        Configuration conf(ev.GetTag("CONFIG"));
+        sampling_speed_ = conf.Get("Producer.DRS4","sampling_frequency", 5);
+        cout << "Sampling Frequency: " << sampling_speed_ << endl;
         tcal = PluginManager::GetTimeCalibration(ev);
         FillFullTime();
         macro->AddLine("\n[Time Calibration]");
@@ -418,6 +421,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     }
     ResizeVectors(sev.GetNWaveforms());
     FillRegionIntegrals(sev);
+    FillBucket(sev);
 
     for (auto iwf : wf_order){
         if (verbose > 3) cout<<"Channel Nr: "<< int(iwf) <<endl;
@@ -702,7 +706,7 @@ inline void FileWriterTreeDRS4::DoSpectrumFitting(uint8_t iwf){
 
     float max = *max_element(data_pos.begin(), data_pos.end());
     //return if the max element is lower than 4 sigma of the noise
-    float threshold = 4 * noise->at(iwf).second + noise->at(iwf).first;
+    float threshold = 4 * noise_.at(iwf).second + noise_.at(iwf).first;
 
     if (max <= threshold) return;
     // tspec threshold is in per cent to max peak
@@ -751,14 +755,41 @@ void FileWriterTreeDRS4::FillSpectrumData(uint8_t iwf){
 void FileWriterTreeDRS4::calc_noise(uint8_t iwf) {
   float value = data->at(peak_noise_pos);
   // filter out peaks at the pedestal
-  if (std::abs(value) < 6 * noise->at(iwf).second + std::abs(noise->at(iwf).first) or noise_vectors.at(iwf)->size() < 10)
-    noise_vectors.at(iwf)->push_back(value);
-  if (noise_vectors.at(iwf)->size() >= 1000)
-    noise_vectors.at(iwf)->pop_front();
-  noise->at(iwf) = calc_mean(*noise_vectors.at(iwf));
+  if (std::abs(value) < 6 * noise_.at(iwf).second + std::abs(noise_.at(iwf).first) or noise_vectors.at(iwf).size() < 10)
+    noise_vectors.at(iwf).push_back(value);
+  if (noise_vectors.at(iwf).size() >= 1000)
+    noise_vectors.at(iwf).pop_front();
+  noise_.at(iwf) = calc_mean(noise_vectors.at(iwf));
 }
 
-void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
+void FileWriterTreeDRS4::FillBucket(const StandardEvent & sev) {
+  /** fills the integral noise for the bucket cut calculations */
+  auto bw = uint16_t(round(sampling_speed_ * bunch_width_));
+  uint8_t j(0);
+  for (auto ch: *regions){
+    uint8_t i_ch = ch.first;
+    const StandardWaveform * wf = &sev.GetWaveform(i_ch);
+    WaveformSignalRegion * r = ch.second->GetRegion("signal_b");
+    WaveformIntegral * i = r->GetIntegralPointer("PeakIntegral2");
+
+    /** noise */
+    float noise = wf->getIntegral(r, i, sampling_speed_, -bw);  // find highest value and integrate as for signal
+    if (abs(noise) < 4 * int_noise_.at(i_ch).second + abs(int_noise_.at(i_ch).first) or int_noise_vectors.at(i_ch).size() < 10) {
+      int_noise_vectors.at(i_ch).push_back(noise); }
+    if (int_noise_vectors.at(i_ch).size() >= 1000) {
+      int_noise_vectors.at(i_ch).pop_front(); }
+    int_noise_.at(i_ch) = calc_mean(int_noise_vectors.at(i_ch));
+
+    /** bucket */
+    float int2 = abs(wf->getIntegral(r, i, sampling_speed_, bw));
+    float thresh = GetNoiseThreshold(i_ch, 3);
+    f_bucket[j] = int2 > thresh and abs(wf->getIntegral(r, i, sampling_speed_)) < thresh; // sig < thresh and bucket 2 > thresh
+    float intm1 = r->GetLowBoarder() - 2 * bw < 0 ? 0 : abs(wf->getIntegral(r, i, sampling_speed_, -2 * bw));
+    f_ped_bucket[j++] = intm1 > GetNoiseThreshold(i_ch, 4);
+  }
+}
+
+void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent & sev){
 
     uint8_t i = 0;
     for (auto channel: *regions){
@@ -774,16 +805,7 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent sev){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);
           integral->SetPeakPosition(peak_pos, wf->GetNSamples());
-          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, 2.0));
-          if (string(region->GetName()) == "signal_b" and name == "peakintegral2"){
-            int bw = 40;
-            float int2 = abs(wf->getIntegral(wf->getIndex(region->GetLowBoarder() + bw, region->GetHighBoarder() + bw, polarity), integral->GetRange(), 2.0));
-            float thresh = GetNoiseThreshold(channel.first, 2);
-            f_bucket[i] = int2 > thresh and abs(integral->GetTimeIntegral()) < thresh; // sig < thresh and bucket 2 > thresh
-            int16_t low(region->GetLowBoarder() - 2 * bw), high(region->GetHighBoarder() - 2 * bw);
-            float intm1 = low < 0 ? 0 : abs(wf->getIntegral(wf->getIndex(low, high, polarity), integral->GetRange(), 2.0));
-            f_ped_bucket[i++] = intm1 > GetNoiseThreshold(channel.first, 4);
-          }
+          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, sampling_speed_));
           if (name.find("peaktopeak")!=std::string::npos){
             integral->SetIntegral(wf->getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else if (name.find("median")!=name.npos){
@@ -824,17 +846,17 @@ void FileWriterTreeDRS4::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     if (UseWaveForm(active_regions, iwf)){
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
-        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
-        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
+        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise_.at(iwf).first);
+        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise_.at(iwf).first);
         auto fit_peak = wf->fitMaximum(reg->GetLowBoarder(), reg->GetHighBoarder());
         v_fit_peak_time->at(iwf) = fit_peak.first;
         v_fit_peak_value->at(iwf) = fit_peak.second;
-        v_wf_start->at(iwf) = wf->getWFStartTime(reg->GetLowBoarder(), reg->GetHighBoarder(), noise->at(iwf).first, fit_peak.second);
+        v_wf_start->at(iwf) = wf->getWFStartTime(reg->GetLowBoarder(), reg->GetHighBoarder(), noise_.at(iwf).first, fit_peak.second);
         v_peaking_time->at(iwf) = v_fit_peak_time->at(iwf) - v_wf_start->at(iwf);
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
-        float threshold = polarities.at(iwf) * 4 * noise->at(iwf).second + noise->at(iwf).first;
+        float threshold = polarities.at(iwf) * 4 * noise_.at(iwf).second + noise_.at(iwf).first;
         vector<uint16_t> * peak_positions = wf->getAllPeaksAbove(0, 1023, threshold);
         v_peak_positions->at(iwf) = *peak_positions;
         v_npeaks->at(iwf) = uint8_t(v_peak_positions->at(iwf).size());
@@ -1016,7 +1038,7 @@ void FileWriterTreeDRS4::ReadIntegralRegions() {
 
 float FileWriterTreeDRS4::GetNoiseThreshold(uint8_t i_wf, float n_sigma) {
   /** :returns:  threshold based on the current noise */
-  return float(polarities.at(i_wf)) * noise->at(i_wf).first + n_sigma * noise->at(i_wf).second;
+  return float(polarities.at(i_wf)) * int_noise_.at(i_wf).first + n_sigma * int_noise_.at(i_wf).second;
 }
 
 #endif // ROOT_FOUND

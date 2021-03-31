@@ -45,11 +45,14 @@ namespace eudaq {
         long max_event_number;
         uint16_t save_waveforms;
         uint16_t active_regions;
+        float sampling_speed_;
+        float bunch_width_;
+
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
         int IsPulserEvent(const StandardWaveform *wf);
         void ExtractForcTiming(std::vector<float> *);
-        void FillRegionIntegrals(StandardEvent sev);
+        void FillRegionIntegrals(const StandardEvent& sev);
         void FillRegionVectors();
         void FillTotalRange(uint8_t iwf, const StandardWaveform *wf);
         void UpdateWaveforms(uint8_t iwf);
@@ -182,9 +185,12 @@ namespace eudaq {
 
         // spectrum
         unsigned peak_noise_pos;
-        std::vector<std::pair<float, float> >* noise;
-        std::map<uint8_t, std::deque<float> *> noise_vectors;
+        std::vector<std::pair<float, float> > noise_;
+        std::vector<std::deque<float> > noise_vectors;
+        std::vector<std::pair<float, float> > int_noise_;
+        std::vector<std::deque<float> > int_noise_vectors;
         void calc_noise(uint8_t);
+        void FillBucket(const StandardEvent& sev);
         std::vector<double> data_pos;
         std::vector<double> decon;
         std::vector<std::vector<uint16_t> *> peaks_x;
