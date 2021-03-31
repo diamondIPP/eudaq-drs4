@@ -12,7 +12,7 @@
 #include <limits>
 #include <vector>
 #include <map>
-#include "TROOT.h"
+
 class WaveformSignalRegion:public TObject {
     public:
         WaveformSignalRegion(int low=-1, int high=-1, std::string name="");

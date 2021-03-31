@@ -15,11 +15,10 @@
 #include <algorithm>
 #include <numeric>      // std::accumulate
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <numeric>
 
-#include <TROOT.h>
 #include "include/OnlineMonConfiguration.hh"
 #include <TMath.h>
 

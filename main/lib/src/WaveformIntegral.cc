@@ -6,6 +6,8 @@
  */
 
 #include <eudaq/WaveformIntegral.hh>
+#include "TString.h"
+#include "TObject.h"
 
 //ClassImp(WaveformIntegral);
 
@@ -13,9 +15,9 @@ WaveformIntegral::WaveformIntegral(int down_range, int up_range, std::string nam
     this->down_range = down_range;
     this->up_range = up_range;
     if (name=="")
-        this->name = TString::Format("Integral_%d-%d",down_range,up_range);
+        this->name_ = TString::Format("Integral_%d-%d", down_range, up_range);
     else
-        this->name=name;
+        this->name_=name;
     this->SetName(name);
 }
 
@@ -23,12 +25,12 @@ void WaveformIntegral::Reset() {
     calculated = false;
     integral_start = -1;
     integral_stop = -1;
-    integral = std::numeric_limits<double>::quiet_NaN();
+  integral_ = std::numeric_limits<double>::quiet_NaN();
 }
 
 void WaveformIntegral::SetIntegral(float integral) {
     calculated = true;
-    this->integral = integral;
+    this->integral_ = integral;
 }
 
 void WaveformIntegral::SetPeakPosition(int peak_position, int n_samples) {
@@ -37,9 +39,9 @@ void WaveformIntegral::SetPeakPosition(int peak_position, int n_samples) {
 }
 
 void WaveformIntegral::Print(std::ostream & out, bool bEndl) const{
-    out<<"WaveformIntegral: "<<name<<"["<<std::setw(3)<<down_range<<","<<std::setw(3)<<up_range<<"]";
+    out << "WaveformIntegral: " << name_ << "[" << std::setw(3) << down_range << "," << std::setw(3) << up_range << "]";
     if (calculated)
-        out<<": ["<<std::setw(3)<<integral_start<<","<<std::setw(3)<<integral_stop<<"] "<<integral;
+        out << ": [" << std::setw(3) << integral_start << "," << std::setw(3) << integral_stop << "] " << integral_;
     if (bEndl)
         out<<std::endl;
 
