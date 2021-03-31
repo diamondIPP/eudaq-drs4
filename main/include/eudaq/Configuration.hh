@@ -53,6 +53,11 @@ namespace eudaq {
       std::string Get(const std::string & key, const std::string fallback, std::string def) const {
         return Get(key, Get(fallback, def));
       }
+      template <typename T>
+        T Get(const std::string & section, const std::string & key, const T & def, bool set=true) {
+        if (set) { SetSection(section); }
+        return Get(key, def);
+        }
       //std::string Get(const std::string & key, const std::string & def = "");
       template <typename T>
         void Set(const std::string & key, const T & val);
