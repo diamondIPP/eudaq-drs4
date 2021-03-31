@@ -361,6 +361,8 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     w_total.Start(false);
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 
+    if (sev.NumPlanes() == 0) return;
+
     f_event_number = sev.GetEventNumber();
 
     /** TU STUFF */
