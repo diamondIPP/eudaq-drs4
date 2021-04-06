@@ -372,14 +372,13 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         cout << "loading the last event...." << endl;
         return;
     }
+    f_event_number = ev.GetEventNumber();
     if (max_event_number > 0 && f_event_number > max_event_number) return;
 
     w_total.Start(false);
     StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 
     if (sev.NumPlanes() == 0) return;
-
-    f_event_number = sev.GetEventNumber();
 
     /** TU STUFF */
     SetTimeStamp(sev);
