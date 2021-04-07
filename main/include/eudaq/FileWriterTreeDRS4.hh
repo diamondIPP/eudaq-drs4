@@ -38,6 +38,9 @@ namespace eudaq {
         long GetMaxEventNumber() override { return max_event_number; }
         std::string GetStats(const DetectorEvent &dev) override { return PluginManager::GetStats(dev); }
         void setTU(bool tu) override { hasTU = tu; }
+        void SetTelescopeBranches();
+        void FillTelescopeArrays(const StandardEvent&);
+        void InitTelescopeArrays();
 
     private:
         unsigned runnumber;
@@ -159,11 +162,12 @@ namespace eudaq {
         std::map<uint8_t, std::vector<float> *> f_wf;
 
         // telescope
-        std::vector<uint16_t> *f_plane;
-        std::vector<uint16_t> *f_col;
-        std::vector<uint16_t> *f_row;
-        std::vector<int16_t> *f_adc;
-        std::vector<uint32_t> *f_charge;
+        uint8_t f_n_hits;
+        uint8_t * f_plane;
+        uint8_t * f_col;
+        uint8_t * f_row;
+        int16_t * f_adc;
+        float * f_charge;
         uint8_t f_trig_phase;
 
         // average waveforms of channels

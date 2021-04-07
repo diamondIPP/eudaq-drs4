@@ -16,6 +16,7 @@
 #include "TString.h"
 #include <Math/MinimizerOptions.h>
 
+#define MAX_SIZE 255
 
 using namespace std;
 using namespace eudaq;
@@ -113,11 +114,8 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     fft_min_freq = new std::vector<float>;
 
     // telescope
-    f_plane  = new std::vector<uint16_t>;
-    f_col    = new std::vector<uint16_t>;
-    f_row    = new std::vector<uint16_t>;
-    f_adc    = new std::vector<int16_t>;
-    f_charge = new std::vector<uint32_t>;
+    InitTelescopeArrays();
+    f_trigger_cell = 0;
 
     //tu
     v_scaler = new vector<uint64_t>;
@@ -338,11 +336,7 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     }
 
     // telescope
-    m_ttree->Branch("plane", &f_plane);
-    m_ttree->Branch("col", &f_col);
-    m_ttree->Branch("row", &f_row);
-    m_ttree->Branch("adc", &f_adc);
-    m_ttree->Branch("charge", &f_charge);
+    SetTelescopeBranches();
     m_ttree->Branch("trigger_phase", &f_trig_phase, "trigger_phase/b");
     verbose = 1;
     
@@ -480,17 +474,8 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     // ---------- save all info for the telescope -------------------------
     // --------------------------------------------------------------------
     f_trig_phase = sev.GetPlane(0).GetTrigPhase();  // there is only one trigger phase for the whole telescope (one DTB)
-    for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
-        const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
-        std::vector<double> cds = plane.GetPixels<double>();
-        for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
-            f_plane->emplace_back(iplane);
-            f_col->push_back(uint16_t(plane.GetX(ipix)));
-            f_row->push_back(uint16_t(plane.GetY(ipix)));
-            f_adc->push_back(int16_t(plane.GetPixel(ipix)));
-            f_charge->push_back(42);						// todo: do charge conversion here!
-        }
-    }
+    FillTelescopeArrays(sev);
+
     m_ttree->Fill();
     if (f_event_number + 1 % 1000 == 0) cout << "of run " << runnumber << flush;
 //        <<" "<<std::setw(7)<<f_event_number<<"\tSpectrum: "<<w_spectrum.RealTime()/w_spectrum.Counter()<<"\t" <<"LinearFitting: "
@@ -502,6 +487,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
     -------------------------DECONSTRUCTOR-------------------------------
     =====================================================================*/
 FileWriterTreeDRS4::~FileWriterTreeDRS4() {
+
     if (macro && m_ttree) {
         macro->AddLine("\n[Sensor Names]");
         vector<string> names;
@@ -535,6 +521,15 @@ FileWriterTreeDRS4::~FileWriterTreeDRS4() {
         avgWF_3_pul->Write();
     }
     if (macro) macro->Write();
+
+    m_tfile->Close();
+    delete m_tfile;
+
+//    delete [] f_plane;
+//    delete [] f_col;
+//    delete [] f_row;
+//    delete [] f_adc;
+//    delete [] f_charge;
 }
 
 float FileWriterTreeDRS4::Calculate(std::vector<float> * data, int min, int max, bool _abs) {
@@ -590,12 +585,6 @@ inline void FileWriterTreeDRS4::ClearVectors(){
 
     for (auto v_wf:f_wf) v_wf.second->clear();
     f_isDa->clear();
-
-    f_plane->clear();
-    f_col->clear();
-    f_row->clear();
-    f_adc->clear();
-    f_charge->clear();
 
     for (auto vec: *v_peak_positions) vec.clear();
     for (auto vec: *v_peak_times) vec.clear();
@@ -1038,6 +1027,42 @@ void FileWriterTreeDRS4::ReadIntegralRegions() {
 float FileWriterTreeDRS4::GetNoiseThreshold(uint8_t i_wf, float n_sigma) {
   /** :returns:  threshold based on the current noise */
   return float(polarities.at(i_wf)) * int_noise_.at(i_wf).first + n_sigma * int_noise_.at(i_wf).second;
+}
+
+void FileWriterTreeDRS4::SetTelescopeBranches() {
+
+  m_ttree->Branch("n_hits_tot", &f_n_hits, "n_hits_tot/b");
+  m_ttree->Branch("plane", f_plane, "plane[n_hits_tot]/b");
+  m_ttree->Branch("col", f_col, "col[n_hits_tot]/b");
+  m_ttree->Branch("row", f_row, "row[n_hits_tot]/b");
+  m_ttree->Branch("adc", f_adc, "adc[n_hits_tot]/S");
+  m_ttree->Branch("charge", f_charge, "charge[n_hits_tot]/F");
+}
+
+void FileWriterTreeDRS4::FillTelescopeArrays(const StandardEvent & sev) {
+
+  f_n_hits = 0;
+  for (auto iplane(0); iplane < sev.NumPlanes(); ++iplane) {
+    const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
+    std::vector<double> cds = plane.GetPixels<double>();
+    for (auto ipix(0); ipix < cds.size(); ++ipix) {
+      f_plane[f_n_hits] = iplane;
+      f_col[f_n_hits] = uint8_t(plane.GetX(ipix));
+      f_row[f_n_hits] = uint8_t(plane.GetY(ipix));
+      f_adc[f_n_hits] = int16_t(plane.GetPixel(ipix));
+      f_charge[f_n_hits++] = 42;						// todo: do charge conversion here!
+    }
+  }
+}
+
+void FileWriterTreeDRS4::InitTelescopeArrays() {
+
+  f_n_hits = 0;
+  f_plane  = new uint8_t[MAX_SIZE];
+  f_col    = new uint8_t[MAX_SIZE];
+  f_row    = new uint8_t[MAX_SIZE];
+  f_adc    = new int16_t [MAX_SIZE];
+  f_charge = new float[MAX_SIZE];
 }
 
 #endif // ROOT_FOUND

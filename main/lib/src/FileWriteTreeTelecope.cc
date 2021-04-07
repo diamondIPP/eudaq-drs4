@@ -17,6 +17,8 @@
 #include "TFitResultPtr.h"
 #include "TMath.h"
 
+#define MAX_SIZE 255
+
 using namespace std;
 using namespace eudaq;
 
@@ -67,6 +69,9 @@ namespace eudaq {
     virtual long GetMaxEventNumber();
       virtual string GetStats(const DetectorEvent &);
       virtual void setTU(bool tu) { hasTU = tu; }
+    void SetTelescopeBranches();
+    void FillTelescopeArrays(const StandardEvent&, bool);
+    void InitTelescopeArrays();
 
   private:
     TFile * m_tfile; // book the pointer to a file (to store the output)
@@ -81,16 +86,18 @@ namespace eudaq {
 
     // Scalar Branches
     int f_event_number;
+    uint8_t f_at_plane;
     double f_time;
     double old_time;
     uint16_t f_beam_current;
 
     // Vector Branches
-    std::vector<uint16_t> * f_plane;
-    std::vector<uint16_t> * f_col;
-    std::vector<uint16_t> * f_row;
-    std::vector<int16_t> * f_adc;
-    std::vector<uint32_t> * f_charge;
+    uint8_t f_n_hits;
+    uint8_t * f_plane;
+    uint8_t * f_col;
+    uint8_t * f_row;
+    int16_t * f_adc;
+    float * f_charge;
     std::vector<int16_t> * f_trig_phase;
 
     //tu
@@ -106,18 +113,14 @@ namespace eudaq {
   }
 
   FileWriterTreeTelescope::FileWriterTreeTelescope(const std::string & /*param*/)
-    : m_tfile(0), m_ttree(0),m_noe(0),chan(4),n_pixels(90*90+60*60), f_event_number(0), hasTU(false)
+    : m_tfile(0), m_ttree(0), m_noe(0), chan(4), n_pixels(90*90+60*60), f_event_number(0), f_at_plane(0), hasTU(false)
   {
     gROOT->ProcessLine("#include <vector>");
     //Initialize for configuration file:
     //how many events will be analyzed, 0 = all events
     max_event_number = 0;
 
-    f_plane  = new std::vector<uint16_t>;
-    f_col    = new std::vector<uint16_t>;
-    f_row    = new std::vector<uint16_t>;
-    f_adc    = new std::vector<int16_t>;
-    f_charge = new std::vector<uint32_t>;
+    InitTelescopeArrays();
     f_trig_phase = new std::vector<int16_t>;
     f_trig_phase->resize(2);
 
@@ -161,11 +164,7 @@ namespace eudaq {
     m_ttree->Branch("time", &f_time, "time/D");
 
     // telescope
-    m_ttree->Branch("plane", &f_plane);
-    m_ttree->Branch("col", &f_col);
-    m_ttree->Branch("row", &f_row);
-    m_ttree->Branch("adc", &f_adc);
-    m_ttree->Branch("charge", &f_charge);
+    SetTelescopeBranches();
     m_ttree->Branch("trigger_phase", &f_trig_phase);
 
     // tu
@@ -205,47 +204,13 @@ namespace eudaq {
     SetBeamCurrent(sev);
     SetScalers(sev);
 
-    f_plane->clear();
-    f_col->clear();
-    f_row->clear();
-    f_adc->clear();
-    f_charge->clear();
     fill(f_trig_phase->begin(), f_trig_phase->end(), -1);
-    uint8_t ind = 0;
-    for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
+    f_n_hits = 0;
+    f_at_plane = 0;
+    FillTelescopeArrays(sev, false);  // first fill the telescope planes and then the DUT
+    FillTelescopeArrays(sev, true);
 
-      const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
-      if(plane.Sensor() == "DUT") {
-        std::vector<double> cds = plane.GetPixels<double>();
-        f_trig_phase->at(0) = int16_t(plane.GetTrigPhase());
-        for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
-          f_plane->push_back(ind); // has to be ind and not iplane, so that the DUT are always first and REF after
-          f_col->push_back(uint16_t(plane.GetX(ipix)));
-          f_row->push_back(uint16_t(plane.GetY(ipix)));
-          f_adc->push_back(int16_t(plane.GetPixel(ipix)));
-          f_charge->push_back(42);                        // todo: do charge conversion here!
-        }
-        ind++;
-      }
-    }
-    for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
-
-      const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
-      if(plane.Sensor() != "DUT") {
-        std::vector<double> cds = plane.GetPixels<double>();
-        f_trig_phase->at(1) = int16_t(plane.GetTrigPhase());
-        for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
-          f_plane->push_back(ind); // has to be ind and not iplane, so that the DUT are always first and REF after
-          f_col->push_back(uint16_t(plane.GetX(ipix)));
-          f_row->push_back(uint16_t(plane.GetY(ipix)));
-          f_adc->push_back(int16_t(plane.GetPixel(ipix)));
-          f_charge->push_back(42);                        // todo: do charge conversion here!
-        }
-        ind++;
-      }
-    }
     m_ttree->Fill();
-
   }
   // Get max event number: DA
   long FileWriterTreeTelescope::GetMaxEventNumber(){
@@ -297,6 +262,45 @@ void FileWriterTreeTelescope::SetScalers(StandardEvent sev) {
         if (valid)
             old_time = f_time;
     }
+}
+
+void FileWriterTreeTelescope::SetTelescopeBranches() {
+
+  m_ttree->Branch("n_hits_tot", &f_n_hits, "n_hits_tot/b");
+  m_ttree->Branch("plane", f_plane, "plane[n_hits_tot]/b");
+  m_ttree->Branch("col", f_col, "col[n_hits_tot]/b");
+  m_ttree->Branch("row", f_row, "row[n_hits_tot]/b");
+  m_ttree->Branch("adc", f_adc, "adc[n_hits_tot]/S");
+  m_ttree->Branch("charge", f_charge, "charge[n_hits_tot]/F");
+}
+
+void FileWriterTreeTelescope::FillTelescopeArrays(const StandardEvent & sev, bool is_dut) {
+
+  for (auto iplane(0); iplane < sev.NumPlanes(); ++iplane) {
+    const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
+    bool is_telescope = plane.Sensor() == "DUT";  // the telescope planes are called DUT here...
+    if (is_telescope == is_dut) { continue; }
+    std::vector<double> cds = plane.GetPixels<double>();
+    f_trig_phase->at(is_dut ? 1 : 0) = int16_t(plane.GetTrigPhase());
+    for (auto ipix(0); ipix < cds.size(); ++ipix) {
+      f_plane[f_n_hits] = f_at_plane;
+      f_col[f_n_hits] = uint8_t(plane.GetX(ipix));
+      f_row[f_n_hits] = uint8_t(plane.GetY(ipix));
+      f_adc[f_n_hits] = int16_t(plane.GetPixel(ipix));
+      f_charge[f_n_hits++] = 42;						// todo: do charge conversion here!
+    }
+    f_at_plane++;
+  }
+}
+
+void FileWriterTreeTelescope::InitTelescopeArrays() {
+
+  f_n_hits = 0;
+  f_plane  = new uint8_t[MAX_SIZE];
+  f_col    = new uint8_t[MAX_SIZE];
+  f_row    = new uint8_t[MAX_SIZE];
+  f_adc    = new int16_t [MAX_SIZE];
+  f_charge = new float[MAX_SIZE];
 }
 
 #endif // ROOT_FOUND
