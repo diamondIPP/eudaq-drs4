@@ -40,6 +40,9 @@ namespace eudaq {
         virtual ~FileWriterTreeCAEN();
         virtual long GetMaxEventNumber() { return max_event_number; }
         virtual std::string GetStats(const DetectorEvent &dev) { return PluginManager::GetStats(dev); }
+        void SetTelescopeBranches();
+        void FillTelescopeArrays(const StandardEvent&);
+        void InitTelescopeArrays();
 
     private:
         unsigned runnumber;
@@ -49,6 +52,9 @@ namespace eudaq {
         uint16_t active_regions;
         uint16_t n_active_channels;
         std::vector<uint16_t> * dia_channels;
+        float sampling_speed_;
+        float bunch_width_;
+
         void ClearVectors();
         void ResizeVectors(size_t n_channels);
         bool IsPulserEvent(const StandardWaveform *wf);
@@ -67,6 +73,8 @@ namespace eudaq {
         void ReadIntegralRanges();
         void ReadIntegralRegions();
         float GetRFPhase(float, float);
+        void FillBucket(const StandardEvent &sev);
+        float GetNoiseThreshold(uint8_t, float=2);
 
         // clocks for checking execution time
         TStopwatch w_spectrum;
@@ -141,6 +149,8 @@ namespace eudaq {
         std::vector<Int_t> *IntegralPeaks;
         std::vector<float> *IntegralPeakTime;
         std::vector<float> *IntegralLength;
+        bool * f_bucket;
+        bool * f_ped_bucket;
 
         // general waveform information
         std::vector<float> * v_signal_peak_time;
@@ -159,11 +169,13 @@ namespace eudaq {
         std::map<uint8_t, std::vector<float> *> f_wf;
 
         // telescope
-        std::vector<uint16_t> *f_plane;
-        std::vector<uint16_t> *f_col;
-        std::vector<uint16_t> *f_row;
-        std::vector<int16_t> *f_adc;
-        std::vector<uint32_t> *f_charge;
+        uint8_t f_n_hits;
+        uint8_t * f_plane;
+        uint8_t * f_col;
+        uint8_t * f_row;
+        int16_t * f_adc;
+        float * f_charge;
+        uint8_t f_trig_phase;
 
         // average waveforms of channels
         TH1F *avgWF_0;
@@ -184,8 +196,10 @@ namespace eudaq {
 
         // spectrum
         unsigned peak_noise_pos;
-        std::vector<std::pair<float, float> >* noise;
+        std::vector<std::pair<float, float> >* noise_;
         std::map<uint8_t, std::deque<float> *> noise_vectors;
+        std::vector<std::pair<float, float> > int_noise_;
+        std::vector<std::deque<float> > int_noise_vectors;
         void calc_noise(uint8_t);
         std::vector<double> data_pos;
         std::vector<double> decon;
@@ -206,7 +220,7 @@ namespace eudaq {
         std::vector<bool> * f_isDa;
         std::vector<uint16_t> wf_thr;
 
-    };
+  };
 }
 
 #endif //EUDAQ_FILEWRITETRECAEN_HH

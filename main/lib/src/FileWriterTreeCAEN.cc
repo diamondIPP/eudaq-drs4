@@ -21,6 +21,7 @@
 #include "TSpectrum.h"
 #include "TPolyMarker.h"
 
+#define MAX_SIZE 255
 
 using namespace std;
 using namespace eudaq;
@@ -31,14 +32,14 @@ namespace { static RegisterFileWriter<FileWriterTreeCAEN> reg("caentree"); }
     --------------------------CONSTRUCTOR--------------------------------
     =====================================================================*/
 FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
-: m_tfile(nullptr), m_ttree(nullptr), m_noe(0), n_channels(9), n_pixels(90*90+60*60), histo(nullptr), spec(nullptr), fft_own(nullptr), runnumber(0) {
+: bunch_width_(19.76), sampling_speed_(2.5), m_tfile(nullptr), m_ttree(nullptr), m_noe(0), n_channels(9), n_pixels(90*90+60*60),
+  histo(nullptr), spec(nullptr), fft_own(nullptr), runnumber(0) {
 
     gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
     gROOT->ProcessLine("#include <vector>");
-    gROOT->ProcessLine("#include <pair>");
     gROOT->ProcessLine("#include <map>");
-//    gInterpreter->GenerateDictionary("map<string,Float_t>;vector<map<string,Float_t> >", "vector;string;map");
-    gInterpreter->GenerateDictionary("vector<vector<Float_t> >;vector<vector<UShort_t> >");
+    gInterpreter->GenerateDictionary("vector<vector<float> >;vector<vector<uint16> >", "vector");
+
     //Polarities of signals, default is positive signals
     polarities.resize(9, 1);
     pulser_polarities.resize(9, 1);
@@ -74,6 +75,8 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     IntegralPeaks = new std::vector<Int_t>;
     IntegralPeakTime = new std::vector<float>;
     IntegralLength  = new std::vector<float>;
+    f_bucket = new bool[n_channels];
+    f_ped_bucket = new bool[n_channels];
 
     // general waveform information
     v_is_saturated = new vector<bool>;
@@ -99,8 +102,10 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     wf_thr = {125, 10, 40, 300, 200, 300, 200, 200, 200};
 
     // spectrum vectors
-    noise = new vector<pair<float, float> >;
-    noise->resize(9);
+    noise_ = new vector<pair<float, float> >;
+    noise_->resize(9);
+    int_noise_.resize(n_channels);
+    int_noise_vectors.resize(n_channels);
     for (uint8_t i = 0; i < 9; i++) noise_vectors[i] = new deque<float>;
     decon.resize(1024, 0);
     peaks_x.resize(9, new std::vector<uint16_t>);
@@ -118,11 +123,8 @@ FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & /*param*/)
     fft_min_freq = new std::vector<float>;
 
     // telescope
-    f_plane  = new std::vector<uint16_t>;
-    f_col    = new std::vector<uint16_t>;
-    f_row    = new std::vector<uint16_t>;
-    f_adc    = new std::vector<int16_t>;
-    f_charge = new std::vector<uint32_t>;
+    InitTelescopeArrays();
+    f_trig_phase = 0;
 
     // average waveforms of channels
     avgWF_0 = new TH1F("avgWF_0","avgWF_0", 1024, 0, 1024);
@@ -301,6 +303,8 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     m_ttree->Branch("IntegralPeaks",&IntegralPeaks);
     m_ttree->Branch("IntegralPeakTime",&IntegralPeakTime);
     m_ttree->Branch("IntegralLength",&IntegralLength);
+    m_ttree->Branch("bucket", f_bucket, TString::Format("bucket[%d]/O", n_active_channels));
+    m_ttree->Branch("ped_bucket", f_ped_bucket, TString::Format("ped_bucket[%d]/O", n_active_channels));
 
     // DUT
     m_ttree->Branch("is_saturated", &v_is_saturated);
@@ -340,11 +344,8 @@ void FileWriterTreeCAEN::StartRun(unsigned runnumber) {
     }
 
     // telescope
-    m_ttree->Branch("plane", &f_plane);
-    m_ttree->Branch("col", &f_col);
-    m_ttree->Branch("row", &f_row);
-    m_ttree->Branch("adc", &f_adc);
-    m_ttree->Branch("charge", &f_charge);
+    SetTelescopeBranches();
+    m_ttree->Branch("trigger_phase", &f_trig_phase, "trigger_phase/b");
     verbose = 0;
     
     EUDAQ_INFO("Done with creating Branches!");
@@ -357,6 +358,8 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     if (ev.IsBORE()) {
         PluginManager::SetConfig(ev, m_config);
         eudaq::PluginManager::Initialize(ev);
+        Configuration conf(ev.GetTag("CONFIG"));
+        sampling_speed_ = conf.Get("Producer.CAEN","sampling_frequency", 5);
         tcal = PluginManager::GetTimeCalibration(ev);
         FillFullTime();
         macro->AddLine("\n[Time Calibration]");
@@ -445,8 +448,9 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         // float sig = CalculatePeak(data, 1075, 1150);
         if (verbose > 3) cout << "get Values1.0 " << iwf << endl;
         FillRegionIntegrals(iwf, &waveform);
+        FillBucket(sev);
 
-        if (verbose > 3) cout << "get Values1.1 " << iwf << endl;
+      if (verbose > 3) cout << "get Values1.1 " << iwf << endl;
         FillTotalRange(iwf, &waveform);
 
         // determine FORC timing: trigger WF august: 2, may: 1
@@ -484,18 +488,7 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
     // --------------------------------------------------------------------
     // ---------- save all info for the telescope -------------------------
     // --------------------------------------------------------------------
-    for (uint8_t iplane = 0; iplane < sev.NumPlanes(); ++iplane) {
-        const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
-        std::vector<double> cds = plane.GetPixels<double>();
-
-        for (uint16_t ipix = 0; ipix < cds.size(); ++ipix) {
-            f_plane->emplace_back(iplane);
-            f_col->push_back(uint16_t(plane.GetX(ipix)));
-            f_row->push_back(uint16_t(plane.GetY(ipix)));
-            f_adc->push_back(int16_t(plane.GetPixel(ipix)));
-            f_charge->push_back(42);						// todo: do charge conversion here!
-        }
-    }
+    FillTelescopeArrays(sev);
     m_ttree->Fill();
     if (f_event_number + 1 % 1000 == 0) cout << "of run " << runnumber << flush;
     w_total.Stop();
@@ -585,12 +578,6 @@ inline void FileWriterTreeCAEN::ClearVectors(){
 
     for (auto v_wf:f_wf) v_wf.second->clear();
     f_isDa->clear();
-
-    f_plane->clear();
-    f_col->clear();
-    f_row->clear();
-    f_adc->clear();
-    f_charge->clear();
 
     for (auto vec: *v_peak_positions) vec.clear();
     for (auto vec: *v_peak_times) vec.clear();
@@ -697,7 +684,7 @@ inline void FileWriterTreeCAEN::DoSpectrumFitting(uint8_t iwf){
     w_spectrum.Start(false);
     float max = *max_element(data_pos.begin(), data_pos.end());
     //return if the max element is lower than 4 sigma of the noise
-    float threshold = 4 * noise->at(iwf).second + noise->at(iwf).first;
+    float threshold = 4 * noise_->at(iwf).second + noise_->at(iwf).first;
     if (max <= threshold) return;
     // tspec threshold is in per cent to max peak
     threshold = threshold / max * 100;
@@ -729,11 +716,38 @@ void FileWriterTreeCAEN::FillSpectrumData(uint8_t iwf){
 void FileWriterTreeCAEN::calc_noise(uint8_t iwf) {
   float value = data->at(peak_noise_pos);
   // filter out peaks at the pedestal
-  if (std::abs(value) < 6 * noise->at(iwf).second + std::abs(noise->at(iwf).first) or noise_vectors.at(iwf)->size() < 10)
+  if (std::abs(value) < 6 * noise_->at(iwf).second + std::abs(noise_->at(iwf).first) or noise_vectors.at(iwf)->size() < 10)
     noise_vectors.at(iwf)->push_back(value);
   if (noise_vectors.at(iwf)->size() >= 1000)
     noise_vectors.at(iwf)->pop_front();
-  noise->at(iwf) = calc_mean(*noise_vectors.at(iwf));
+  noise_->at(iwf) = calc_mean(*noise_vectors.at(iwf));
+}
+
+void FileWriterTreeCAEN::FillBucket(const StandardEvent & sev) {
+  /** fills the integral noise for the bucket cut calculations */
+  auto bw = uint16_t(round(sampling_speed_ * bunch_width_));
+  uint8_t j(0);
+  for (auto ch: *regions){
+    uint8_t i_ch = ch.first;
+    const StandardWaveform * wf = &sev.GetWaveform(i_ch);
+    WaveformSignalRegion * r = ch.second->GetRegion("signal_b");
+    WaveformIntegral * i = r->GetIntegralPointer("PeakIntegral2");
+
+    /** noise */
+    float noise = wf->getIntegral(r, i, sampling_speed_, -bw);  // find highest value and integrate as for signal
+    if (abs(noise) < 4 * int_noise_.at(i_ch).second + abs(int_noise_.at(i_ch).first) or int_noise_vectors.at(i_ch).size() < 10) {
+      int_noise_vectors.at(i_ch).push_back(noise); }
+    if (int_noise_vectors.at(i_ch).size() >= 1000) {
+      int_noise_vectors.at(i_ch).pop_front(); }
+    int_noise_.at(i_ch) = calc_mean(int_noise_vectors.at(i_ch));
+
+    /** bucket */
+    float int2 = abs(wf->getIntegral(r, i, sampling_speed_, bw));
+    float thresh = GetNoiseThreshold(i_ch, 3);
+    f_bucket[j] = int2 > thresh and abs(wf->getIntegral(r, i, sampling_speed_)) < thresh; // sig < thresh and bucket 2 > thresh
+    float intm1 = r->GetLowBoarder() - 2 * bw < 0 ? 0 : abs(wf->getIntegral(r, i, sampling_speed_, -2 * bw));
+    f_ped_bucket[j++] = intm1 > GetNoiseThreshold(i_ch, 4);
+  }
 }
 
 void FileWriterTreeCAEN::FillRegionIntegrals(uint8_t iwf, const StandardWaveform *wf){
@@ -826,12 +840,12 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
         v_signal_peak_time->at(iwf) = wf->getPeakFit(reg->GetLowBoarder(), reg->GetHighBoarder(), regions->at(iwf)->GetPolarity());
-        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
-        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
+        v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise_->at(iwf).first);
+        v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise_->at(iwf).first);
         pair<uint16_t, float> peak = wf->getMaxPeak();
         v_max_peak_position->at(iwf) = peak.first;
         v_max_peak_time->at(iwf) = getTriggerTime(iwf, peak.first);
-        float threshold = polarities.at(iwf) * 4 * noise->at(iwf).second + noise->at(iwf).first;
+        float threshold = polarities.at(iwf) * 4 * noise_->at(iwf).second + noise_->at(iwf).first;
         vector<uint16_t> * peak_positions = wf->getAllPeaksAbove(0, 1023, threshold);
         v_peak_positions->at(iwf) = *peak_positions;
         v_npeaks->at(iwf) = uint8_t(v_peak_positions->at(iwf).size());
@@ -842,8 +856,8 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
 
   if (scint_channel == iwf) {
       WaveformSignalRegion * reg = regions->at(dia_channels->at(0))->GetRegion("signal_b");
-      v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
-      v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise->at(iwf).first);
+      v_rise_time->at(iwf) = wf->getRiseTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise_->at(iwf).first);
+      v_fall_time->at(iwf) = wf->getFallTime(reg->GetLowBoarder(), uint16_t(reg->GetHighBoarder() + 10), noise_->at(iwf).first);
 //    cout << f_event_number << " " << int(iwf) << " " << v_rise_time->at(iwf) << " " << v_t_thresh->at(iwf) << " " << (-10 * noise->at(iwf).second + noise->at(iwf).first)<<endl;
   }
 }
@@ -989,10 +1003,51 @@ void FileWriterTreeCAEN::ReadIntegralRegions() {
     }
 }
 
+float FileWriterTreeCAEN::GetNoiseThreshold(uint8_t i_wf, float n_sigma) {
+  /** :returns:  threshold based on the current noise */
+  return float(polarities.at(i_wf)) * int_noise_.at(i_wf).first + n_sigma * int_noise_.at(i_wf).second;
+}
+
 float FileWriterTreeCAEN::GetRFPhase(float phase, float period) {
 
   // shift phase always in [-pi,pi]
   float fac = int(phase / period - .5);
   return phase - fac * period;
+}
+
+void FileWriterTreeCAEN::SetTelescopeBranches() {
+
+  m_ttree->Branch("n_hits_tot", &f_n_hits, "n_hits_tot/b");
+  m_ttree->Branch("plane", f_plane, "plane[n_hits_tot]/b");
+  m_ttree->Branch("col", f_col, "col[n_hits_tot]/b");
+  m_ttree->Branch("row", f_row, "row[n_hits_tot]/b");
+  m_ttree->Branch("adc", f_adc, "adc[n_hits_tot]/S");
+  m_ttree->Branch("charge", f_charge, "charge[n_hits_tot]/F");
+}
+
+void FileWriterTreeCAEN::FillTelescopeArrays(const StandardEvent & sev) {
+
+  f_n_hits = 0;
+  for (auto iplane(0); iplane < sev.NumPlanes(); ++iplane) {
+    const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
+    std::vector<double> cds = plane.GetPixels<double>();
+    for (auto ipix(0); ipix < cds.size(); ++ipix) {
+      f_plane[f_n_hits] = iplane;
+      f_col[f_n_hits] = uint8_t(plane.GetX(ipix));
+      f_row[f_n_hits] = uint8_t(plane.GetY(ipix));
+      f_adc[f_n_hits] = int16_t(plane.GetPixel(ipix));
+      f_charge[f_n_hits++] = 42;						// todo: do charge conversion here!
+    }
+  }
+}
+
+void FileWriterTreeCAEN::InitTelescopeArrays() {
+
+  f_n_hits = 0;
+  f_plane  = new uint8_t[MAX_SIZE];
+  f_col    = new uint8_t[MAX_SIZE];
+  f_row    = new uint8_t[MAX_SIZE];
+  f_adc    = new int16_t [MAX_SIZE];
+  f_charge = new float[MAX_SIZE];
 }
 #endif // ROOT_FOUND
