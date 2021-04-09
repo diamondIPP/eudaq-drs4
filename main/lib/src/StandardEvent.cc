@@ -78,6 +78,7 @@ float StandardWaveform::getIntegral(uint16_t peak_pos, std::pair<uint16_t, uint1
 
 float StandardWaveform::getIntegral(WaveformSignalRegion * r, WaveformIntegral * i, float sspeed, int16_t offset) const {
   uint16_t peak_pos = getIndex(r->GetLowBoarder() + offset, r->GetHighBoarder() + offset, m_polarity);
+  if (peak_pos < i->GetDownRange() + 3) { return 1e9; }  // need the full range...
   return getIntegral(max(peak_pos - i->GetDownRange(), 0), min(peak_pos + i->GetUpRange(), int(m_n_samples)), peak_pos, sspeed);
 }
 
