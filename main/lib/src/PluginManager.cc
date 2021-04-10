@@ -241,6 +241,7 @@ namespace eudaq {
       GetInstance().GetPlugin(source).GetStandardSubEvent(dest, source);
     } catch (const Exception & e) {
       std::cerr << "Error during conversion in PluginManager::ConvertStandardSubEvent:\n" << e.what() << std::endl;
+      if (std::string(e.what()).find("Memory") != std::string::npos) { throw; }
     }
   }
 

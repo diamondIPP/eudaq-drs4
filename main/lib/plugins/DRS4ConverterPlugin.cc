@@ -98,8 +98,9 @@ public:
 			data = in_raw.GetBlock(id++); // Get Header
 			char buffer [5];
 			std::memcpy(&buffer,&(data[0]), 4);
-			buffer[4]='\0';
-			int ch = atoi(&buffer[1])-1;
+      buffer[4]='\0';
+      int ch = atoi(&buffer[1])-1;
+      if (ch < 0) { EUDAQ_THROW("Memory error!"); }
 
 			//Get Waveform
 			data = in_raw.GetBlock(id++);

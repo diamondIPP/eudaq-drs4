@@ -42,22 +42,26 @@ int main(int /*unused*/, char ** argv) {
       decoder->StartRun(reader2.RunNumber());
       ProgressBar pbar(uint32_t(decoder->GetMaxEventNumber()));
       uint32_t event_nr = 0;
-
-      do {
-        if (!numbers2.empty() && reader2.GetDetectorEvent().GetEventNumber() > numbers2.back()) {
-          break;
-        }
-        if (reader2.GetDetectorEvent().IsBORE() || reader2.GetDetectorEvent().IsEORE() || numbers2.empty() ||
-            std::find(numbers2.begin(), numbers2.end(), reader2.GetDetectorEvent().GetEventNumber()) != numbers2.end()) {
-          decoder->WriteEvent(reader2.GetDetectorEvent());
-          if (dbg > 0) { std::cout << "writing one more event" << std::endl; }
-          ++event_nr;
-          if (event_nr == decoder->GetMaxEventNumber() + 1) { decoder->GetStats(reader2.GetDetectorEvent()); }
-          pbar.update(event_nr);
-        }
-      } while (reader2.NextEvent() && (decoder->GetMaxEventNumber() <= 0 || event_nr <=
-                                                                            decoder->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
-
+      try {
+        do {
+          if (!numbers2.empty() && reader2.GetDetectorEvent().GetEventNumber() > numbers2.back()) {
+            break;
+          }
+          if (reader2.GetDetectorEvent().IsBORE() || reader2.GetDetectorEvent().IsEORE() || numbers2.empty() ||
+              std::find(numbers2.begin(), numbers2.end(), reader2.GetDetectorEvent().GetEventNumber()) != numbers2.end()) {
+            decoder->WriteEvent(reader2.GetDetectorEvent());
+            if (dbg > 0) { std::cout << "writing one more event" << std::endl; }
+            ++event_nr;
+            if (event_nr == decoder->GetMaxEventNumber() + 1) { decoder->GetStats(reader2.GetDetectorEvent()); }
+            pbar.update(event_nr);
+          }
+        } while (reader2.NextEvent() && (decoder->GetMaxEventNumber() <= 0 || event_nr <=
+                                                                              decoder->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
+      }
+      catch (const Exception & e) {
+        std::cerr << "Error during conversion \n" << e.what() << std::endl;
+        decoder->GetStats(reader2.GetDetectorEvent());
+      }
       decoder->Run(); // Calculate Level1, decoding offsets and timing compensations (alphas)
 
       /** ------------------------------------------------------
@@ -117,7 +121,7 @@ int main(int /*unused*/, char ** argv) {
     if(dbg>0) { std::cout<< "no more events to read" << std::endl; }
     
   } catch (...) {
-	    std::cout << "Time: " << elapsed_time(start) << " s" << std::endl;
+    std::cout << "Time: " << elapsed_time(start) << " s" << std::endl;
     return op.HandleMainException();
   }
     std::cout << "Time: " << elapsed_time(start) << " s" << std::endl;
