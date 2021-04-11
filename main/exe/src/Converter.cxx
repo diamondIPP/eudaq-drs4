@@ -35,9 +35,9 @@ int main(int /*unused*/, char ** argv) {
     /** -----------------------------------------------
      * First step: Find analogue decoding in 100k events:
      * -----------------------------------------------*/
-    print_banner("STEP 1: Calculating decoding offsets ...", '~');
     Configuration config(configFileName.Value(), "Converter.telescopetree", true);
     if (config.Get("decoding_offset_v", "").empty()) {  // only run the decoder if the config file does not already have entries
+      print_banner("STEP 1: Calculating decoding offsets ...", '~');
       std::shared_ptr<eudaq::FileWriter> decoder(FileWriterFactory::Create("cmsdecoder", &config));
       decoder->StartRun(reader2.RunNumber());
       ProgressBar pbar(uint32_t(decoder->GetMaxEventNumber()));
@@ -79,8 +79,8 @@ int main(int /*unused*/, char ** argv) {
       config.Save();
       config.SetSection("Converter." + type.Value());
       decoder.reset();
+      std::cout << "\n... STEP 1 done in " << std::setprecision(1) << elapsed_time(start) << " s" << std::endl;
     }
-    std::cout << "\n... STEP 1 done in " << std::setprecision(1) << elapsed_time(start) << " s" << std::endl;
     start = clock();
 
     /** -----------------------------------------------
