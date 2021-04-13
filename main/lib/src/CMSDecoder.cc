@@ -42,9 +42,6 @@ void CMSDecoder::WriteEvent(const DetectorEvent & ev) {
     cout << "loaded the last event." << endl;
     return;
   }
-  // Condition to evaluate only certain number of events defined in configuration file  : DA
-  if (f_max_event_number > 0 && f_event_number > f_max_event_number)
-  { return; }
 
   StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 }
@@ -212,5 +209,21 @@ int CMSDecoder::FindLastBinAbove(TH1F* h, float value, int bin_low, int bin_high
 
 std::string CMSDecoder::GetStats(const DetectorEvent &dev) {
   return PluginManager::GetStats(dev);
+}
+
+void CMSDecoder::PrintResults() {
+
+  std::cout << "Calculated decoding offets: " << to_string(*m_black_offsets, ", ", 0, 3) << std::endl;
+  std::cout << "Calculated levels 1: " << to_string(*m_level1_offsets, ", ", 0, 2) << std::endl;
+  std::cout << "Calculated time compensations (alphas): " << to_string(*m_alphas, ", ", 0, 2) << std::endl;
+}
+
+void CMSDecoder::SaveResults() {
+
+  m_config->SetSection("Converter.telescopetree");
+  m_config->Set("decoding_offset_v", to_string(*m_black_offsets, ",", 0, 3));
+  m_config->Set("decoding_l1_v", to_string(*m_level1_offsets, ",", 0, 2));
+  m_config->Set("decoding_alphas_v", to_string(*m_alphas, ",", 0, 2));
+  m_config->Save();
 }
 

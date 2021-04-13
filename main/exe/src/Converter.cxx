@@ -40,44 +40,24 @@ int main(int /*unused*/, char ** argv) {
       print_banner("STEP 1: Calculating decoding offsets ...", '~');
       std::shared_ptr<eudaq::FileWriter> decoder(FileWriterFactory::Create("cmsdecoder", &config));
       decoder->StartRun(reader2.RunNumber());
+
       ProgressBar pbar(uint32_t(decoder->GetMaxEventNumber()));
       uint32_t event_nr = 0;
-      try {
-        do {
-          if (!numbers2.empty() && reader2.GetDetectorEvent().GetEventNumber() > numbers2.back()) {
-            break;
-          }
-          if (reader2.GetDetectorEvent().IsBORE() || reader2.GetDetectorEvent().IsEORE() || numbers2.empty() ||
-              std::find(numbers2.begin(), numbers2.end(), reader2.GetDetectorEvent().GetEventNumber()) != numbers2.end()) {
-            decoder->WriteEvent(reader2.GetDetectorEvent());
-            if (dbg > 0) { std::cout << "writing one more event" << std::endl; }
-            ++event_nr;
-            if (event_nr == decoder->GetMaxEventNumber() + 1) { decoder->GetStats(reader2.GetDetectorEvent()); }
-            pbar.update(event_nr);
-          }
-        } while (reader2.NextEvent() && (decoder->GetMaxEventNumber() <= 0 || event_nr <=
-                                                                              decoder->GetMaxEventNumber()));// Added " && (writer->GetMaxEventNumber() <= 0 || event_nr <= writer->GetMaxEventNumber())" to prevent looping over all events when desired: DA
+      size_t max_decoder = decoder->GetMaxEventNumber() <= 0 ? UINT32_MAX: decoder->GetMaxEventNumber();
+      size_t max_number = numbers2.empty() ? UINT32_MAX : numbers2.back();
+      DetectorEvent dev = reader2.GetDetectorEvent();
+      while (reader2.NextEvent() and event_nr < std::min(max_decoder, max_number)) {
+        event_nr = dev.GetEventNumber();
+        decoder->WriteEvent(dev);
+        pbar.update(event_nr);
+        dev = reader2.GetDetectorEvent();
       }
-      catch (const Exception & e) {
-        std::cerr << "Error during conversion \n" << e.what() << std::endl;
-        decoder->GetStats(reader2.GetDetectorEvent());
-      }
+      decoder->GetStats(reader2.GetDetectorEvent());
       decoder->Run(); // Calculate Level1, decoding offsets and timing compensations (alphas)
 
-      /** ------------------------------------------------------
-       * Get and save the decoding parameters to the config file */
-      std::vector<float> black_offsets = decoder->GetBlackOffsets();
-      std::vector<float> level1_offsets = decoder->GetLeve1Offsets();
-      std::vector<float> alphas = decoder->GetAlphas();
-      std::cout << "Calculated decoding offets: " << to_string(black_offsets, ", ", 0, 3) << std::endl;
-      std::cout << "Calculated levels 1: " << to_string(level1_offsets, ", ", 0, 2) << std::endl;
-      std::cout << "Calculated time compensations (alphas): " << to_string(alphas, ", ", 0, 2) << std::endl;
-      config.SetSection("Converter.telescopetree");
-      config.Set("decoding_offset_v", to_string(black_offsets, ",", 0, 3));
-      config.Set("decoding_l1_v", to_string(level1_offsets, ",", 0, 2));
-      config.Set("decoding_alphas_v", to_string(alphas, ",", 0, 2));
-      config.Save();
-      config.SetSection("Converter." + type.Value());
+      /** Save the decoding parameters to the config file */
+      decoder->PrintResults();
+      decoder->SaveResults();
       decoder.reset();
       std::cout << "\n... STEP 1 done in " << std::setprecision(1) << elapsed_time(start) << " s" << std::endl;
     }

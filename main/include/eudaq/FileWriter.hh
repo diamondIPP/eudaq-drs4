@@ -25,6 +25,8 @@ namespace eudaq {
       // method to get max event number: DA
       virtual long GetMaxEventNumber();
       virtual std::string GetStats(const DetectorEvent &) {};
+      virtual void PrintResults() {};
+      virtual void SaveResults() {};
       virtual void setTU(bool) {};
       virtual ~FileWriter() {}
     protected:

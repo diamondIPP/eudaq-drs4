@@ -27,6 +27,8 @@ public:
   std::vector<float> GetBlackOffsets() override { return *m_black_offsets; }
   std::vector<float> GetLeve1Offsets() override { return *m_level1_offsets; }
   std::vector<float> GetAlphas() override { return *m_alphas; }
+  void PrintResults() override;
+  void SaveResults() override;
 
 private:
   uint64_t FileBytes() const override { return 0; }
