@@ -103,7 +103,7 @@ namespace eudaq {
 
         /** SCALAR BRANCHES */
         uint16_t f_nwfs;
-        int f_event_number;
+        uint32_t f_event_number;
         int f_pulser_events;
         int f_signal_events;
         double f_time;

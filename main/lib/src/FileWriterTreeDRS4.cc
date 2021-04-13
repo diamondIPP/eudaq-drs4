@@ -352,7 +352,7 @@ void FileWriterTreeDRS4::WriteEvent(const DetectorEvent & ev) {
         PluginManager::Initialize(ev);
         Configuration conf(ev.GetTag("CONFIG"));
         sampling_speed_ = conf.Get("Producer.DRS4","sampling_frequency", 5);
-        cout << "Sampling Frequency: " << sampling_speed_ << endl;
+        cout << "Sampling Frequency: " << sampling_speed_ << " GHz" << endl;
         tcal = PluginManager::GetTimeCalibration(ev);
         FillFullTime();
         macro->AddLine("\n[Time Calibration]");

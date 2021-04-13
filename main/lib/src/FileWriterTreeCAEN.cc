@@ -359,7 +359,8 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         PluginManager::SetConfig(ev, m_config);
         eudaq::PluginManager::Initialize(ev);
         Configuration conf(ev.GetTag("CONFIG"));
-        sampling_speed_ = conf.Get("Producer.CAEN","sampling_frequency", 5);
+        sampling_speed_ = float(ev.GetRawSubEvent("VX1742").GetTag("sampling_speed", 5000)) / 1000;
+        cout << "Sampling Frequency: " << sampling_speed_ << " GHz" << endl;
         tcal = PluginManager::GetTimeCalibration(ev);
         FillFullTime();
         macro->AddLine("\n[Time Calibration]");
@@ -448,7 +449,6 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
         // float sig = CalculatePeak(data, 1075, 1150);
         if (verbose > 3) cout << "get Values1.0 " << iwf << endl;
         FillRegionIntegrals(iwf, &waveform);
-        FillBucket(sev);
 
       if (verbose > 3) cout << "get Values1.1 " << iwf << endl;
         FillTotalRange(iwf, &waveform);
@@ -480,9 +480,10 @@ void FileWriterTreeCAEN::WriteEvent(const DetectorEvent & ev) {
 
         f_isDa->at(iwf) = *max_element(&data->at(20), &data->at(1023)) > wf_thr.at(iwf);
 
-        data->clear();
+//        data->clear();
     } // end iwf waveform loop
 
+    FillBucket(sev);
     FillRegionVectors();
 
     // --------------------------------------------------------------------
