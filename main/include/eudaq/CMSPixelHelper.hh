@@ -122,7 +122,7 @@ namespace eudaq {
       m_conv_cfg->SetSection("Converter.telescopetree");
       do_decoding = m_conv_cfg->Get("decoding_offset_v", "").empty() and TString("DUT").CompareTo(TString(m_detector)) == 0;
       decodingOffsetVector = m_conv_cfg->Get("decoding_offset_v", std::vector<float>(16, m_conv_cfg->Get("decoding_offset", 0.)));
-      level1Vector = m_conv_cfg->Get("decoding_l1_v", std::vector<float>(16, 0.));
+      level1Vector = m_conv_cfg->Get("decoding_l1_v", std::vector<float>(16, m_conv_cfg->Get("decoding_l1", 0.)));
       decodingAlphasVector = m_conv_cfg->Get("decoding_alphas_v", std::vector<float>(16, 0.));
       std::cout << "Using decoding offsets: " << to_string(decodingOffsetVector, ", ", 0, 3) << std::endl;
       std::cout << "Using decoding Level1: " << to_string(level1Vector, ", ", 0, 3) << std::endl;
