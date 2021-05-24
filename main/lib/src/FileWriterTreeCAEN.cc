@@ -783,10 +783,10 @@ void FileWriterTreeCAEN::FillRegionIntegrals(uint8_t iwf, const StandardWaveform
                 integral = wf->getMedian(low_border,high_border);
             }
             else if (name.find("full")!=name.npos){
-                integral = wf->getIntegral(low_border,high_border);
+                integral = wf->getAverage(low_border, high_border);
             }
             else {
-                integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
+                integral = wf->getAverage(p->GetIntegralStart(), p->GetIntegralStop());
                 time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, 2.5);
             }
             p->SetIntegral(integral);
@@ -836,7 +836,7 @@ void FileWriterTreeCAEN::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     signed char pol = polarities.at(iwf);
     v_is_saturated->at(iwf) = wf->getAbsMaxInRange(0, 1023) > 488; // indicator if saturation is reached in sampling region (1-1024)
     v_median->at(iwf) = pol * wf->getMedian(0, 1023); // Median over whole sampling region
-    v_average->at(iwf) = pol * wf->getIntegral(0, 1023);
+    v_average->at(iwf) = pol * wf->getAverage(0, 1023);
     if (UseWaveForm(active_regions, iwf)){
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
@@ -893,8 +893,8 @@ void FileWriterTreeCAEN::UpdateWaveforms(uint8_t iwf){
 } // end UpdateWaveforms()
 
 inline bool FileWriterTreeCAEN::IsPulserEvent(const StandardWaveform *wf){
-    float pulser_int = wf->getIntegral(pulser_region.first, pulser_region.second, true);
-    float baseline_int = wf->getIntegral(5, uint16_t(pulser_region.first - pulser_region.second + 5), true);
+    float pulser_int = wf->getAverage(pulser_region.first, pulser_region.second, true);
+    float baseline_int = wf->getAverage(5, uint16_t(pulser_region.first - pulser_region.second + 5), true);
     return abs(pulser_int - baseline_int) > pulser_threshold;
 } //end IsPulserEvent
 

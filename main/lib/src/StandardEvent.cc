@@ -59,55 +59,62 @@ unsigned StandardWaveform::ID() const {
 }
 
 
-float StandardWaveform::getIntegral(uint16_t min, uint16_t max, bool _abs) const {
-  if (max > this->GetNSamples() - 1) max = uint16_t(this->GetNSamples() - 1);
-  if (min < 0) min = 0;
-  float integral = 0;
-  for (uint16_t i = min; i <= max; i++) {
-    if (!_abs)
-      integral += m_samples.at(i);
-    else
-      integral += std::abs(m_samples.at(i));
-  }
-  return integral / (float) (max - (int) min);
+float StandardWaveform::getAverage(uint16_t min, uint16_t max, bool _abs) const {
+  float sum = accumulate(m_samples.begin() + min, m_samples.begin() + max, float(0)) / float(int(max) - min);
+  return _abs ? fabs(sum) : sum;
 }
 
 float StandardWaveform::getIntegral(uint16_t peak_pos, std::pair<uint16_t, uint16_t> range, float sspeed) const {
-  return getIntegral(max(peak_pos - range.first, 0), min(peak_pos + range.second, int(m_n_samples)), peak_pos, sspeed);
+  return getIntegral(range.first, range.second, peak_pos, sspeed);
 }
 
 float StandardWaveform::getIntegral(WaveformSignalRegion * r, WaveformIntegral * i, float sspeed, int16_t offset) const {
-  uint16_t peak_pos = getIndex(r->GetLowBoarder() + offset, r->GetHighBoarder() + offset, m_polarity);
+  uint16_t peak_pos = FindPeakIndex(r->GetLowBoarder() + offset, r->GetHighBoarder() + offset, sspeed, m_polarity);
   if (peak_pos < i->GetDownRange() + 3) { return 1e9; }  // need the full range...
-  return getIntegral(max(peak_pos - i->GetDownRange(), 0), min(peak_pos + i->GetUpRange(), int(m_n_samples)), peak_pos, sspeed);
+  return getIntegral(i->GetDownRange(), i->GetUpRange(), peak_pos, sspeed);
 }
 
-float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const {
+//float StandardWaveform::getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const {
+//
+//  high_bin = min(high_bin, uint16_t(m_n_samples - 1));
+//  if (high_bin == peak_pos and low_bin == peak_pos)
+//    return m_samples.at(peak_pos);
+//  float max_low_length = (peak_pos - low_bin) / sspeed;
+//  float max_high_length = (high_bin - peak_pos) / sspeed;
+//  float integral = 0;  // take the value at the peak pos as start value
+//  // sum up the times if the bins to the left side of the peak pos until max length is reached
+//  float low_length(0), high_length(0);
+//  uint16_t ibin(peak_pos);
+//  while (low_length <= max_low_length - 0.001) {
+//    float width = min(getBinWidth(--ibin), max_low_length - low_length);  // take the diff between max und current length if it gets smaller than bin width
+//    bool full_int = width < max_low_length - low_length; // full integral if rest of the total width is bigger than the actual bin width
+//    integral += width * (full_int ? (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2 : interpolateVoltage(ibin + 1, m_times.at(ibin + 1) - width));
+//    low_length += width;
+//  }
+//  ibin = uint16_t(peak_pos - 1);
+//  while (high_length <= max_high_length - 0.001) {
+//    float width = min(getBinWidth(++ibin), max_high_length - high_length);  // take the diff between max und current length if it gets smaller than bin width
+//    bool full_int = width < max_high_length - high_length; // full integral if rest of the total width is bigger than the actual bin width
+//    integral += width * (full_int ? (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2 : interpolateVoltage(ibin + 1, m_times.at(ibin) + width));
+//    high_length += width;
+//  }
+//  return integral / (max_high_length + max_low_length);
+//}
 
-  high_bin = min(high_bin, uint16_t(m_n_samples - 1));
-  if (high_bin == peak_pos and low_bin == peak_pos)
-    return m_samples.at(peak_pos);
-  float max_low_length = (peak_pos - low_bin) / sspeed;
-  float max_high_length = (high_bin - peak_pos) / sspeed;
-  float integral = 0;  // take the value at the peak pos as start value
-  // sum up the times if the bins to the left side of the peak pos until max length is reached
-  float low_length(0), high_length(0);
-  uint16_t ibin(peak_pos);
-  while (low_length <= max_low_length - 0.001) {
-    float width = min(getBinWidth(--ibin), max_low_length - low_length);  // take the diff between max und current length if it gets smaller than bin width
-    bool full_int = width < max_low_length - low_length; // full integral if rest of the total width is bigger than the actual bin width
-    integral += width * (full_int ? (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2 : interpolateVoltage(ibin + 1, m_times.at(ibin + 1) - width));
-    low_length += width;
+  float StandardWaveform::getIntegral(uint16_t imin, uint16_t imax, uint16_t ipeak, float sspead) const {
+  /** average the waveform in a time range around the peak position by interpolating a straight line between the points of the time corrected waveform*/
+  if (imin == 0 and imax == 0) { return m_samples.at(ipeak); }
+  float tmin = m_t.at(ipeak) - float(imin) / sspead, tmax = m_t.at(ipeak) + float(imax) / sspead;
+  uint16_t ilow = distance(m_t.begin(), find_if(m_t.begin(), m_t.end(), [tmin](float i){ return i > tmin; }));
+  uint16_t ihigh = m_n_samples - distance(m_t.rbegin(), find_if(m_t.rbegin(), m_t.rend(), [tmax](float i){ return i < tmax; })) ;
+  vector<float> delta_t(ihigh - ilow), sum_v(ihigh - ilow), res(ihigh - ilow);
+  transform(&m_t.at(ilow + 1), &m_t.at(ihigh + 1), &m_t.at(ilow), delta_t.begin(), minus<float>());  //subtract times
+  transform(&m_samples.at(ilow + 1), &m_samples.at(ihigh + 1), &m_samples.at(ilow), sum_v.begin(), plus<float>());  //add  voltages
+  transform(delta_t.begin(), delta_t.end(), sum_v.begin(), res.begin(), multiplies<float>()); // multiply the two vectors
+  float int0 = (m_t.at(ilow) - tmin) * (m_samples.at(ilow) + GetY(m_t.at(ilow - 1), m_t.at(ilow), m_samples.at(ilow - 1), m_samples.at(ilow), tmin));
+  float int_end = (tmax - m_t.at(ihigh)) * (m_samples.at(ihigh) + GetY(m_t.at(ihigh), m_t.at(ihigh + 1), m_samples.at(ihigh), m_samples.at(ihigh + 1), tmax));
+  return accumulate(res.begin(), res.end(), int0 + int_end) / (tmax - tmin) / float(2);
   }
-  ibin = uint16_t(peak_pos - 1);
-  while (high_length <= max_high_length - 0.001) {
-    float width = min(getBinWidth(++ibin), max_high_length - high_length);  // take the diff between max und current length if it gets smaller than bin width
-    bool full_int = width < max_high_length - high_length; // full integral if rest of the total width is bigger than the actual bin width
-    integral += width * (full_int ? (m_samples.at(ibin) + m_samples.at(ibin + 1)) / 2 : interpolateVoltage(ibin + 1, m_times.at(ibin) + width));
-    high_length += width;
-  }
-  return integral / (max_high_length + max_low_length);
-}
 
 TF1 StandardWaveform::getRFFit(std::vector<float> *tcal) const {
 
@@ -127,6 +134,12 @@ std::vector<float> StandardWaveform::getCalibratedTimes(std::vector<float> *tcal
   for (uint16_t i(1); i < m_n_samples; i++)
     t.push_back(tcal->at(unsigned((m_trigger_cell + i) % m_n_samples)) + t.back());
   return t;
+}
+
+std::vector<float> StandardWaveform::getTVec() const {
+  vector<float> tmp(m_times.begin(), m_times.end());
+  tmp.insert(tmp.begin(), 0);
+  return tmp;
 }
 
 float StandardWaveform::getPeakFit(uint16_t bin_low, uint16_t bin_high, signed char pol) const {
@@ -166,14 +179,6 @@ float StandardWaveform::interpolateTime(uint16_t ibin, float value) const {
   float a = m_samples.at(ibin) - m * m_times.at(ibin);
 	return (value - a) / m;
 }
-
-  float StandardWaveform::interpolateVoltage(uint16_t ibin, float time) const {
-
-    /** v = mt + a */
-    float m = (m_samples.at(ibin) - m_samples.at(uint16_t(ibin - 1))) / (m_times.at(ibin) - m_times.at(uint16_t(ibin - 1)));
-    float a = m_samples.at(ibin) - m * m_times.at(ibin);
-    return m * time + a;
-  }
 
 float StandardWaveform::getRiseTime(uint16_t bin_low, uint16_t bin_high, float noise) const {
 
@@ -317,6 +322,16 @@ float StandardWaveform::getMedian(uint32_t min, uint32_t max) const
         break; }
       last_is_neg = v0.at(i) < 0; }
     return interpolate_x(m_times.at(i_cross + min - 1), m_times.at(i_cross + min), v0.at(i_cross - 1), v0.at(i_cross), 0);
+  }
+
+  uint16_t StandardWaveform::FindPeakIndex(uint16_t imin, uint16_t imax, float sspead, signed char pol) const {
+    if (imin == imax) { return imin; }
+    const float tmin = float(imin) / sspead, tmax = float(imax) / sspead;
+    uint16_t ilow = distance(m_t.begin(), find_if(m_t.begin(), m_t.end(), [tmin](float i){ return i > tmin; }));
+    uint16_t ihigh = m_n_samples - distance(m_t.rbegin(), find_if(m_t.rbegin(), m_t.rend(), [tmax](float i){ return i < tmax; })) ;
+    auto value = (pol * 1 > 0) ? max_element(&m_samples.at(ilow), &m_samples.at(ihigh)) : min_element(&m_samples.at(ilow), &m_samples.at(ihigh));
+    vector<float> a(&m_samples.at(ilow), &m_samples.at(ihigh + 1));
+    return uint16_t(distance(&m_samples.at(0), value));
   }
 
 /************************************************************************************************/

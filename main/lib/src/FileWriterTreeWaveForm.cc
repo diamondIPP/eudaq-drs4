@@ -355,10 +355,10 @@ void FileWriterTreeWaveForm::FillRegionIntegrals(uint8_t iwf, const StandardWave
                 integral = wf->getMedian(low_border,high_border);
             }
             else if (name.find("full")!=name.npos){
-                integral = wf->getIntegral(low_border,high_border);
+                integral = wf->getAverage(low_border, high_border);
             }
             else {
-                integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop());
+                integral = wf->getAverage(p->GetIntegralStart(), p->GetIntegralStop());
                 time_integral = wf->getIntegral(p->GetIntegralStart(), p->GetIntegralStop(), peak_pos, 2.0);
             }
             p->SetIntegral(integral);
@@ -410,7 +410,7 @@ void FileWriterTreeWaveForm::FillPeaks(uint8_t iwf, const StandardWaveform *wf){
         v_peak_positions->at(iwf) = peak.first;
         v_peak_values->at(iwf) = peak.second;
         v_peak_timings->at(iwf) = getTriggerTime(iwf, peak.first);
-        v_pedestals->at(iwf) = wf->getIntegral(uint16_t(ranges["pedestal"]->first), uint16_t(ranges["pedestal"]->second), false);
+        v_pedestals->at(iwf) = wf->getAverage(uint16_t(ranges["pedestal"]->first), uint16_t(ranges["pedestal"]->second), false);
         if (peak.first < 1024 - uint16_t(ranges["int"]->second) and peak.first > uint16_t(ranges["int"]->first)) {
           uint16_t low_bin = peak.first - uint16_t(ranges["int"]->first);
           uint16_t high_bin = peak.first + uint16_t(ranges["int"]->second);

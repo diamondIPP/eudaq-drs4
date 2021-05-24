@@ -30,7 +30,7 @@ public:
 	void SetTriggerCell(uint16_t trigger_cell) {m_trigger_cell=trigger_cell;}
 	uint16_t GetTriggerCell() const{return m_trigger_cell;}
 	void SetPolarities(signed char polarity, signed char pulser_polarity) { m_polarity = polarity; m_pulser_polarity = pulser_polarity; }
-	void SetTimes(std::vector<float> * tcal) { m_times = getCalibratedTimes(tcal); }
+	void SetTimes(std::vector<float> * tcal) { m_times = getCalibratedTimes(tcal); m_t = getTVec();}
 	unsigned ID() const;
 	void Print(std::ostream &) const;
 	std::string GetType() const {return m_type;}
@@ -81,11 +81,12 @@ public:
 		std::pair<uint16_t, float> getMaxPeak() const;
     float getSpreadInRange(int min, int max) const{return (getMaxInRange(min,max)-getMinInRange(min,max));};
     float getPeakToPeak(int min, int max) const{return getSpreadInRange(min,max);}
-    float getIntegral(uint16_t min, uint16_t max, bool _abs=false) const;
-    float getIntegral(uint16_t low_bin, uint16_t high_bin, uint16_t peak_pos, float sspeed) const;
+    float getAverage(uint16_t min, uint16_t max, bool _abs=false) const;
+    float getIntegral(uint16_t, uint16_t, uint16_t, float) const;
     float getIntegral(uint16_t peak_pos, std::pair<uint16_t, uint16_t> range, float sspeed) const;
     float getIntegral(WaveformSignalRegion*, WaveformIntegral*, float, int16_t off=0) const;
 		std::vector<float> getCalibratedTimes(std::vector<float>*) const;
+		std::vector<float> getTVec() const;
     float getTriggerTime(std::vector<float>*) const;
     float getPeakFit(uint16_t, uint16_t, signed char) const;
     TF1 getRFFit(std::vector<float>*) const;
@@ -95,8 +96,8 @@ public:
     float getWFStartTime(uint16_t bin_low, uint16_t bin_high, float noise, float max_value) const;
     std::pair<float, float> fitMaximum(uint16_t bin_low, uint16_t bin_high) const;
     float interpolateTime(uint16_t ibin, float value) const;
-    float interpolateVoltage(uint16_t ibin, float time) const;
     float getBinWidth(uint16_t ibin) const { return m_times.at(ibin) - m_times.at(uint16_t(ibin - 1)); }
+    uint16_t FindPeakIndex(uint16_t , uint16_t, float, signed char) const;
 
 private:
 	uint64_t m_timestamp;
@@ -109,6 +110,7 @@ private:
 	signed char m_polarity;
 	signed char m_pulser_polarity;
 	std::vector<float> m_times;
+	std::vector<float> m_t;
 
 };
 

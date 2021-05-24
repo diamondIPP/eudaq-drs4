@@ -785,21 +785,21 @@ void FileWriterTreeDRS4::FillRegionIntegrals(const StandardEvent & sev){
       channel.second->GetRegion(0)->SetPeakPostion(5);
       for (auto region: channel.second->GetRegions()){
         signed char polarity = (string(region->GetName()).find("pulser") != string::npos) ? channel.second->GetPulserPolarity() : channel.second->GetPolarity();
-        uint16_t peak_pos = wf->getIndex(region->GetLowBoarder(), region->GetHighBoarder(), polarity);
+        uint16_t peak_pos = wf->FindPeakIndex(region->GetLowBoarder(), region->GetHighBoarder(), sampling_speed_, polarity);
         region->SetPeakPostion(peak_pos);
         if (string(region->GetName()) == "signal_b"){  // TODO change this naming or define a definite signal region
-          v_cft[i] = wf->getCFT(region->GetLowBoarder(), region->GetHighBoarder(), rise_time * 2); }
+          v_cft[i++] = wf->getCFT(region->GetLowBoarder(), region->GetHighBoarder(), rise_time * 2); }
         for (auto integral: region->GetIntegrals()){
           std::string name = integral->GetName();
           std::transform(name.begin(), name.end(), name.begin(), ::tolower);
           integral->SetPeakPosition(peak_pos, wf->GetNSamples());
-          integral->SetTimeIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop(), peak_pos, sampling_speed_));
+          integral->SetTimeIntegral(wf->getIntegral(integral->GetDownRange(), integral->GetUpRange(), peak_pos, sampling_speed_));
           if (name.find("peaktopeak")!=std::string::npos){
             integral->SetIntegral(wf->getPeakToPeak(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else if (name.find("median")!=name.npos){
             integral->SetIntegral(wf->getMedian(integral->GetIntegralStart(), integral->GetIntegralStop()));
           } else
-            integral->SetIntegral(wf->getIntegral(integral->GetIntegralStart(), integral->GetIntegralStop()));
+            integral->SetIntegral(wf->getAverage(integral->GetDownRange(), integral->GetUpRange()));
         }
       }
     }
@@ -830,7 +830,7 @@ void FileWriterTreeDRS4::FillTotalRange(uint8_t iwf, const StandardWaveform *wf)
     signed char pol = polarities.at(iwf);
     v_is_saturated->at(iwf) = wf->getAbsMaxInRange(0, 1023) > 498; // indicator if saturation is reached in sampling region (1-1024)
     v_median->at(iwf) = pol * wf->getMedian(0, 1023); // Median over whole sampling region
-    v_average->at(iwf) = pol * wf->getIntegral(0, 1023);
+    v_average->at(iwf) = pol * wf->getAverage(0, 1023);
     if (UseWaveForm(active_regions, iwf)){
 
         WaveformSignalRegion * reg = regions->at(iwf)->GetRegion("signal_b");
@@ -883,7 +883,7 @@ void FileWriterTreeDRS4::UpdateWaveforms(uint8_t iwf){
 } // end UpdateWaveforms()
 
 inline int FileWriterTreeDRS4::IsPulserEvent(const StandardWaveform *wf){
-    float pulser_int = wf->getIntegral(pulser_region.first, pulser_region.second, true);
+    float pulser_int = wf->getAverage(pulser_region.first, pulser_region.second, true);
     return pulser_int > pulser_threshold;
 } //end IsPulserEvent
 
