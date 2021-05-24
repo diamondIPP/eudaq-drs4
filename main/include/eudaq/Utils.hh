@@ -392,6 +392,8 @@ namespace eudaq {
   inline float get_p1(float x0, float x1, float y0, float y1) { return x0 != x1 ? (y0 - y1) / (x0 - x1) : 0; }
   inline float get_p0(float x, float y, float p1) { return y - x * p1; }
   float interpolate_x(float x0, float x1, float y0, float y1, float y=0);
+  inline float DLLEXPORT GetX(float x1, float x2, float y1, float y2, float y) { return (x2 - x1) / (y2 - y1) * (y - y1) + x1; }
+  inline float DLLEXPORT GetY(float x1, float x2, float y1, float y2, float x) { return GetX(y1, y2, x1, x2, x); }
 
   class ProgressBar {
 
