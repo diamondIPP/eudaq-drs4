@@ -769,10 +769,11 @@ void FileWriterTreeDRS4::FillBucket(const StandardEvent & sev) {
     int_noise_.at(i_ch) = calc_mean(int_noise_vectors.at(i_ch));
 
     /** bucket */
-    float int2 = abs(wf->getIntegral(r, i, sampling_speed_, bw));
+    float pol = polarities.at(i_ch);
+    float int2 = pol * wf->getIntegral(r, i, sampling_speed_, bw);
     float thresh = GetNoiseThreshold(i_ch, 3);
-    f_bucket[j] = int2 > thresh and abs(i->GetTimeIntegral()) < thresh; // sig < thresh and bucket 2 > thresh
-    float intm1 = r->GetLowBoarder() - 2 * bw < 0 ? 0 : abs(wf->getIntegral(r, i, sampling_speed_, -2 * bw));
+    f_bucket[j] = int2 > thresh and pol * i->GetTimeIntegral() < thresh; // sig < thresh and bucket 2 > thresh
+    float intm1 = r->GetLowBoarder() - 2 * bw < 0 ? 0 : pol * wf->getIntegral(r, i, sampling_speed_, -2 * bw);
     f_ped_bucket[j++] = intm1 > GetNoiseThreshold(i_ch, 4);
   }
 }
