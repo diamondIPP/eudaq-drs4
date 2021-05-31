@@ -66,6 +66,7 @@ FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & /*param*/)
     v_cft = new float[n_channels];
     f_bucket = new bool[n_channels];
     f_ped_bucket = new bool[n_channels];
+    f_b2_int = new float[n_channels];
 
     // general waveform information
     v_is_saturated = new vector<bool>;
@@ -288,9 +289,10 @@ void FileWriterTreeDRS4::StartRun(unsigned runnumber) {
     m_ttree->Branch("IntegralPeaks", &IntegralPeaks);
     m_ttree->Branch("IntegralPeakTime", &IntegralPeakTime);
     m_ttree->Branch("IntegralLength", &IntegralLength);
-    m_ttree->Branch("cft", v_cft, TString::Format("cft[%d]/f", n_active_channels));
+    m_ttree->Branch("cft", v_cft, TString::Format("cft[%d]/F", n_active_channels));
     m_ttree->Branch("bucket", f_bucket, TString::Format("bucket[%d]/O", n_active_channels));
     m_ttree->Branch("ped_bucket", f_ped_bucket, TString::Format("ped_bucket[%d]/O", n_active_channels));
+    m_ttree->Branch("b2_integral", f_b2_int, TString::Format("b2_integral[%d]/F", n_active_channels));
 
     // DUT
     m_ttree->Branch("is_saturated", &v_is_saturated);
@@ -770,9 +772,9 @@ void FileWriterTreeDRS4::FillBucket(const StandardEvent & sev) {
 
     /** bucket */
     float pol = polarities.at(i_ch);
-    float int2 = pol * wf->getIntegral(r, i, sampling_speed_, bw);
+    f_b2_int[j] = pol * wf->getIntegral(r, i, sampling_speed_, bw);
     float thresh = GetNoiseThreshold(i_ch, 3);
-    f_bucket[j] = int2 > thresh and pol * i->GetTimeIntegral() < thresh; // sig < thresh and bucket 2 > thresh
+    f_bucket[j] = f_b2_int[j] > thresh and pol * i->GetTimeIntegral() < thresh; // sig < thresh and bucket 2 > thresh
     float intm1 = r->GetLowBoarder() - 2 * bw < 0 ? 0 : pol * wf->getIntegral(r, i, sampling_speed_, -2 * bw);
     f_ped_bucket[j++] = intm1 > GetNoiseThreshold(i_ch, 4);
   }

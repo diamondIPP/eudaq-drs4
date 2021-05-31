@@ -141,6 +141,7 @@ namespace eudaq {
         float * v_cft;  // constant fraction time
         bool * f_bucket;
         bool * f_ped_bucket;
+        float * f_b2_int;
 
         // general waveform information
         std::vector<bool> *v_is_saturated;
