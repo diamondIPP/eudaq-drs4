@@ -290,18 +290,14 @@ void FileWriterWF::StartRun(unsigned run_number) {
   SetTelescopeBranches();
 
   EUDAQ_INFO("Done with creating Branches!");
-}
+} // end StartRun()
 
-/** =====================================================================
-    -------------------------WRITE EVENT---------------------------------
-    =====================================================================*/
+/** -------------------------WRITE EVENT--------------------------------- */
 void FileWriterWF::WriteEvent(const DetectorEvent & ev) {
   if (ev.IsBORE()) {
     PluginManager::SetConfig(ev, m_config);
     PluginManager::Initialize(ev);
-    Configuration conf(ev.GetTag("CONFIG"));
-    sampling_speed_ = conf.Get(Form("Producer.%s", producer_name_.c_str()), "sampling_frequency", 5);
-    cout << "Sampling Frequency: " << sampling_speed_ << " GHz" << endl;
+    sampling_speed_ = LoadSamplingFrequency(ev);
     tcal_ = PluginManager::GetTimeCalibration(ev);
     FillFullTime();
     macro_->AddLine("\n[Time Calibration]");
@@ -700,14 +696,13 @@ inline bool FileWriterWF::IsPulserEvent(const StandardWaveform *wf) const {
 } //end IsPulserEvent
 
 void FileWriterWF::FillFullTime(){
-  uint16_t n_waveform_samples = uint16_t(tcal_.at(0).size() / 2);  // tcal vec is two times to big atm, todo: fix that!
-  for (auto i_ch:tcal_) {
-    i_ch.second.resize(n_waveform_samples);
+  for (auto i_ch: tcal_) {
+    i_ch.second.resize(n_samples_);
     float sum = 0;
     full_time_[i_ch.first] = vector<float>();
     full_time_.at(i_ch.first).push_back(sum);
     for (auto j = 0; j < i_ch.second.size() * 2 - 1; j++) {
-      sum += i_ch.second.at(uint16_t(j % 1024));
+      sum += i_ch.second.at(uint16_t(j % n_samples_));
       full_time_.at(i_ch.first).push_back(sum);
     }
   }

@@ -93,6 +93,7 @@ namespace eudaq {
     void ReadIntegralRanges();
     void ReadIntegralRegions();
     float GetNoiseThreshold(uint8_t, float=2);
+    virtual float LoadSamplingFrequency(const DetectorEvent&){};
 
     // clocks for checking execution time
     TStopwatch w_spectrum;
