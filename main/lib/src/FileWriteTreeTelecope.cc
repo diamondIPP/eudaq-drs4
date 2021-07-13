@@ -68,7 +68,7 @@ namespace eudaq {
       // Add to get maximum number of events: DA
     virtual long GetMaxEventNumber();
       virtual string GetStats(const DetectorEvent &);
-      virtual void setTU(bool tu) { hasTU = tu; }
+      virtual void SetTU(bool tu) { hasTU = tu; }
     void SetTelescopeBranches();
     void FillTelescopeArrays(const StandardEvent&, bool);
     void InitTelescopeArrays();

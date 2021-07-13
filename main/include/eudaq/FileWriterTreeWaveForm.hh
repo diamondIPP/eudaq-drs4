@@ -1,8 +1,8 @@
 //
 // Created by reichmann on 07.04.16.
 //
-#ifndef EUDAQ_FILEWRITETREEDRS4_HH
-#define EUDAQ_FILEWRITETREEDRS4_HH
+#ifndef EUDAQ_FILEWRITETREEWF_HH
+#define EUDAQ_FILEWRITETREEWF_HH
 
 // eudaq imports
 #include "FileNamer.hh"
@@ -123,4 +123,4 @@ namespace eudaq {
     };
 }
 
-#endif //EUDAQ_FILEWRITETREEDRS4_HH
+#endif //EUDAQ_FILEWRITETREEWF_HH

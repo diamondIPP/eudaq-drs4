@@ -27,7 +27,7 @@ namespace eudaq {
       virtual std::string GetStats(const DetectorEvent &) {};
       virtual void PrintResults() {};
       virtual void SaveResults() {};
-      virtual void setTU(bool) {};
+      virtual void SetTU(bool) {};
       virtual ~FileWriter() {}
     protected:
       std::string m_filepattern;

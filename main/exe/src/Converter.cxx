@@ -76,8 +76,7 @@ int main(int /*unused*/, char ** argv) {
       print_banner("STARTING EUDAQ " + to_string(type.Value()) + " CONVERTER");
 
       std::shared_ptr<eudaq::FileWriter> writer(FileWriterFactory::Create(type.Value(), &config));
-      writer->setTU(reader.hasTUEvent());
-//      writer->SetConfig(&config);
+      writer->SetTU(reader.hasTUEvent());
       writer->SetFilePattern(opat.Value());
       writer->StartRun(reader.RunNumber());
       auto pbar = ProgressBar(uint32_t(writer->GetMaxEventNumber()));
