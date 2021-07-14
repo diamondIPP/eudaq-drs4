@@ -219,7 +219,7 @@ void FileWriterWF::StartRun(unsigned run_number) {
   // Set Branch Addresses
   ttree_->Branch("event_number", &f_event_number, "event_number/I");
   ttree_->Branch("time", & f_time, "time/D");
-  ttree_->Branch("pulser", & f_pulser, "pulser/I");
+  ttree_->Branch("pulser", & f_pulser, "pulser/O");
   ttree_->Branch("nwfs", &f_nwfs, "n_waveforms/I");
   ttree_->Branch("beam_current", &f_beam_current, "beam_current/s");
   if (has_tu_) { ttree_->Branch("rate", &v_scaler); }
