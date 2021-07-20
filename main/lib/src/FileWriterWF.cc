@@ -230,9 +230,11 @@ void FileWriterWF::StartRun(unsigned run_number) {
   ttree_->Branch("trigger_cell", &f_trigger_cell, "trigger_cell/s");
 
   // waveforms
-  for (uint8_t i_wf = 0; i_wf < 4; i_wf++)
-    if ((save_waveforms_ & 1 << i_wf) == 1 << i_wf)
-      ttree_->Branch(Form("wf%i", i_wf), &f_wf.at(i_wf), Form("wf%i[%d]/F", i_wf, n_samples_));
+  for (uint8_t i_wf = 0; i_wf < 4; i_wf++) {
+    if (UseWaveForm(save_waveforms_, i_wf)) {
+      ttree_->Branch(Form("wf%i", i_wf), f_wf.at(i_wf), Form("wf%i[%d]/F", i_wf, n_samples_));
+    }
+  }
 
   // integrals
   ttree_->Branch("IntegralValues", &IntegralValues);
@@ -687,7 +689,7 @@ void FileWriterWF::FillTotalRange(uint8_t iwf, const StandardWaveform *wf){
 
 void FileWriterWF::UpdateWaveforms(uint8_t iwf){
   if (verbose_ > 3) { cout << "fill wf " << iwf << endl; }
-  if (UseWaveForm(save_waveforms_, iwf)) {f_wf.at(iwf) = data_->data(); }
+  if (UseWaveForm(save_waveforms_, iwf)) { copy(data_->begin(), data_->end(), f_wf.at(iwf)); }
 } // end UpdateWaveforms()
 
 inline bool FileWriterWF::IsPulserEvent(const StandardWaveform *wf) const {
