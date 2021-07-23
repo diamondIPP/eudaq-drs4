@@ -34,7 +34,7 @@ void TUCollection::Write(TFile *file){
     exit(-1);
   }
 
-  if (gDirectory!=NULL){
+  if (gDirectory != nullptr){
     gDirectory->mkdir("TU");
     gDirectory->cd("TU");
     tuevhistos->Write();

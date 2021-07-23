@@ -29,7 +29,7 @@ void MonitorPerformanceCollection::Write(TFile *file)
     cout << "MonitorPerformanceCollection::Write File pointer is NULL"<<endl;
     exit(-1);
   }
-  if (gDirectory!=NULL) //check if this pointer exists
+  if (gDirectory != nullptr) //check if this pointer exists
   {
     gDirectory->mkdir("MonitorPerformance");
     gDirectory->cd("MonitorPerformance");
