@@ -21,7 +21,7 @@ WaveformSignalRegion::~WaveformSignalRegion() {
 }
 
 void WaveformSignalRegion::ResetIntegrals() {
-    for (UInt_t i = 0; i<this->integral_names.size();i++){
+    for (uint16_t i = 0; i<this->integral_names.size();i++){
         WaveformIntegral* p = this->GetIntegralPointer(i);
         p->Reset();
     }
@@ -37,7 +37,7 @@ void WaveformSignalRegion::Print(std::ostream& out) const {
 }
 
 
-WaveformIntegral* WaveformSignalRegion::GetIntegralPointer(UInt_t s) {
+WaveformIntegral* WaveformSignalRegion::GetIntegralPointer(uint16_t s) {
     if (s< integral_names.size())
         return &(integrals[integral_names.at(s)]);
     return 0;
@@ -55,7 +55,7 @@ std::vector<WaveformIntegral *> WaveformSignalRegion::GetIntegrals() {
     return tmp;
 }
 
-void WaveformSignalRegion::SetPeakPostion(Int_t peak_position) {
+void WaveformSignalRegion::SetPeakPostion(int16_t peak_position) {
 //    std::cout<<name<<": Setting peakPosition: "<<peak_pos<<std::endl;
     peak_pos = peak_position;
 }

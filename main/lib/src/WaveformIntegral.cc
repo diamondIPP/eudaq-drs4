@@ -11,10 +11,10 @@
 
 //ClassImp(WaveformIntegral);
 
-WaveformIntegral::WaveformIntegral(int down_range, int up_range, std::string name):calculated(false) {
+WaveformIntegral::WaveformIntegral(int down_range, int up_range, const std::string & name):calculated(false) {
     this->down_range = down_range;
     this->up_range = up_range;
-    if (name=="")
+    if (name.empty())
         this->name_ = TString::Format("Integral_%d-%d", down_range, up_range);
     else
         this->name_=name;
@@ -45,7 +45,5 @@ void WaveformIntegral::Print(std::ostream & out, bool bEndl) const{
     if (bEndl)
         out<<std::endl;
 
-}
-WaveformIntegral::~WaveformIntegral() {
 }
 

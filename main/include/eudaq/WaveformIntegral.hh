@@ -14,11 +14,10 @@
 #include <iosfwd>
 #include <iostream>
 #include <iomanip>
-#include "TObject.h"
 
-class WaveformIntegral:public TObject{
+class WaveformIntegral {
     public:
-        WaveformIntegral(int low=-1, int high=-1, std::string name="");
+        explicit WaveformIntegral(int low=-1, int high=-1, const std::string& name="");
         void SetPeakPosition(int peak_position,int n_samples);
         uint16_t GetIntegralStart() const {return integral_start;}
         uint16_t GetIntegralStop() const {return integral_stop;}
@@ -29,7 +28,7 @@ class WaveformIntegral:public TObject{
         std::pair<uint16_t, uint16_t> GetRange() { return std::make_pair(down_range, up_range); }
         uint16_t GetDownRange() const { return down_range; }
         uint16_t GetUpRange() const { return up_range; }
-        ~WaveformIntegral() override;
+        ~WaveformIntegral() = default;
         void Reset();
         void Print() const {Print(std::cout,true);}
         void Print(std::ostream& out, bool bEndl=false) const;

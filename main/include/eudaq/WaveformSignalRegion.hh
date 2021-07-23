@@ -13,15 +13,15 @@
 #include <vector>
 #include <map>
 
-class WaveformSignalRegion:public TObject {
+class WaveformSignalRegion {
     public:
         WaveformSignalRegion(int low=-1, int high=-1, std::string name="");
         virtual ~WaveformSignalRegion();
-        void SetPeakPostion(Int_t peak_position);
+        void SetPeakPostion(int16_t peak_position);
         void SetPeakTime(float t_peak) { peak_time = t_peak; }
         size_t GetNIntegrals(){return integrals.size();}
         std::vector<WaveformIntegral *> GetIntegrals();
-        WaveformIntegral* GetIntegralPointer(UInt_t i);
+        WaveformIntegral* GetIntegralPointer(uint16_t i);
         WaveformIntegral* GetIntegralPointer(std::string s);
         void ResetIntegrals();
         void Print() const {Print(std::cout);}
