@@ -38,7 +38,7 @@ void WaveformCollection::Write(TFile *file)
 {
     if (file == nullptr)
         exit(-1);
-    if (gDirectory != nullptr) {
+    if (gDirectory) {
         gDirectory->mkdir("Waveforms");
         gDirectory->cd("Waveforms");
 
