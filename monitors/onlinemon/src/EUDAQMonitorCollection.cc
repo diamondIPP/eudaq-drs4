@@ -38,12 +38,12 @@ void EUDAQMonitorCollection::Reset()
 
 void EUDAQMonitorCollection::Write(TFile *file)
 {
-  if (file==NULL)
+  if (file == nullptr)
   {
     cout << "EUDAQMonitorCollection::Write File pointer is NULL"<<endl;
     exit(-1);
   }
-  if (gDirectory!=NULL) //check if this pointer exists
+  if (gDirectory != nullptr) //check if this pointer exists
   {
     gDirectory->mkdir("EUDAQMonitor");
     gDirectory->cd("EUDAQMonitor");
