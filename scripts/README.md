@@ -4,7 +4,8 @@
  - run main file "STARTRUN.py \<conf>  (-t)"
  - all settings provided by the config files in the config directory
  - main config is the file without the dash
- - subconfig behind the dash overwrites the setting from the main file
+ - subconfig behind the dash overwrites the setting from the main file, e.g. "psi-pixel" will load the main config
+   "psi.ini" and overwrite the settings with the "pixel.ini"
  - if flag "-t" is set, it runs in test mode without starting the program
 
 ### Settings File

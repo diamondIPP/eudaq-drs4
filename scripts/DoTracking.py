@@ -15,7 +15,7 @@ parser.add_argument('run')
 parser.add_argument('-v', action='store_true')
 args = parser.parse_args()
 
-config = load_config()
+config = load_main_config()
 location = config.get('MAIN', 'location')
 data_dir = config.get('MAIN', 'data directory')
 tel = config.get('MAIN', 'telescope')

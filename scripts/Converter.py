@@ -24,7 +24,7 @@ trees = ['caentree', 'drs4tree', 'telescopetree', 'waveformtree']
 if args.t not in trees:
     critical('wrong tree {0}! It has to be in {1}'.format(args.t, trees))
 
-config = load_config()
+config = load_main_config()
 location = config.get('MAIN', 'location')
 raw_dir = config.get('MAIN', 'raw directory')
 data_dir = config.get('MAIN', 'data directory')

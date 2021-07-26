@@ -11,7 +11,7 @@ from subprocess import check_call
 
 
 def run_wbc(data, trim=None, old=False):
-    config = load_config()
+    config = load_main_config()
     path = expanduser(join('~', config.get('MAIN', 'software directory'), 'old-pxar' if old else 'pxar', 'python', 'iCLIX.py'))
     trim = '' if trim is None else '-T {}'.format(trim)
     cmd = 'python {} {} -wbc {}'.format(path, data, trim)

@@ -15,7 +15,7 @@ parser.add_argument('-x', nargs='?', default='0')
 parser.add_argument('run', nargs='?', default=None)
 args = parser.parse_args()
 
-config = load_config()
+config = load_main_config()
 location = config.get('MAIN', 'location')
 raw_dir = config.get('MAIN', 'raw directory')
 data_dir = config.get('MAIN', 'data directory')

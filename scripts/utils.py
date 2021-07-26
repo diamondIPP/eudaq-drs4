@@ -3,9 +3,10 @@
 #       Utility methods for the EUDAQ Scripts
 #       created on April 11th 2019 by M. Reichmann (remichae@phys.ethz.ch)
 # -------------------------------------------------------
-from subprocess import getstatusoutput
-from time import sleep
+from subprocess import getstatusoutput, Popen
+from time import sleep, time
 from glob import glob
+from os import _exit
 from os.path import join, isfile, dirname, realpath
 from datetime import datetime
 from configparser import ConfigParser
@@ -16,26 +17,29 @@ GREEN = '\033[92m'
 BOLD = '\033[1m'
 ENDC = '\033[0m'
 
+Dir = dirname(dirname(realpath(__file__)))
+
 
 def get_t_str():
     return datetime.now().strftime('%H:%M:%S')
 
 
-def warning(txt):
-    print('{} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC))
+def warning(txt, skip_lines=0, prnt=True):
+    if prnt:
+        print('\n' * skip_lines + f'{get_t_str()} --> {BOLD}{RED}{txt}{ENDC}')
 
 
 def critical(txt):
-    print('CRITICAL: {} --> {}{}{}{}'.format(get_t_str(), BOLD, RED, txt, ENDC))
-    exit(2)
+    print(f'CRITICAL: {get_t_str()} --> {BOLD}{RED}{txt}{ENDC}')
+    _exit()
 
 
-def finished(txt):
-    print('{} --> {}{}{}{}'.format(get_t_str(), BOLD, GREEN, txt, ENDC))
+def finished(txt, skip_lines=0):
+    print('\n' * skip_lines + f'{get_t_str()} --> {BOLD}{GREEN}{txt}{ENDC}')
 
 
 def get_output(command, process=''):
-    return [word.strip('\r\t') for word in getstatusoutput('{} {}'.format(command, process))[-1].split('\n')]
+    return [word.strip('\r\t') for word in getstatusoutput(f'{command} {process}')[-1].split('\n')]
 
 
 def get_pids(process):
@@ -44,25 +48,24 @@ def get_pids(process):
 
 
 def get_screens(host=None):
-    host = 'ssh -tY {} '.format(host) if host is not None else ''
-    screens = dict([tuple(word.split('\t')[0].split('.')) for word in get_output('{}screen -ls 2>/dev/null'.format(host))[1:-1]])
-    return screens
+    host = '' if host is None else f'ssh -tY {host} '
+    return dict([tuple(word.split('\t')[0].split('.')) for word in get_output(f'{host}screen -ls 2>/dev/null') if '\t' in word])
 
 
-def get_x(name):
-    while True:
-        try:
-            return int(get_output('xwininfo -name "{}" | grep "Absolute upper-left X"'.format(name))[0].split(':')[-1])
-        except ValueError:
-            sleep(.1)
+def get_xwin_info(name, timeout=30):
+    t = time()
+    keys = ['Absolute upper-left X', 'Absolute upper-left Y', 'Width', 'Height']
+    while time() - t < timeout:
+        out = get_output(f'xwininfo -name "{name}" | egrep "{"|".join(keys)}"')
+        if len(out) > 2 and 'Error' not in out[0]:
+            return {key: int(word.split(':')[-1]) for key, word in zip(['x', 'y', 'w', 'h'], out)}
+        sleep(.1)
+    critical(f'could not find xwin "{name}" after waiting for {timeout}s')
 
 
-def get_width(name):
-    return int(get_output('xwininfo -name "{}" | grep "Width"'.format(name))[0].split(':')[-1])
-
-
-def get_height(name):
-    return int(get_output('xwininfo -name "{}" | grep "Height"'.format(name))[0].split(':')[-1])
+def start_xterm(tit, cmd='pwd', w=100, h=30, x=0, y=0, prnt=True):
+    warning('  Starting {}'.format(tit), prnt=prnt)
+    Popen(f'xterm -xrm "XTerm.vt100.allowTitleOps:false" -geom {w}x{h}+{x}+{y} -hold -T "{tit}" -e {cmd}'.split())
 
 
 def get_user(host):
@@ -92,10 +95,28 @@ def get_dir():
     return dirname(dirname(realpath(__file__)))
 
 
-def load_config():
-    filename = join(get_dir(), 'scripts', 'dirs.ini')
-    if not isfile(filename):
-        critical('Please create the dirs.ini file in eudaq/scripts based on dirs.default')
+def load_configparser(filename):
     p = ConfigParser()
     p.read(filename)
     return p
+
+
+def load_main_config():
+    filename = join(Dir, 'scripts', 'dirs.ini')
+    if not isfile(filename):
+        critical('Please create the dirs.ini file in eudaq/scripts based on dirs.default')
+    return load_configparser(filename)
+
+
+def load_config(file_name, sub_dir=''):
+    file_name = file_name.replace('.ini', '')
+    main_config = join(Dir, sub_dir, 'config', f'{file_name.split("-")[0]}.ini')
+    p = load_configparser(main_config)
+    if '-' in file_name:
+        p.read(join(Dir, sub_dir, 'config', f'{"-".join(file_name.split("-")[1:])}.ini'))  # only overwrites different settings
+    return p
+
+
+def load_host(config, name):
+    host = config.get('HOST', name)
+    return None if host.lower() == 'none' else host
