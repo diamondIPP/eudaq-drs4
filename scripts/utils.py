@@ -57,7 +57,7 @@ def get_xwin_info(name, timeout=30):
     keys = ['Absolute upper-left X', 'Absolute upper-left Y', 'Width', 'Height']
     while time() - t < timeout:
         out = get_output(f'xwininfo -name "{name}" | egrep "{"|".join(keys)}"')
-        if len(out) > 2 and 'Error' not in out[0]:
+        if len(out) > 2 and 'Error' not in out[0] and int(out[2].split(':')[-1]) > 1:
             return {key: int(word.split(':')[-1]) for key, word in zip(['x', 'y', 'w', 'h'], out)}
         sleep(.1)
     critical(f'could not find xwin "{name}" after waiting for {timeout}s')

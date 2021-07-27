@@ -4,7 +4,7 @@
 #       created in 2018 by M. Reichmann (remichae@phys.ethz.ch)
 # -------------------------------------------------------
 from os import chmod, chdir
-from screeninfo import get_monitors, Monitor
+from screeninfo import get_monitors, Monitor, common
 from KILLRUN import *
 
 
@@ -36,26 +36,32 @@ class EudaqStart:
             self.Monitor = self.find_monitor()
             self.MaxW = self.Monitor.width
             self.MaxH = self.Monitor.height
+            self.X0 = self.Monitor.x
             self.XMax, self.YMax = self.get_max_pos()
             # self.XMax, self.YMax = 318, 82
             self.Spacing = self.Config.getint('WINDOW', 'spacing')
             self.W = int((self.XMax - (self.NWindows - 1) * self.XMax * self.Spacing / self.MaxH) / self.NWindows) - 4
             # self.H = self.Config.getint('WINDOW', 'height')
             self.H = self.YMax / 5
-            self.XPos = 0
+            self.XPos = self.X0
 
     def load_n_windows(self):
         return max(1 + sum(self.Config.getboolean('DEVICE', option) for option in self.Config.options('DEVICE')), 2)
 
     def find_monitor(self) -> Monitor:
-        monitors = sorted(get_monitors(), key=lambda mon: mon.x)
+        try:
+            monitors = get_monitors()
+        except common.ScreenInfoError:
+            return [Monitor(1366, 768, 0, 0)]
+        monitors = sorted(monitors, key=lambda mon: mon.x)
         return monitors[min(len(monitors) - 1, self.Config.getint('WINDOW', 'monitor number'))]
 
     def get_max_pos(self):
-        start_xterm('MaxPos', 'pwd', 200, 100, prnt=False)
+        start_xterm('MaxPos', 'pwd', 100, 30, self.X0, prnt=False)
         xinfo = get_xwin_info('MaxPos')
+        print(xinfo)
         self.Kill.xterms()
-        return (self.MaxW - xinfo['x']) * 200 / xinfo['w'], self.MaxH * 100 / (xinfo['h'] + xinfo['y'])
+        return (self.MaxW - self.X0 + xinfo['x']) * 100 / xinfo['w'], self.MaxH * 30 / (xinfo['h'] + xinfo['y'])
 
     def protect_data(self):
         if self.DataPC is None:
@@ -76,7 +82,7 @@ class EudaqStart:
         warning('  starting RunControl')
         chdir(join(self.EUDAQDir, 'bin'))
         port = f'tcp://{self.RCPort}'
-        Popen(f'{join(self.EUDAQDir, "bin", "euRun.exe")} -x 0 -y -0 -w {int(self.MaxW / 3.)} -g {int(self.MaxH * 2 / 3 - 50)} -a {port}'.split())
+        Popen(f'{join(self.EUDAQDir, "bin", "euRun.exe")} -x {self.X0} -y -0 -w {int(self.MaxW / 3.)} -g {int(self.MaxH * 2 / 3 - 50)} -a {port}'.split())
 
     def start_logcontrol(self):
         warning('  starting LogControl')
