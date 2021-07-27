@@ -50,11 +50,10 @@ class EudaqStart:
 
     def find_monitor(self) -> Monitor:
         try:
-            monitors = get_monitors()
+            monitors = sorted(get_monitors(), key=lambda mon: mon.x)
+            return monitors[min(len(monitors) - 1, self.Config.getint('WINDOW', 'monitor number'))]
         except common.ScreenInfoError:
-            monitors = [Monitor(0, 0, 1366, 768)]
-        monitors = sorted(monitors, key=lambda mon: mon.x)
-        return monitors[min(len(monitors) - 1, self.Config.getint('WINDOW', 'monitor number'))]
+            return Monitor(0, 0, 1366, 768)
 
     def get_max_pos(self):
         start_xterm('MaxPos', 'pwd', 100, 30, self.X0, prnt=False)
