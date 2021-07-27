@@ -63,9 +63,17 @@ def get_xwin_info(name, timeout=30):
     critical(f'could not find xwin "{name}" after waiting for {timeout}s')
 
 
+def wait_for_xwin(name, add=.2, timeout=10):
+    t = time()
+    while time() - t < timeout and 'Error' in get_output(f'xwininfo -name "{name}"'):
+        sleep(.1)
+    sleep(add)
+
+
 def start_xterm(tit, cmd='pwd', w=100, h=30, x=0, y=0, prnt=True):
+    w, h, x, y = [int(round(i)) for i in [w, h, x, y]]
     warning('  Starting {}'.format(tit), prnt=prnt)
-    Popen(f'xterm -xrm "XTerm.vt100.allowTitleOps:false" -geom {w}x{h}+{x}+{y} -hold -T "{tit}" -e {cmd}'.split())
+    Popen(f'xterm -xrm "XTerm.vt100.allowTitleOps:false" -geom {w}x{h}+{x}+{y} -hold -T'.split() + [f'{tit}'] + f'-e {cmd}'.split())
 
 
 def get_user(host):

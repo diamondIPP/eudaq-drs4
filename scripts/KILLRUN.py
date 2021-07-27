@@ -20,7 +20,7 @@ class EudaqKill:
         self.DataPC = load_host(self.Config, "data")
         self.Processes = ['TUProducer', 'euLog.exe', 'euRun.exe', 'TestDataCollector.exe']
         self.Screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT']
-        self.XTerms = ['DataCollector', 'TU', 'CMS Pixel Telescope', 'CMS Pixel DUT', 'Clock Generator', 'WBC Scan', 'DRS4 Producer', 'DRS4 Osci', 'CAEN Producer', 'Max Pos']
+        self.XTerms = ['DataCollector', 'TU', 'CMS Pixel Telescope', 'CMS Pixel DUT', 'Clock Generator', 'WBC Scan', 'DRS4 Producer', 'DRS4 Osci', 'CAEN Producer', 'MaxPos']
 
     def all(self):
         warning('START to kill all EUDAQ processes...', skip_lines=1)

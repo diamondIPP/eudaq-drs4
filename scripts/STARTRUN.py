@@ -23,8 +23,8 @@ class EudaqStart:
 
         # KILL
         if not mask:
-            self.Kill = EudaqKill()
-            # self.Kill.all()
+            self.Kill = EudaqKill(config)
+            self.Kill.all()
 
             # PORTS
             self.Hostname = self.get_ip()
@@ -36,21 +36,23 @@ class EudaqStart:
             self.MonitorNumber = self.Config.getint('WINDOW', 'monitor number')
             self.MaxW = get_monitors()[self.MonitorNumber].width
             self.MaxH = get_monitors()[self.MonitorNumber].height
-            # self.XMax, self.YMax = self.get_max_pos()
-            self.XMax, self.YMax = 318, 82
+            self.XMax, self.YMax = self.get_max_pos()
+            # self.XMax, self.YMax = 318, 82
             self.Spacing = self.Config.getint('WINDOW', 'spacing')
             self.W = int((self.XMax - (self.NWindows - 1) * self.XMax * self.Spacing / self.MaxH) / self.NWindows) - 4
-            self.H = self.Config.getint('WINDOW', 'height')
+            # self.H = self.Config.getint('WINDOW', 'height')
+            self.H = self.YMax / 5
             self.XPos = 0
 
     def load_n_windows(self):
         return max(1 + sum(self.Config.getboolean('DEVICE', option) for option in self.Config.options('DEVICE')), 2)
 
     def get_max_pos(self):
-        start_xterm('MaxPos')
+        start_xterm('MaxPos', 'pwd', 200, 100)
         xinfo = get_xwin_info('MaxPos')
         self.Kill.xterms()
-        return self.MaxW * 100 / xinfo['w'], self.MaxH * 30 / xinfo['h']
+        print(xinfo)
+        return (self.MaxW - xinfo['x']) * 200 / xinfo['w'], self.MaxH * 100 / (xinfo['h'] + xinfo['y'])
 
     def protect_data(self):
         if self.DataPC is None:
@@ -69,19 +71,15 @@ class EudaqStart:
         warning('  starting RunControl')
         chdir(join(self.EUDAQDir, 'bin'))
         port = f'tcp://{self.RCPort}'
-        Popen(f'{join(self.EUDAQDir, "bin", "euRun.exe")} -x 0 -y -0 -w {int(self.MaxW / 3.)} -g {int(self.MaxH * 2 / 3.)} -a {port}'.split())
+        Popen(f'{join(self.EUDAQDir, "bin", "euRun.exe")} -x 0 -y -0 -w {int(self.MaxW / 3.)} -g {int(self.MaxH * 2 / 3 - 50)} -a {port}'.split())
 
     def start_logcontrol(self):
         warning('  starting LogControl')
         x = int(self.MaxW / 3.) + get_xwin_info('ETH/PSI Run Control based on eudaq 1.4.5')['x']
-        Popen(f'{join(self.EUDAQDir, "bin", "euLog.exe")} -l DEBUG -x {x} -y -0 -w {int(self.MaxW / 3.)} -g {int(self.MaxH * 2 / 3.)} -r {self.Port}'.split())
-
-    def t(self):
-        self.start_runcontrol()
-        self.start_data_collector()
+        Popen(f'{join(self.EUDAQDir, "bin", "euLog.exe")} -l DEBUG -x {x} -y -0 -w {int(self.MaxW / 3.)} -g {int(self.MaxH * 2 / 3 - 50)} -r {self.Port}'.split())
 
     def start_data_collector(self):
-        _ = get_xwin_info('ETH/PSI Run Control based on eudaq 1.4.5')['x']
+        wait_for_xwin('EUDAQ Log Collector', 1)
         cmd = f'ssh -tY {self.DataPC} scripts/StartDataCollector.sh' if self.DataPC is not None else join(self.EUDAQDir, 'bin', f'TestDataCollector.exe -r {self.Port}')
         self.start_xterm('DataCollector', cmd)
 
