@@ -4,7 +4,7 @@
 #       created in 2018 by M. Reichmann (remichae@phys.ethz.ch)
 # -------------------------------------------------------
 from os import chmod, chdir
-from screeninfo import get_monitors
+from screeninfo import get_monitors, Monitor
 from KILLRUN import *
 
 
@@ -33,9 +33,9 @@ class EudaqStart:
 
             # WINDOWS
             self.NWindows = self.load_n_windows()
-            self.MonitorNumber = self.Config.getint('WINDOW', 'monitor number')
-            self.MaxW = get_monitors()[self.MonitorNumber].width
-            self.MaxH = get_monitors()[self.MonitorNumber].height
+            self.Monitor = self.find_monitor()
+            self.MaxW = self.Monitor.width
+            self.MaxH = self.Monitor.height
             self.XMax, self.YMax = self.get_max_pos()
             # self.XMax, self.YMax = 318, 82
             self.Spacing = self.Config.getint('WINDOW', 'spacing')
@@ -46,6 +46,10 @@ class EudaqStart:
 
     def load_n_windows(self):
         return max(1 + sum(self.Config.getboolean('DEVICE', option) for option in self.Config.options('DEVICE')), 2)
+
+    def find_monitor(self) -> Monitor:
+        monitors = sorted(get_monitors(), key=lambda mon: mon.x)
+        return monitors[min(len(monitors) - 1, self.Config.getint('WINDOW', 'monitor number'))]
 
     def get_max_pos(self):
         start_xterm('MaxPos', 'pwd', 200, 100, prnt=False)
