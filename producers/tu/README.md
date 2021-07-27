@@ -1,0 +1,2 @@
+ - TU requires libconfig++ library
+ - ubuntu: ```sudo apt install libconfig++-dev```
