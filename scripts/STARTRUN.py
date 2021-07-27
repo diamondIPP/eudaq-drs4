@@ -52,7 +52,7 @@ class EudaqStart:
         try:
             monitors = get_monitors()
         except common.ScreenInfoError:
-            return [Monitor(0, 0, 1366, 768)]
+            monitors = [Monitor(0, 0, 1366, 768)]
         monitors = sorted(monitors, key=lambda mon: mon.x)
         return monitors[min(len(monitors) - 1, self.Config.getint('WINDOW', 'monitor number'))]
 
