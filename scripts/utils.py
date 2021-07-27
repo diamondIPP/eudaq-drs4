@@ -31,7 +31,7 @@ def warning(txt, skip_lines=0, prnt=True):
 
 def critical(txt):
     print(f'CRITICAL: {get_t_str()} --> {BOLD}{RED}{txt}{ENDC}')
-    _exit()
+    _exit(2)
 
 
 def finished(txt, skip_lines=0):

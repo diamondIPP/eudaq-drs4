@@ -64,7 +64,9 @@ class EudaqStart:
             get_output('ssh -tY {} chmod 444 {}'.format(self.DataPC, join(data_dir, 'run*.raw')))
 
     def get_ip(self):
-        return get_output('ifconfig {} | grep "inet "'.format(self.Config.get('MISC', 'inet device')))[0].strip('inet addr:').split()[0]
+        device = self.Config.get('MISC', 'inet device')
+        out = get_output(f'ifconfig {device} | grep "inet "')[0].strip('inet addr:')
+        return critical(f'inet device "{device}" not found in ifconfig, set the correct one in the config file') if 'error' in out else out.split()[0]
 
     def start_runcontrol(self):
         warning('  starting RunControl')
