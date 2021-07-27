@@ -48,10 +48,9 @@ class EudaqStart:
         return max(1 + sum(self.Config.getboolean('DEVICE', option) for option in self.Config.options('DEVICE')), 2)
 
     def get_max_pos(self):
-        start_xterm('MaxPos', 'pwd', 200, 100)
+        start_xterm('MaxPos', 'pwd', 200, 100, prnt=False)
         xinfo = get_xwin_info('MaxPos')
         self.Kill.xterms()
-        print(xinfo)
         return (self.MaxW - xinfo['x']) * 200 / xinfo['w'], self.MaxH * 100 / (xinfo['h'] + xinfo['y'])
 
     def protect_data(self):
