@@ -66,7 +66,7 @@ namespace eudaq {
       virtual uint64_t FileBytes() const;
       virtual ~FileWriterTreeTelescope();
       // Add to get maximum number of events: DA
-    virtual long GetMaxEventNumber();
+    virtual uint64_t GetMaxEventNumber();
       virtual string GetStats(const DetectorEvent &);
       virtual void SetTU(bool tu) { hasTU = tu; }
     void SetTelescopeBranches();
@@ -213,7 +213,7 @@ namespace eudaq {
     m_ttree->Fill();
   }
   // Get max event number: DA
-  long FileWriterTreeTelescope::GetMaxEventNumber(){
+  uint64_t FileWriterTreeTelescope::GetMaxEventNumber(){
     return max_event_number;
   }
 

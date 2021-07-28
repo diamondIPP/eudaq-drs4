@@ -23,7 +23,7 @@ namespace eudaq {
       virtual uint64_t FileBytes() const = 0;
       void SetFilePattern(const std::string & p) { m_filepattern = p; }
       // method to get max event number: DA
-      virtual long GetMaxEventNumber();
+      virtual uint64_t GetMaxEventNumber();
       virtual std::string GetStats(const DetectorEvent &) {};
       virtual void PrintResults() {};
       virtual void SaveResults() {};

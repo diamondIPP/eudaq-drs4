@@ -35,7 +35,7 @@ namespace eudaq {
     void WriteEvent(const DetectorEvent &) override;
     uint64_t FileBytes() const override;
 
-    long GetMaxEventNumber() override { return max_event_number_; }
+    uint64_t GetMaxEventNumber() override { return max_event_number_; }
     std::string GetStats(const DetectorEvent &dev) override { return PluginManager::GetStats(dev); }
     void SetTU(bool status) override { has_tu_ = status; }
     void SetTelescopeBranches();
@@ -218,4 +218,4 @@ namespace eudaq {
   };
 }
 
-#endif //EUDAQ_FILE_WRITER_WF_HH
+#endif //EUDAQ_FILEWRITERWF_HH
