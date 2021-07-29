@@ -9,7 +9,8 @@ namespace { static RegisterFileWriter<FileWriterTreeDRS4> reg("drs4tree"); }
 
 
 /** --------------------------CONSTRUCTOR-------------------------------- */
-FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & params): FileWriterWF(params, "drs4tree", 4) {
+FileWriterTreeDRS4::FileWriterTreeDRS4(const std::string & params): FileWriterWF(params, 4) {
+  name_ = "drs4tree";
   producer_name_ = "DRS4";
 } // end Constructor
 

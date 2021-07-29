@@ -6,7 +6,7 @@
 
 // eudaq imports
 #include "FileNamer.hh"
-#include "FileWriter.hh"
+#include "FileWriterTelescope.hh"
 #include "PluginManager.hh"
 #include "Logger.hh"
 #include "FileSerializer.hh"
@@ -24,37 +24,22 @@ class TMacro;
 
 namespace eudaq {
 
-  class FileWriterWF : public FileWriter {
+class FileWriterWF : public FileWriterTreeTelescope {
 
   public:
-    explicit FileWriterWF(const std::string &, std::string="", int=4);
+    explicit FileWriterWF(const std::string &, int=4);
     ~FileWriterWF() override;
 
     void StartRun(unsigned) override;
     void Configure() override;
-    void WriteEvent(const DetectorEvent &) override;
-    uint64_t FileBytes() const override;
-
-    uint64_t GetMaxEventNumber() override { return max_event_number_; }
-    std::string GetStats(const DetectorEvent &dev) override { return PluginManager::GetStats(dev); }
-    void SetTU(bool status) override { has_tu_ = status; }
-    void SetTelescopeBranches();
-    void FillTelescopeData(const StandardEvent&);
-    void InitTelescopeArrays();
+    void AddWrite(StandardEvent&) override;
+    void InitBORE(const DetectorEvent&) override;
 
   protected:
-    std::string name_{};
     std::string producer_name_;
-    uint32_t run_number_;
-    uint64_t max_event_number_;
     uint16_t save_waveforms_{};
     uint16_t active_regions_{};
-    bool has_tu_;
-    int verbose_;
 
-    /** ROOT File and Tree */
-    TFile * tfile_;  // book the pointer to a file (to store the output)
-    TTree * ttree_;  // book the tree (to store the needed event info)
     TMacro * macro_;  // macro to add text information to the file
 
     /** Waveform info */
@@ -87,9 +72,6 @@ namespace eudaq {
     static bool UseWaveForm(uint16_t bitmask, uint8_t iwf) { return ((bitmask & 1 << iwf) == 1 << iwf); }
     std::string GetBitMask(uint16_t bitmask) const;
     static std::string GetPolarityStr(const std::vector<signed char>& pol);
-    void SetTimeStamp(StandardEvent);
-    void SetBeamCurrent(StandardEvent);
-    void SetScalers(StandardEvent);
     void ReadIntegralRanges();
     void ReadIntegralRegions();
     float GetNoiseThreshold(uint8_t, float=2);
@@ -106,12 +88,8 @@ namespace eudaq {
 
     /** SCALAR BRANCHES */
     int f_nwfs;
-    uint32_t f_event_number;
     int f_pulser_events;
     int f_signal_events;
-    double f_time;
-    double old_time;
-    uint16_t f_beam_current;
 
     //drs4
     uint16_t f_trigger_cell;
@@ -167,15 +145,6 @@ namespace eudaq {
     // waveforms
     std::map<uint8_t, float*> f_wf;
 
-    // telescope
-    uint8_t f_n_hits;
-    uint8_t * f_plane;
-    uint8_t * f_col;
-    uint8_t * f_row;
-    int16_t * f_adc;
-    float * f_charge;
-    uint8_t f_trig_phase;
-
     // peak finding and FFT
     TSpectrum * spec_;
     TVirtualFFT * tfft_;
@@ -205,10 +174,6 @@ namespace eudaq {
     std::vector<float> *fft_min;
     std::vector<float> *fft_min_freq;
     std::vector<std::vector<float> *> fft_modes;
-
-    //tu
-    std::vector<uint64_t> * v_scaler;
-    std::vector<uint64_t> * old_scaler;
 
     //peak finding
     std::pair<float, float> peak_finding_roi;
