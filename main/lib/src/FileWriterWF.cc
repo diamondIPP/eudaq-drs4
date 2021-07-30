@@ -24,12 +24,10 @@ using namespace std;
 using namespace eudaq;
 
 /** --------------------------CONSTRUCTOR-------------------------------- */
-FileWriterWF::FileWriterWF(const std::string & /*params*/, string name, int n_channels)
-: name_(move(name)), producer_name_("PROD"), run_number_(0), max_event_number_(0), has_tu_(false), verbose_(0), tfile_(nullptr), ttree_(nullptr), sampling_speed_(2),
-  bunch_width_(19.751), n_channels_(n_channels), n_active_channels_(0), rise_time_(5), n_samples_(1024), tfft_(nullptr), re_full_(nullptr), im_full_(nullptr), in_(nullptr) {
+FileWriterWF::FileWriterWF(const std::string & params, int n_channels)
+: FileWriterTreeTelescope(params), producer_name_("PROD"), sampling_speed_(2), bunch_width_(19.751), n_channels_(n_channels), n_active_channels_(0), rise_time_(5),
+  n_samples_(1024), tfft_(nullptr), re_full_(nullptr), im_full_(nullptr), in_(nullptr) {
 
-  gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
-  gROOT->ProcessLine("#include <vector>");
   gROOT->ProcessLine("#include <map>");
   gInterpreter->GenerateDictionary("vector<vector<float> >;vector<vector<uint16> >", "vector");
 
@@ -40,13 +38,9 @@ FileWriterWF::FileWriterWF(const std::string & /*params*/, string name, int n_ch
   macro_ = new TMacro("region_information", "Region Information");
 
   f_nwfs = 0;
-  f_event_number = -1;
   f_pulser_events = 0;
   f_signal_events = 0;
-  f_time = -1.;
-  old_time = 0;
   f_pulser = false;
-  f_beam_current = UINT16_MAX;
   v_forc_pos = new vector<uint16_t>;
   v_forc_time = new vector<float>;
 
@@ -101,30 +95,13 @@ FileWriterWF::FileWriterWF(const std::string & /*params*/, string name, int n_ch
   fft_min = new std::vector<float>;
   fft_min_freq = new std::vector<float>;
 
-  // telescope
-  InitTelescopeArrays();
-  f_trigger_cell = 0;
-
-  //tu
-  v_scaler = new vector<uint64_t>;
-  v_scaler->resize(n_channels_ + 1);
-  old_scaler = new vector<uint64_t>;
-  old_scaler->resize(n_channels_ + 1, 0);
-
   spec_ = new TSpectrum(25);
 } // end Constructor
 
 /** --------------------------CONFIGURE---------------------------------- */
 void FileWriterWF::Configure(){
 
-  // do some assertions
-  if (m_config == nullptr) { return EUDAQ_WARN("Configuration class instance m_config does not exist!"); }
-
-  m_config->SetSection(Form("Converter.%s", name_.c_str()));
-  if (m_config->NSections() == 0) { return EUDAQ_WARN("Config file has no sections!"); }
-  EUDAQ_INFO(Form("Configuring FileWriter %s\n", name_.c_str()));
-
-  max_event_number_ = m_config->Get("max_event_number", 0);
+  FileWriterTreeTelescope::Configure();
   rise_time_ = m_config->Get("rise_time", float(5));
 
   // spectrum and fft
@@ -200,7 +177,6 @@ void FileWriterWF::Configure(){
         names.push_back(TString::Format("\"ch%d_%s_%s\"", int(ch.first), region->GetName(), integral->GetName().c_str()));
   macro_->AddLine(("Names = [" + to_string(names) + "]").c_str());
 
-  cout << "\nMAXIMUM NUMBER OF EVENTS: " << (max_event_number_ ? to_string(max_event_number_) : "ALL") << endl;
   EUDAQ_INFO("End of Configure!");
   cout << endl;
   macro_->Write();
@@ -208,21 +184,11 @@ void FileWriterWF::Configure(){
 
 /** --------------------------START RUN---------------------------------- */
 void FileWriterWF::StartRun(unsigned run_number) {
-  run_number_ = run_number;
-  EUDAQ_INFO(Form("Converting the input file into a %s TTree", name_.c_str()));
-  string f_output = FileNamer(m_filepattern).Set('X', ".root").Set('R', run_number);
-  EUDAQ_INFO("Preparing the output file: " + f_output);
 
-  tfile_ = new TFile(f_output.c_str(), "RECREATE");
-  ttree_ = new TTree("tree", "EUDAQ TTree with telescope and waveform branches");
-
+  FileWriterTreeTelescope::StartRun(run_number);
   // Set Branch Addresses
-  ttree_->Branch("event_number", &f_event_number, "event_number/I");
-  ttree_->Branch("time", & f_time, "time/D");
   ttree_->Branch("pulser", & f_pulser, "pulser/O");
   ttree_->Branch("nwfs", &f_nwfs, "n_waveforms/I");
-  ttree_->Branch("beam_current", &f_beam_current, "beam_current/s");
-  if (has_tu_) { ttree_->Branch("rate", &v_scaler); }
   ttree_->Branch("forc_pos", &v_forc_pos);
   ttree_->Branch("forc_time", &v_forc_time);
 
@@ -288,49 +254,31 @@ void FileWriterWF::StartRun(unsigned run_number) {
       ttree_->Branch(TString::Format("fft_values%d", i_wf), &fft_values.at(i_wf));
     }
   }
-  // telescope
-  SetTelescopeBranches();
-
   EUDAQ_INFO("Done with creating Branches!");
 } // end StartRun()
 
+void FileWriterWF::InitBORE(const DetectorEvent & dev) {
+
+  FileWriterTreeTelescope::InitBORE(dev);
+  sampling_speed_ = LoadSamplingFrequency(dev);
+  tcal_ = PluginManager::GetTimeCalibration(dev);
+  FillFullTime();
+  macro_->AddLine("\n[Time Calibration]");
+  macro_->AddLine(("tcal = [" + to_string(tcal_.at(0)) + "]").c_str());
+}
+
 /** -------------------------WRITE EVENT--------------------------------- */
-void FileWriterWF::WriteEvent(const DetectorEvent & ev) {
-  if (ev.IsBORE()) {
-    PluginManager::SetConfig(ev, m_config);
-    PluginManager::Initialize(ev);
-    sampling_speed_ = LoadSamplingFrequency(ev);
-    tcal_ = PluginManager::GetTimeCalibration(ev);
-    FillFullTime();
-    macro_->AddLine("\n[Time Calibration]");
-    macro_->AddLine(("tcal = [" + to_string(tcal_.at(0)) + "]").c_str());
-    cout << "loading the first event...." << endl;
-    //todo: add time stamp for the very first tu event
-    return;
-  } else if (ev.IsEORE()) {
-    eudaq::PluginManager::ConvertToStandard(ev);
-    cout << "loading the last event...." << endl;
-    return;
-  }
-  f_event_number = ev.GetEventNumber();
-  if (max_event_number_ > 0 && f_event_number > max_event_number_) return;
+void FileWriterWF::AddWrite(StandardEvent & sev) {
 
   w_total.Start(false);
-  StandardEvent sev = eudaq::PluginManager::ConvertToStandard(ev);
 
   if (sev.NumPlanes() == 0) return;
-
-  /** TU STUFF */
-  SetTimeStamp(sev);
-  SetBeamCurrent(sev);
-  SetScalers(sev);
 
   f_nwfs = sev.NumWaveforms();
   if (f_event_number <= 10 and verbose_ > 0 and not f_nwfs) { return EUDAQ_WARN("NO WAVEFORMS IN THIS EVENT!!!"); }
 
   ClearVectors();
 
-  if (verbose_ > 3) cout << "event number " << f_event_number << endl;
   if (verbose_ > 3) cout << "number of waveforms " << f_nwfs << endl;
 
   /** Acquire the waveform data
@@ -381,9 +329,7 @@ void FileWriterWF::WriteEvent(const DetectorEvent & ev) {
   } // end iwf waveform loop
 
   FillRegionVectors();
-  FillTelescopeData(sev);
 
-  ttree_->Fill();
   w_total.Stop();
 } // end WriteEvent()
 
@@ -412,9 +358,8 @@ FileWriterWF::~FileWriterWF() {
   if (macro_) { macro_->Write(); }
   tfile_->Close();
   delete tfile_;
+  tfile_ = nullptr;
 }
-
-uint64_t FileWriterWF::FileBytes() const { return 0; }
 
 inline void FileWriterWF::ClearVectors(){
 
@@ -733,36 +678,6 @@ string FileWriterWF::GetPolarityStr(const vector<signed char> &pol) {
     return trim(ss.str(), " ");
 }
 
-void FileWriterWF::SetTimeStamp(StandardEvent sev) {
-  if (sev.hasTUEvent()){
-    if (sev.GetTUEvent(0).GetValid())
-      f_time = sev.GetTimestamp();
-  } else
-    f_time = sev.GetTimestamp() / 384066.;
-}
-
-void FileWriterWF::SetBeamCurrent(StandardEvent sev) {
-
-  if (sev.hasTUEvent()){
-    StandardTUEvent tuev = sev.GetTUEvent(0);
-    f_beam_current = uint16_t(tuev.GetValid() ? tuev.GetBeamCurrent() : UINT16_MAX);
-  }
-}
-
-void FileWriterWF::SetScalers(StandardEvent sev) {
-
-  if (sev.hasTUEvent()) {
-    StandardTUEvent tuev = sev.GetTUEvent(0);
-    bool valid = tuev.GetValid();
-    /** scaler continuously count upwards: subtract old scaler value and divide by time interval to get rate
-      * first scaler value is the scintillator and then the planes */
-    for (uint8_t i(0); i < 5; i++) {
-      v_scaler->at(i) = uint64_t(valid ? double(tuev.GetScalerValue(i) - old_scaler->at(i)) * 1000 / (f_time - old_time) : UINT32_MAX);
-      if (valid) { old_scaler->at(i) = tuev.GetScalerValue(i); }
-    }
-    if (valid) { old_time = f_time; }
-  }
-}
 
 void FileWriterWF::ReadIntegralRanges() {
 
@@ -817,44 +732,6 @@ void FileWriterWF::ReadIntegralRegions() {
 float FileWriterWF::GetNoiseThreshold(uint8_t i_wf, float n_sigma) {
   /** :returns:  threshold based on the current noise */
   return float(polarities_.at(i_wf)) * int_noise_.at(i_wf).first + n_sigma * int_noise_.at(i_wf).second;
-}
-
-void FileWriterWF::SetTelescopeBranches() {
-
-  ttree_->Branch("n_hits_tot", &f_n_hits, "n_hits_tot/b");
-  ttree_->Branch("plane", f_plane, "plane[n_hits_tot]/b");
-  ttree_->Branch("col", f_col, "col[n_hits_tot]/b");
-  ttree_->Branch("row", f_row, "row[n_hits_tot]/b");
-  ttree_->Branch("adc", f_adc, "adc[n_hits_tot]/S");
-  ttree_->Branch("charge", f_charge, "charge[n_hits_tot]/F");
-  ttree_->Branch("trigger_phase", &f_trig_phase, "trigger_phase/b");
-}
-
-void FileWriterWF::FillTelescopeData(const StandardEvent & sev) {
-
-  f_trig_phase = sev.GetPlane(0).GetTrigPhase();  // there is only one trigger phase for the whole telescope (one DTB)
-  f_n_hits = 0;
-  for (auto iplane(0); iplane < sev.NumPlanes(); ++iplane) {
-    const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
-    std::vector<double> cds = plane.GetPixels<double>();
-    for (auto ipix(0); ipix < cds.size(); ++ipix) {
-      f_plane[f_n_hits] = iplane;
-      f_col[f_n_hits] = uint8_t(plane.GetX(ipix));
-      f_row[f_n_hits] = uint8_t(plane.GetY(ipix));
-      f_adc[f_n_hits] = int16_t(plane.GetPixel(ipix));
-      f_charge[f_n_hits++] = 42;						// todo: do charge conversion here!
-    }
-  }
-}
-
-void FileWriterWF::InitTelescopeArrays() {
-
-  f_n_hits = 0;
-  f_plane  = new uint8_t[MAX_SIZE];
-  f_col    = new uint8_t[MAX_SIZE];
-  f_row    = new uint8_t[MAX_SIZE];
-  f_adc    = new int16_t [MAX_SIZE];
-  f_charge = new float[MAX_SIZE];
 }
 
 #endif // ROOT_FOUND

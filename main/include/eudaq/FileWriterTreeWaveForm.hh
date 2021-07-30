@@ -45,7 +45,7 @@ namespace eudaq {
 
         float avgWF(float, float, int);
         virtual ~FileWriterTreeWaveForm();
-        virtual long GetMaxEventNumber() { return max_event_number; }
+        virtual uint64_t GetMaxEventNumber() { return max_event_number; }
 
     private:
         unsigned runnumber;

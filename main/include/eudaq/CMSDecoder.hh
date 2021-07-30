@@ -20,7 +20,7 @@ public:
   explicit CMSDecoder(const std::string &);
   void WriteEvent(const DetectorEvent & ev) override;
   void StartRun(unsigned /*run_number*/) override;
-  long GetMaxEventNumber() override { return f_max_event_number; }
+  uint64_t GetMaxEventNumber() override { return f_max_event_number; }
   void Run() override;
   std::string GetStats(const DetectorEvent &dev) override;
 

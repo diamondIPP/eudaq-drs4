@@ -12,7 +12,8 @@ namespace { static RegisterFileWriter<FileWriterTreeCAEN> reg("caentree"); }
 
 /** --------------------------CONSTRUCTOR-------------------------------- */
 FileWriterTreeCAEN::FileWriterTreeCAEN(const std::string & params):
-  FileWriterWF(params, "caentree", 9), f_trigger_time(0), f_rf_period(0), f_rf_phase(0), f_rf_chi2(UINT16_MAX), fit_rf(false) {
+  FileWriterWF(params, 9), f_trigger_time(0), f_rf_period(0), f_rf_phase(0), f_rf_chi2(UINT16_MAX), fit_rf(false) {
+  name_ = "caentree";
   producer_name_ = "VX1742";
   sampling_speed_ = 2.5;
   dia_channels_ = new vector<uint16_t>;
