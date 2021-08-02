@@ -128,3 +128,10 @@ def load_config(file_name, sub_dir=''):
 def load_host(config, name):
     host = config.get('HOST', name)
     return None if host.lower() == 'none' else host
+
+
+def choose(v, default, decider='None', *args, **kwargs):
+    use_default = decider is None if decider != 'None' else v is None
+    if callable(default) and use_default:
+        default = default(*args, **kwargs)
+    return default if use_default else v(*args, **kwargs) if callable(v) else v
