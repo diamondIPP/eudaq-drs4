@@ -45,6 +45,11 @@ class EudaqStart:
             self.H = self.YMax / 5
             self.XPos = self.X0
 
+            self.TWait = self.Config.getfloat('MISC', 'waiting time')  # waiting time between the starting the processes
+            self.LastDevice = 'EUDAQ Log Collector'
+
+    # ----------------------------------------
+    # region INIT
     def load_n_windows(self):
         return max(1 + sum(self.Config.getboolean('DEVICE', option) for option in self.Config.options('DEVICE')), 2)
 
@@ -75,6 +80,8 @@ class EudaqStart:
         device = self.Config.get('MISC', 'inet device')
         out = get_output(f'ifconfig {device} | grep "inet "')[0].strip('inet addr:')
         return critical(f'inet device "{device}" not found in ifconfig, set the correct one in the config file') if 'error' in out else out.split()[0]
+    # endregion INIT
+    # ----------------------------------------
 
     def start_runcontrol(self):
         warning('  starting RunControl')
@@ -88,21 +95,23 @@ class EudaqStart:
         Popen(f'{join(self.EUDAQDir, "bin", "euLog.exe")} -l DEBUG -x {x} -y -0 -w {int(self.MaxW / 3.)} -g {int(self.MaxH * 2 / 3 - 50)} -r {self.Port}'.split())
 
     def start_data_collector(self):
-        wait_for_xwin('EUDAQ Log Collector', 1)
+        self.wait_for_last_device('DataCollector')
         cmd = f'ssh -tY {self.DataPC} scripts/StartDataCollector.sh' if self.DataPC is not None else join(self.EUDAQDir, 'bin', f'TestDataCollector.exe -r {self.Port}')
         self.start_xterm('DataCollector', cmd)
 
     def start_tu(self):
         if self.device_is_active('tu'):
+            self.wait_for_last_device('TU')
             self.start_xterm('TU', '{d} -r {p}'.format(d=join(self.EUDAQDir, 'bin', 'TUProducer.exe'), p=self.Port))
 
     def get_script_cmd(self, name, script_dir='scripts'):
         ssh_cmd = '' if self.BeamPC is None else 'ssh -tY {}'.format(self.BeamPC)
         script_path = join('~', script_dir) if self.BeamPC is None else join('/home', get_user(self.BeamPC), script_dir)
-        return '"{} bash -ic \'{}\'"'.format(ssh_cmd, join(script_path, name) if name is not None else '')
+        return "{} bash -ic \'{}\'".format(ssh_cmd, join(script_path, name) if name is not None else '')
 
     def start_beam_device(self, name, device, script_name=None, script_dir='scripts'):
         if self.device_is_active(device):
+            self.wait_for_last_device(name)
             self.start_xterm(name, self.get_script_cmd(script_name, script_dir))
 
     def start_xterm(self, tit, cmd):
@@ -147,6 +156,10 @@ class EudaqStart:
 
     def device_is_active(self, name):
         return name in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', name)
+
+    def wait_for_last_device(self, new_xterm_name, t_wait=None):
+        wait_for_xwin(self.LastDevice, choose(t_wait, self.TWait))
+        self.LastDevice = new_xterm_name
 
 
 if __name__ == '__main__':
