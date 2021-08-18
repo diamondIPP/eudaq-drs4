@@ -96,7 +96,9 @@ def get_tc(data_dir, tc, location):
 
 def get_run_path(run, tc_dir, raw_dir):
     run_paths = glob(join(tc_dir, raw_dir, 'run*.raw'))
-    return max(run_paths) if run is None else join(tc_dir, raw_dir, 'run{n}.raw'.format(n=run.zfill(6)))
+    if not run_paths:
+        critical(f'There are no raw files in {join(tc_dir, raw_dir)}')
+    return max(run_paths) if run is None else join(tc_dir, raw_dir, f'run{run:>06}.raw')
 
 
 def get_dir():
