@@ -5,19 +5,16 @@
 #  PXARCORE_LIBRARIES - The libraries needed to use pxarCore
 #  PXARCORE_DEFINITIONS - Compiler switches required for using pxarCore
 
+IF (NOT DEFINED ${PXARPATH})
+   SET(PXARPATH $ENV{PXARPATH})
+ENDIF()
 MESSAGE(STATUS "Looking for CMSPixel dependencies: pxarCore... PXARPATH = ${PXARPATH}")
 
-find_path(PXARCORE_API_INCLUDE_DIR api.h
-  HINTS "${PXARPATH}/core/api" "$ENV{PXARPATH}/core/api")
-find_path(PXARCORE_UTILS_INCLUDE_DIR dictionaries.h
-  HINTS "${PXARPATH}/core/utils" "$ENV{PXARPATH}/core/utils")
-find_path(PXARCORE_DECODER_INCLUDE_DIR datasource_evt.h
-  HINTS "${PXARPATH}/core/decoder" "$ENV{PXARPATH}/core/decoder")
-find_path(PXAR_UTIL_INCLUDE_DIR ConfigParameters.hh
-  HINTS "${PXARPATH}/util" "$ENV{PXARPATH}/util")
-
-find_library(PXARCORE_LIBRARY NAMES pxar
-  HINTS "${PXARPATH}/lib" "$ENV{PXARPATH}/lib")
+find_path(PXARCORE_API_INCLUDE_DIR api.h HINTS "${PXARPATH}/core/api")
+find_path(PXARCORE_UTILS_INCLUDE_DIR dictionaries.h HINTS "${PXARPATH}/core/utils")
+find_path(PXARCORE_DECODER_INCLUDE_DIR datasource_evt.h HINTS "${PXARPATH}/core/decoder")
+find_path(PXAR_UTIL_INCLUDE_DIR ConfigParameters.hh HINTS "${PXARPATH}/util")
+find_library(PXARCORE_LIBRARY NAMES pxar HINTS "${PXARPATH}/lib")
 
 set(PXARCORE_LIBRARIES ${PXARCORE_LIBRARY} )
 set(PXARCORE_INCLUDE_DIRS ${PXARCORE_API_INCLUDE_DIR} ${PXARCORE_UTILS_INCLUDE_DIR} ${PXARCORE_DECODER_INCLUDE_DIR} ${PXAR_UTIL_INCLUDE_DIR})

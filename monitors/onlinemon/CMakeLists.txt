@@ -48,10 +48,11 @@ set(OnlineMon_HEADERS
 
 SET(MY_INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/monitors/onlinemon/include/ ${PROJECT_SOURCE_DIR}/monitors/onlinemon ${PROJECT_SOURCE_DIR}/main/include ${ROOT_INCLUDE_DIR} )
 
-# set everything needed for the root dictonary and create the
+# set everything needed for the root dictionary and create the
 # dictionary
 set(OnlineMon_DICTIONARY ${CMAKE_CURRENT_BINARY_DIR}/OnlineMonDict.cxx) 
 ROOT_GENERATE_DICTIONARY_OLD("${OnlineMon_HEADERS}" "${OnlineMon_DICTIONARY}" "${MY_INCLUDE_DIRECTORIES}")
+#ROOT_GENERATE_DICTIONARY("${OnlineMon_HEADERS}" "" "${OnlineMon_DICTIONARY}" "${MY_INCLUDE_DIRECTORIES}")
 
 add_executable(OnlineMon.exe ${OnlineMon_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/OnlineMonDict.cxx)
 

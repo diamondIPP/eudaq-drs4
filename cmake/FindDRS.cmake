@@ -5,30 +5,20 @@
 #  DRS_LIBRARIES - The libraries needed to use DRS
 #  DRS_DEFINITIONS - Compiler switches required for using DRS
 
+IF (NOT DEFINED ${DRS_PATH})
+   SET(DRS_PATH $ENV{DRS_PATH})
+ENDIF()
 MESSAGE(STATUS "Looking for DRS Board dependencies: DRS... DRS_PATH: " ${DRS_PATH})
-find_path(DRS_INCLUDE_DIR DRS.h
-  HINTS "${DRS_PATH}/include" "$ENV{DRS_PATH}/include")
-IF (DRS_INCLUDE_DIR)
-    MESSAGE(STATUS "\tFound DRS_INCLUDE_DIR Dir:" ${DRS_INCLUDE_DIR})
-ELSE ()
-    MESSAGE(SEND_ERROR "\tCannot find Include Dir..." ${DRS_INCLUDE_DIR})
-ENDIF ()
 
-find_path(DRS_SRC_DIR DRS.cpp 
-    HINTS "${DRS_PATH}/src" "$ENV{DRS_PATH}/src")    
-IF (DRS_SRC_DIR)
-    MESSAGE(STATUS "\tFound DRS_SRC_DIR Dir:" ${DRS_SRC_DIR})
-ELSE ()
-    MESSAGE(SEND_ERROR "\tCannot find Include Dir..." ${DRS_SRC_DIR})
-ENDIF ()
+find_path(DRS_INCLUDE_DIR DRS.h HINTS "${DRS_PATH}/include")
+find_path(DRS_SRC_DIR DRS.cpp HINTS "${DRS_PATH}/src")
+IF (NOT DRS_INCLUDE_DIR OR NOT DRS_SRC_DIR)
+    MESSAGE(SEND_ERROR "Cannot find DRS_SRC_DIR...")
+ENDIF()
 
-MESSAGE(STATUS "\tFind DRS_LIBRARY " ${DRS_PATH}  $ENV{DRS_PATH})
-find_library(DRS_LIBRARY NAMES DRS
-  HINTS "${DRS_PATH}" "$ENV{DRS_PATH}")
-IF (DRS_LIBRARY)
-    MESSAGE(STATUS "\tFound DRS_LIBRARY Dir:" ${DRS_LIBRARY})
-ELSE ()
-    MESSAGE(STATUS "\tYou might to build a shared object: "
+find_library(DRS_LIBRARY NAMES DRS HINTS "${DRS_PATH}")
+IF (NOT DRS_LIBRARY)
+    MESSAGE(STATUS "\tYou need to build a shared object: "
     "	"
     "$(SHARED_OBJECTS): %.so:  DRS.o mxml.o averager.o musbstd.o"
 	" $(CXX) $(CFLAGS) $(WXFLAGS) $(WXLIBS) $(LIBS)"
