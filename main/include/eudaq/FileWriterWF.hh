@@ -75,7 +75,7 @@ class FileWriterWF : public FileWriterTreeTelescope {
     void ReadIntegralRanges();
     void ReadIntegralRegions();
     float GetNoiseThreshold(uint8_t, float=2);
-    virtual float LoadSamplingFrequency(const DetectorEvent&){};
+    virtual float LoadSamplingFrequency(const DetectorEvent&) = 0;
 
     // clocks for checking execution time
     TStopwatch w_spectrum;
@@ -83,7 +83,7 @@ class FileWriterWF : public FileWriterTreeTelescope {
     TStopwatch w_total;
 
     void FillFullTime();
-    inline float GetTriggerTime(const uint8_t &ch, const uint16_t &bin);
+    float GetTriggerTime(const uint8_t &ch, const uint16_t &bin);
     float GetTimeDifference(uint8_t ch, uint16_t bin_low, uint16_t bin_up);
 
     /** SCALAR BRANCHES */

@@ -10,7 +10,7 @@ namespace eudaq {
 
   class DLLEXPORT FileWriter {
     public:
-      FileWriter(Configuration *config);
+      explicit FileWriter(Configuration *config);
       FileWriter();
       void SetConfig(Configuration *config) {m_config=config;}
       virtual void Configure();
@@ -24,11 +24,11 @@ namespace eudaq {
       void SetFilePattern(const std::string & p) { m_filepattern = p; }
       // method to get max event number: DA
       virtual uint64_t GetMaxEventNumber();
-      virtual std::string GetStats(const DetectorEvent &) {};
+      virtual std::string GetStats(const DetectorEvent &) { return ""; }
       virtual void PrintResults() {};
       virtual void SaveResults() {};
       virtual void SetTU(bool) {};
-      virtual ~FileWriter() {}
+      virtual ~FileWriter() = default;
     protected:
       std::string m_filepattern;
       Configuration* m_config;

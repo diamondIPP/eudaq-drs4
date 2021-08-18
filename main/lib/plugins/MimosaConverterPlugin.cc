@@ -236,10 +236,10 @@ namespace eudaq {
       // (if first 16 bits read already, just completes the present word)
       
 
-      char ch1[2];
-      char ch2[2];
-      char ch3[2];
-      char ch4[2];
+      char ch1[3];
+      char ch2[3];
+      char ch3[3];
+      char ch4[3];
 
       unsigned char word[4];
 

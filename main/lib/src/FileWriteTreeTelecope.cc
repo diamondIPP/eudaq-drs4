@@ -4,8 +4,9 @@
 #include "eudaq/FileWriter.hh"
 #include "eudaq/PluginManager.hh"
 #include "eudaq/Logger.hh"
-#include "TFile.h"
 
+#pragma GCC diagnostic ignored "-Wattributes"
+#include "TFile.h"
 #include "TTree.h"
 #include "TROOT.h"
 #include <Math/MinimizerOptions.h>
@@ -14,6 +15,7 @@
 #include "TString.h"
 #include "TFitResultPtr.h"
 #include "eudaq/FileWriterTelescope.hh"
+#pragma GCC diagnostic warning "-Wattributes"
 
 #define MAX_SIZE 255
 

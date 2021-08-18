@@ -268,7 +268,7 @@ template<typename Char>
 default_basic_error_handler<Char> basic_json_reader<Char>::default_err_handler;
 
 template <typename Char>
-unsigned long long string_to_ulonglong(const Char *s, size_t length, const unsigned long long max_value) throw(std::overflow_error)
+unsigned long long string_to_ulonglong(const Char *s, size_t length, const unsigned long long max_value) noexcept(false)
 {
     unsigned long long n = 0;
     for (size_t i = 0; i < length; ++i)

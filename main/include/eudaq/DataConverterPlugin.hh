@@ -148,7 +148,7 @@ namespace eudaq{
       typedef std::pair<unsigned, std::string> t_eventid;
 
       virtual void Initialize(eudaq::Event const &, eudaq::Configuration const &) {}
-			virtual std::string GetStats() {}
+			virtual std::string GetStats() { return ""; }
       virtual std::map<uint8_t, std::vector<float> > GetTimeCalibration(const Event & bore);
       virtual void SetConfig(Configuration conv_cfg) {}
       virtual void SetConfig(Configuration * conv_cfg) {}
