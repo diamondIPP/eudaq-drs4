@@ -8,7 +8,7 @@
 #ifndef WaveformHISTOS_HH_
 #define WaveformHISTOS_HH_
 //ROOT
-//#include <TGraph.h>
+#pragma GCC diagnostic ignored "-Wattributes"
 #include <TH1F.h>
 #include <TH2F.h>
 #include <TF1.h>
@@ -16,6 +16,7 @@
 #include <TString.h>
 #include <THStack.h>
 #include <TGraph.h>
+#pragma GCC diagnostic warning "-Wattributes"
 //std
 #include <map>
 #include <algorithm>    // std::min_element, std::max_element

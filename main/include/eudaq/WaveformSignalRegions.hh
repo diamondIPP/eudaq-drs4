@@ -13,7 +13,9 @@
 #include "WaveformIntegral.hh"
 #include <limits>
 #include <vector>
+#pragma GCC diagnostic ignored "-Wattributes"
 #include "TROOT.h"
+#pragma GCC diagnostic warning "-Wattributes"
 #include "WaveformSignalRegion.hh"
 
 class WaveformSignalRegions:public TObject{

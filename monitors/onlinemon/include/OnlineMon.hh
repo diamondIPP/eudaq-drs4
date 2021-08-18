@@ -20,8 +20,10 @@
 #include <TApplication.h>
 
 //ROOT includes
+#pragma GCC diagnostic ignored "-Wattributes"
 #include <TSystem.h>
 #include <RQ_OBJECT.h>
+#pragma GCC diagnostic warning "-Wattributes"
 
 //STL includes
 #include <string>

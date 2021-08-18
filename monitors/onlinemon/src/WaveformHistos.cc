@@ -7,10 +7,13 @@
 
 #include "WaveformHistos.hh"
 #include "OnlineMon.hh"
+
+#pragma GCC diagnostic ignored "-Wattributes"
 #include <TStyle.h>
 #include <TROOT.h>
 #include <TProfile.h>
 #include <math.h>
+#pragma GCC diagnostic warning "-Wattributes"
 
 WaveformHistos::WaveformHistos(SimpleStandardWaveform p, RootMonitor * mon):
 _n_wfs(10),_sensor(p.getName()), _id(p.getID()),n_fills(0),n_fills_bad(0),n_fills_good(0),_n_samples(1024),time_start(0)

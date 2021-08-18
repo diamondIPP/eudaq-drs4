@@ -8,8 +8,10 @@
 #ifndef HITMAPHISTOS_HH_
 #define HITMAPHISTOS_HH_
 
+#pragma GCC diagnostic ignored "-Wattributes"
 #include <TH2I.h>
 #include <TFile.h>
+#pragma GCC diagnostic warning "-Wattributes"
 
 #include <map>
 

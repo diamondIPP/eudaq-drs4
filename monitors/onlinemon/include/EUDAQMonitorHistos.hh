@@ -10,10 +10,12 @@
 
 
 
+#pragma GCC diagnostic ignored "-Wattributes"
 #include "TH1F.h"
 #include "TH2I.h"
 #include "TProfile.h"
 #include "TFile.h"
+#pragma GCC diagnostic warning "-Wattributes"
 
 
 #include <map>

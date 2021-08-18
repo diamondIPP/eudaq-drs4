@@ -7,11 +7,13 @@
 
 #include "HitmapHistos.hh"
 #include "OnlineMon.hh"
+#pragma GCC diagnostic ignored "-Wattributes"
 #include <TGaxis.h>
 #include <cstdlib>
 #include <TStyle.h>
 #include <TROOT.h>
 #include <TProfile.h>
+#pragma GCC diagnostic warning "-Wattributes"
 #include "OnlineMonWindow.hh"
 
 HitmapHistos::HitmapHistos(SimpleStandardPlane p, RootMonitor* mon): _sensor(p.getName()), _id(p.getID()), _maxX(p.getMaxX()), _maxY(p.getMaxY()), _wait(false),
