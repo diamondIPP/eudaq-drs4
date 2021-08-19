@@ -14,6 +14,7 @@ from configparser import ConfigParser
 
 RED = '\033[91m'
 GREEN = '\033[92m'
+CYAN = '\033[36m'
 BOLD = '\033[1m'
 ENDC = '\033[0m'
 
@@ -24,18 +25,32 @@ def get_t_str():
     return datetime.now().strftime('%H:%M:%S')
 
 
+def colorise(txt, color=None, bold=False):
+    return txt if color is None else f'{BOLD if bold else ""}{color}{txt}{ENDC}'
+
+
+def prepare_msg(msg, head='', bold=False, color=None, head_color=None, blank_lines=0):
+    blank = '\n' * blank_lines
+    return f'{blank}{colorise(head, head_color, bold=True)} {get_t_str()} --> {colorise(msg, color, bold)}'
+
+
+def info(txt, skip_lines=0, prnt=True):
+    if prnt:
+        return print(prepare_msg(txt, 'INFO', head_color=CYAN, blank_lines=skip_lines))
+
+
 def warning(txt, skip_lines=0, prnt=True):
     if prnt:
-        print('\n' * skip_lines + f'{get_t_str()} --> {BOLD}{RED}{txt}{ENDC}')
+        return print(prepare_msg(txt, 'WARNING', bold=True, color=RED, head_color=RED, blank_lines=skip_lines))
 
 
 def critical(txt):
-    print(f'CRITICAL: {get_t_str()} --> {BOLD}{RED}{txt}{ENDC}')
+    print(prepare_msg(txt, 'CRITICAL', bold=True, color=RED, head_color=RED))
     _exit(2)
 
 
 def finished(txt, skip_lines=0):
-    print('\n' * skip_lines + f'{get_t_str()} --> {BOLD}{GREEN}{txt}{ENDC}')
+    return print(prepare_msg(txt, bold=True, color=GREEN, blank_lines=skip_lines))
 
 
 def get_output(command, process=''):
