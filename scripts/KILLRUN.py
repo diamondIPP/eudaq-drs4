@@ -19,8 +19,8 @@ class EudaqKill:
         self.BeamPC = load_host(self.Config, "beam")
         self.DataPC = load_host(self.Config, "data")
         self.Processes = ['TUProducer', 'euLog.exe', 'euRun.exe', 'TestDataCollector.exe']
-        self.Screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT']
-        self.XTerms = ['DataCollector', 'TU', 'CMS Pixel Telescope', 'CMS Pixel DUT', 'Clock Generator', 'WBC Scan', 'DRS4 Producer', 'DRS4 Osci', 'CAEN Producer', 'MaxPos']
+        self.Screens = ['DRS4Producer', 'CMSPixel', 'CAENProducer', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT', 'WBCScan', 'DRS4Osci']
+        self.XTerms = ['DataCollector', 'TU', 'CMS Pixel Telescope', 'CMS Pixel DUT', 'Clock Generator', 'WBC Scan Telescope', 'DRS4 Producer', 'DRS4Osci', 'CAEN Producer', 'MaxPos']
 
     def all(self):
         warning('START to kill all EUDAQ processes...', skip_lines=1)
@@ -67,7 +67,7 @@ class EudaqKill:
     def beam_processes(self):
         """ Kill all EUDAQ processes on computer in the beam area. """
         warning('Cleaning up the beam computer "{}"'.format(self.BeamPC), skip_lines=1)
-        eudaq_screens = ['DRS4Screen', 'CMSPixelScreen', 'CAENScreen', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT', 'CMSPixelScreenDIG']
+        eudaq_screens = ['DRS4Screen', 'CMSPixel', 'CAENScreen', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT', 'CMSPixelScreenDIG', 'WBCScan']
         for pid, screen in get_screens(self.BeamPC).items():
             if screen in eudaq_screens:
                 EudaqKill.screen(screen, pid, self.BeamPC)
@@ -84,5 +84,9 @@ class EudaqKill:
 
 if __name__ == '__main__':
 
-    z = EudaqKill()
+    from argparse import ArgumentParser
+    p = ArgumentParser()
+    p.add_argument('config', nargs='?', default='psi-pad', help='config file name (also without .ini), combine main files (eth, psi, cern) with sub config, e.g. psi-wbc')
+    args = p.parse_args()
+    z = EudaqKill(args.config)
     z.all()
