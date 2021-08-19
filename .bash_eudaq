@@ -11,12 +11,12 @@ export DRS_PATH="$SOFTDIR/DRS4-v5-shared"
 
 # PROCESS ALIASES
 cmspix="$EUDAQDIR/bin/CMSPixelProducer.exe -r $EUDAQ_SERVER:$RCPORT"
-alias DataCollector='$EUDAQDIR/bin/TestDataCollector.exe -r $EUDAQ_SERVER:$RCPORT &'
+alias DataCollector='cd $EUDAQDIR/bin; ./TestDataCollector.exe -r $EUDAQ_SERVER:$RCPORT &'
 alias PixelProducer='$cmspix'
 alias CMSPixel='$cmspix -n CMSPixel &'
 alias CMSPixelDig='$cmspix -n CMSPixelDig &'
-alias DRS4Producer='$EUDAQDIR/bin/DRSProducer.exe -r $EUDAQ_SERVER:$RCPORT -n DRS4Producer &'
-alias CAENProducer='$EUDAQDIR/bin/VX1742Producer.exe -r $EUDAQ_SERVER:$RCPORT -n CAENProducer &'
+alias DRS4Producer='$EUDAQDIR/bin/DRSProducer.exe -r $EUDAQ_SERVER:$RCPORT -n DRS4 &'
+alias CAENProducer='$EUDAQDIR/bin/VX1742Producer.exe -r $EUDAQ_SERVER:$RCPORT -n CAEN &'
 
 # ALIASES
 alias OnlineMonitor='$EUDAQDIR/scripts/OnlineMon.py'
