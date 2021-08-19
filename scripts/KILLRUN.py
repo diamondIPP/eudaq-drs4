@@ -67,7 +67,7 @@ class EudaqKill:
     def beam_processes(self):
         """ Kill all EUDAQ processes on computer in the beam area. """
         warning('Cleaning up the beam computer "{}"'.format(self.BeamPC), skip_lines=1)
-        eudaq_screens = ['DRS4Screen', 'CMSPixel', 'CAENScreen', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT', 'CMSPixelScreenDIG', 'WBCScan']
+        eudaq_screens = ['DRS4Producer', 'CMSPixel', 'CAENProducer', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT', 'CMSPixelScreenDIG', 'WBCScan']
         for pid, screen in get_screens(self.BeamPC).items():
             if screen in eudaq_screens:
                 EudaqKill.screen(screen, pid, self.BeamPC)
@@ -77,7 +77,7 @@ class EudaqKill:
         """ Kill the data collector if running on seperate PC. """
         warning('Cleaning up the data computer "{}"'.format(self.DataPC), skip_lines=1)
         for pid, screen in get_screens(self.DataPC).items():
-            if screen == 'DataCollectorScreen':
+            if screen == 'DataCollector':
                 EudaqKill.screen(screen, pid, self.DataPC)
         finished('Killing the data collector on the data pc complete')
 
