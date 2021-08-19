@@ -10,6 +10,7 @@ from os import _exit
 from os.path import join, isfile, dirname, realpath
 from datetime import datetime
 from configparser import ConfigParser
+from getpass import getuser
 
 
 RED = '\033[91m'
@@ -92,7 +93,11 @@ def start_xterm(tit, cmd='pwd', w=100, h=30, x=0, y=0, prnt=True):
 
 
 def get_user(host):
-    return get_output('ssh -tY {} whoami'.format(host))[0]
+    return getuser() if host is None else "$USER"
+
+
+def get_ssh_cmd(cmd, host=None):
+    return cmd if host is None else f'ssh -tY {host} bash -ic \'{cmd}\''
 
 
 def remove_letters(string):
