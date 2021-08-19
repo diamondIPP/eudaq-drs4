@@ -1,15 +1,19 @@
+#!/bin/bash
 # PATHS
 export EUDAQ_SERVER=192.168.1.102
 export RCPORT=44000
-export EUDAQDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-SOFTDIR="$(dirname $EUDAQDIR)"
+EUDAQDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+SOFTDIR="$(dirname "$EUDAQDIR")"
+export EUDAQDIR=$EUDAQDIR
 export PXARPATH="$SOFTDIR/pxar_root6"
 export DRS_PATH="$SOFTDIR/DRS4-v5-shared"
 
 # PROCESS ALIASES
-alias Collector='$EUDAQDIR/bin/TestDataCollector.exe -r $EUDAQ_SERVER:$RCPORT'
-alias CMSPixel='$EUDAQDIR/bin/CMSPixelProducer.exe -r $EUDAQ_SERVER:$RCPORT -n CMSPixel &'
-alias CMSPixelDig='$EUDAQDIR/bin/CMSPixelProducer.exe -r $EUDAQ_SERVER:$RCPORT -n CMSPixelDig'
+cmspix="$EUDAQDIR/bin/CMSPixelProducer.exe -r $EUDAQ_SERVER:$RCPORT"
+alias DataCollector='$EUDAQDIR/bin/TestDataCollector.exe -r $EUDAQ_SERVER:$RCPORT'
+alias PixelProducer='$cmspix'
+alias CMSPixel='$cmspix -n CMSPixel &'
+alias CMSPixelDig='$cmspix -n CMSPixelDig'
 alias DRS4Producer='$EUDAQDIR/bin/DRSProducer.exe -r $EUDAQ_SERVER:$RCPORT -n DRS4Producer &'
 
 # ALIASES
