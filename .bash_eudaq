@@ -10,6 +10,7 @@ export DRS_PATH="$SOFTDIR/DRS4-v5-shared"
 alias Collector='$EUDAQDIR/bin/TestDataCollector.exe -r $EUDAQ_SERVER:$RCPORT'
 alias CMSPixel='$EUDAQDIR/bin/CMSPixelProducer.exe -r $EUDAQ_SERVER:$RCPORT -n CMSPixel &'
 alias CMSPixelDig='$EUDAQDIR/bin/CMSPixelProducer.exe -r $EUDAQ_SERVER:$RCPORT -n CMSPixelDig'
+alias DRS4Producer='$EUDAQDIR/bin/DRSProducer.exe -r $EUDAQ_SERVER:$RCPORT -n DRS4Producer &'
 
 # ALIASES
 alias OnlineMonitor='$EUDAQDIR/scripts/OnlineMon.py'
@@ -17,5 +18,5 @@ alias Convert='$EUDAQDIR/scripts/Converter.py'
 alias DoTracking='$EUDAQDIR/scripts/DoTracking.py'
 alias logger='~/scripts/logger.sh'
 alias mountRapidshare='sudo mount 192.168.1.100:/mnt/raid /data'
-
+alias restartDRS4='ykushcmd ykushxs -d; sleep .5; ykushcmd ykushxs -u'
 
