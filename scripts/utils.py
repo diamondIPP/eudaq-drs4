@@ -6,11 +6,12 @@
 from subprocess import getstatusoutput, Popen
 from time import sleep, time
 from glob import glob
-from os import _exit
+from os import _exit, remove
 from os.path import join, isfile, dirname, realpath
 from datetime import datetime
 from configparser import ConfigParser
 from getpass import getuser
+from numpy import array, ndarray, full, frombuffer, log2
 
 
 RED = '\033[91m'
@@ -157,3 +158,34 @@ def choose(v, default, decider='None', *args, **kwargs):
     if callable(default) and use_default:
         default = default(*args, **kwargs)
     return default if use_default else v(*args, **kwargs) if callable(v) else v
+
+
+def make_list(value):
+    return array([value], dtype=object).flatten()
+
+
+def get_tree_vec(tree, var, cut='', dtype=None, nentries=None, firstentry=0):
+    strings = make_list(var)
+    n = tree.Draw(':'.join(strings), cut, 'goff', choose(nentries, tree.kMaxEntries), firstentry)
+    dtypes = dtype if type(dtype) in [list, ndarray] else full(strings.size, dtype)
+    vals = [get_buf(tree.GetVal(i), n, dtypes[i]) for i in range(strings.size)]
+    return vals[0] if len(vals) == 1 else vals
+
+
+def get_arg(arg, default):
+    return default if arg is None else arg
+
+
+def get_buf(buf, n, dtype=None):
+    return frombuffer(buf, dtype=buf.typecode, count=n).astype(dtype)
+
+
+def remove_file(file_path, prnt=True):
+    if isfile(file_path):
+        info('removing {}'.format(file_path), prnt=prnt)
+        remove(file_path)
+
+
+def make_byte_string(v):
+    n = int(log2(v) // 10) if v else 0
+    return '{:1.1f} {}'.format(v / 2 ** (10 * n), ['B', 'kB', 'MB', 'GB'][n])
