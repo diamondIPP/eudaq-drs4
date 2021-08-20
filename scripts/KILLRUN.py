@@ -67,7 +67,7 @@ class EudaqKill:
     def beam_processes(self):
         """ Kill all EUDAQ processes on computer in the beam area. """
         warning('Cleaning up the beam computer "{}"'.format(self.BeamPC), skip_lines=1)
-        eudaq_screens = ['DRS4Producer', 'CMSPixel', 'CAENProducer', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT', 'CMSPixelScreenDIG', 'WBCScan']
+        eudaq_screens = ['DRS4Producer', 'CMSPixel', 'CAENProducer', 'CMSPixelScreenDIG1', 'CMSPixelScreenDIG2', 'CMSPixelScreenDUT', 'CMSPixelScreenDIG', 'WBCScan', 'DRS4Osci']
         for pid, screen in get_screens(self.BeamPC).items():
             if screen in eudaq_screens:
                 EudaqKill.screen(screen, pid, self.BeamPC)
