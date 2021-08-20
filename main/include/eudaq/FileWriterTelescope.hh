@@ -64,7 +64,6 @@ namespace eudaq {
     uint32_t f_event_number;
     double f_time;
     double old_time;
-    uint16_t f_beam_current;
 
     /** VECTOR BRANCHES */
     uint8_t f_n_hits;
@@ -76,6 +75,7 @@ namespace eudaq {
     uint8_t * f_trig_phase;
 
     //tu
+    uint16_t f_beam_current;
     uint64_t * v_scaler;
     uint64_t * old_scaler;
   };
