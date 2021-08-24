@@ -12,6 +12,7 @@ class EudaqStart:
 
     Dir = dirname(realpath(__file__))
     EUDAQDir = dirname(Dir)
+    SPath = join('scripts', 'start_screen.sh')
 
     def __init__(self, config='psi', mask=False):
 
@@ -48,6 +49,32 @@ class EudaqStart:
             self.TWait = self.Config.getfloat('MISC', 'waiting time')  # waiting time between the starting the processes
             self.LastDevice = 'EUDAQ Log Collector'
 
+    def run(self):
+        warning('\nStarting subprocesses ...')
+        self.start_runcontrol()
+        self.start_logcontrol()
+        self.start_data_collector()
+        self.start_tu()
+        self.run_pad()
+        self.run_pixel()
+        finished('Starting EUDAQ complete!')
+
+    def run_pad(self):
+        self.start_beam_device('cmstel', 'CMSPixel', 'CMSPixel', xtit='CMS Pixel Telescope')
+        self.start_beam_device('drs4', 'DRS4Producer', 'DRS4Producer', xtit='DRS4 Producer')
+        self.start_beam_device('wbc', 'WBCScan', self.get_wbc_cmd(), 'WBC Scan Telescope')
+        self.start_beam_device('drsgui', 'DRS4Osci', join("$SOFTDIR" if self.BeamPC else dirname(self.EUDAQDir), 'DRS4-v5-shared', 'drsosc'))
+        self.start_beam_device('caen', 'CAENProducer', 'CAENProducer', xtit='CEAN Producer')
+
+    def run_pixel(self):
+        # TODO finish...
+        pass
+        # self.start_beam_device('CMS Pixel Telescope', 'cmstelold', 'StartCMSPixelOld.sh')
+        # self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDigOld.sh')
+        # self.start_beam_device('Clock Generator', 'clock', 'clockgen.sh')
+        # self.start_beam_device('Pixel WBC Scan Tel', 'wbcpixtel', self.get_wbc_cmd(old=True), script_dir=join('software', 'eudaq-drs4', 'scripts'))
+        # self.start_beam_device('Pixel WBC Scan DUT', 'wbcpixdut', self.get_wbc_cmd(old=True, tel=False), script_dir=join('software', 'eudaq-drs4', 'scripts'))
+
     # ----------------------------------------
     # region INIT
     def load_n_windows(self):
@@ -83,6 +110,30 @@ class EudaqStart:
     # endregion INIT
     # ----------------------------------------
 
+    # ----------------------------------------
+    # region GET
+    def get_dir(self, host=None):
+        return "$EUDAQDIR" if host else self.EUDAQDir
+
+    def device_is_active(self, name):
+        return name in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', name)
+
+    def wait_for_last_device(self, new_xterm_name, t_wait=None):
+        wait_for_xwin(self.LastDevice, choose(t_wait, self.TWait))
+        self.LastDevice = new_xterm_name
+
+    def get_wbc_cmd(self, tel=True, old=False):
+        data_path = join('/home', get_user(self.BeamPC), self.Config.get('DIR', 'telescope' if tel else 'dut'))
+        return f'{join(self.get_dir(self.BeamPC), "scripts", "find_wbc.py")} {data_path} -T {self.Config.get("TRIM", "telescope" if tel else "dut")}{" -o" if old else ""}'
+    # endregion GET
+    # ----------------------------------------
+
+    # ----------------------------------------
+    # region START
+    def start_screen(self, tit, cmd, host=None, xtit=None):
+        cmd = f'{join(self.get_dir(host), self.SPath)} {tit} {cmd}'
+        self.start_xterm(choose(xtit, tit), get_ssh_cmd(cmd, host))
+
     def start_runcontrol(self):
         warning('  starting RunControl')
         chdir(join(self.EUDAQDir, 'bin'))
@@ -96,50 +147,23 @@ class EudaqStart:
 
     def start_data_collector(self):
         self.wait_for_last_device('DataCollector')
-        cmd = f'ssh -tY {self.DataPC} scripts/StartDataCollector.sh' if self.DataPC is not None else join(self.EUDAQDir, 'bin', f'TestDataCollector.exe -r {self.Port}')
-        self.start_xterm('DataCollector', cmd)
+        self.start_screen('DataCollector', 'DataCollector', self.DataPC)
 
     def start_tu(self):
         if self.device_is_active('tu'):
             self.wait_for_last_device('TU')
             self.start_xterm('TU', '{d} -r {p}'.format(d=join(self.EUDAQDir, 'bin', 'TUProducer.exe'), p=self.Port))
 
-    def get_script_cmd(self, name, script_dir='scripts'):
-        ssh_cmd = '' if self.BeamPC is None else 'ssh -tY {}'.format(self.BeamPC)
-        script_path = join('~', script_dir) if self.BeamPC is None else join('/home', get_user(self.BeamPC), script_dir)
-        return "{} bash -ic \'{}\'".format(ssh_cmd, join(script_path, name) if name is not None else '')
-
-    def start_beam_device(self, name, device, script_name=None, script_dir='scripts'):
+    def start_beam_device(self, device, tit, cmd, xtit=None):
         if self.device_is_active(device):
-            self.wait_for_last_device(name)
-            self.start_xterm(name, self.get_script_cmd(script_name, script_dir))
+            self.wait_for_last_device(tit)
+            self.start_screen(tit, cmd, self.BeamPC, xtit)
 
     def start_xterm(self, tit, cmd):
         start_xterm(tit, cmd, self.W, self.H, self.XPos, int(self.MaxH * 3. / 4))
         self.XPos += int(get_xwin_info(tit)['w'] + self.Spacing + (get_xwin_info('DataCollector')['x'] if not self.XPos else 0))
-
-    def get_wbc_cmd(self, tel=True, old=False):
-        data_str = self.Config.get('DIR', 'telescope' if tel else 'dut')
-        data_path = join('/home', get_user(self.BeamPC), data_str)
-        return f'iclix.py {data_path} -T {self.Config.get("TRIM", "telescope" if tel else "dut")}{" -o" if old else ""}'
-
-    def run(self):
-        warning('\nStarting subprocesses ...')
-        self.start_runcontrol()
-        self.start_logcontrol()
-        self.start_data_collector()
-        self.start_tu()
-        self.start_beam_device('CMS Pixel Telescope', 'cmstel', 'StartCMSPixel.sh')
-        self.start_beam_device('CMS Pixel Telescope', 'cmstelold', 'StartCMSPixelOld.sh')
-        self.start_beam_device('CMS Pixel DUT', 'cmsdut', 'StartCMSPixelDigOld.sh')
-        self.start_beam_device('Clock Generator', 'clock', 'clockgen.sh')
-        self.start_beam_device('WBC Scan', 'wbc', self.get_wbc_cmd(), script_dir=join('software', 'eudaq-drs4', 'scripts'))
-        self.start_beam_device('Pixel WBC Scan Tel', 'wbcpixtel', self.get_wbc_cmd(old=True), script_dir=join('software', 'eudaq-drs4', 'scripts'))
-        self.start_beam_device('Pixel WBC Scan DUT', 'wbcpixdut', self.get_wbc_cmd(old=True, tel=False), script_dir=join('software', 'eudaq-drs4', 'scripts'))
-        self.start_beam_device('DRS4 Producer', 'drs4', 'StartDRS4.sh')
-        self.start_beam_device('DRS4 Osci', 'drsgui', 'drsosc', script_dir=join('software', 'DRS4'))
-        self.start_beam_device('CAEN Producer', 'caen', 'StartVME.sh')
-        finished('Starting EUDAQ complete!')
+    # endregion START
+    # ----------------------------------------
 
     def make_mask(self):
         now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -153,13 +177,6 @@ class EudaqStart:
         string += 'cornBot 2 {} {}\ncornTop 2 {} {}\n\n'.format(x2[0].rjust(2), y2[0].rjust(2), x2[1].rjust(2), y2[1].rjust(2))
         system('ssh -tY {} "echo \'{}\' > {}"'.format(self.BeamPC, string, file_path))
         print(file_name)
-
-    def device_is_active(self, name):
-        return name in self.Config.options('DEVICE') and self.Config.getboolean('DEVICE', name)
-
-    def wait_for_last_device(self, new_xterm_name, t_wait=None):
-        wait_for_xwin(self.LastDevice, choose(t_wait, self.TWait))
-        self.LastDevice = new_xterm_name
 
 
 if __name__ == '__main__':

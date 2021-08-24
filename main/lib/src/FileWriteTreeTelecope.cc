@@ -69,10 +69,10 @@ void FileWriterTreeTelescope::StartRun(unsigned run_number) {
 
   // Set Branch Addresses
   ttree_->Branch("event_number", &f_event_number, "event_number/I");
-  ttree_->Branch("time", & f_time, "time/D");
+  ttree_->Branch("time", &f_time, "time/D");
   if (has_tu_) {
     ttree_->Branch("beam_current", &f_beam_current, "beam_current/s");
-    ttree_->Branch("rate", &v_scaler);
+    ttree_->Branch("rate", v_scaler, "rate[5]/l");
   }
 
   ttree_->Branch("n_hits_tot", &f_n_hits, "n_hits_tot/b");
