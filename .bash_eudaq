@@ -5,7 +5,7 @@ export RCPORT=44000
 EUDAQDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 SOFTDIR="$(dirname "$EUDAQDIR")"
 export EUDAQDIR=$EUDAQDIR
-export PXARPATH="$SOFTDIR/pxar_root6"
+export PXARPATH="$SOFTDIR/pxar6"
 export DRS_PATH="$SOFTDIR/DRS4-v5-shared"
 
 # PROCESS ALIASES
