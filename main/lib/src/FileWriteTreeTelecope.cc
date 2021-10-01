@@ -5,7 +5,6 @@
 #include "eudaq/PluginManager.hh"
 #include "eudaq/Logger.hh"
 
-#pragma GCC diagnostic ignored "-Wattributes"
 #include "TFile.h"
 #include "TTree.h"
 #include "TROOT.h"
@@ -15,9 +14,6 @@
 #include "TString.h"
 #include "TFitResultPtr.h"
 #include "eudaq/FileWriterTelescope.hh"
-#pragma GCC diagnostic warning "-Wattributes"
-
-#define MAX_SIZE 255
 
 using namespace std;
 using namespace eudaq;
@@ -27,22 +23,10 @@ namespace { static RegisterFileWriter<FileWriterTreeTelescope> reg("telescopetre
 
 FileWriterTreeTelescope::FileWriterTreeTelescope(const std::string & /*param*/)
 : name_("telescopetree"), run_number_(0), max_event_number_(0), has_tu_(false), verbose_(0), at_plane_(0), tfile_(nullptr), ttree_(nullptr),
-  f_event_number(0), f_time(-1), old_time(0), f_beam_current(UINT16_MAX) {
+  f_event_number(0), f_time(-1), old_time(0), f_n_hits(0), f_beam_current(UINT16_MAX) {
 
   gROOT->ProcessLine("gErrorIgnoreLevel = 5001;");
   gROOT->ProcessLine("#include <vector>");
-
-  f_n_hits = 0;
-  f_plane  = new uint8_t[MAX_SIZE];
-  f_col    = new uint8_t[MAX_SIZE];
-  f_row    = new uint8_t[MAX_SIZE];
-  f_adc    = new int16_t [MAX_SIZE];
-  f_charge = new float[MAX_SIZE];
-  f_trig_phase = new uint8_t[2];
-
-  //tu
-  v_scaler = new uint64_t[5];
-  old_scaler = new uint64_t[5];
 }
 
 void FileWriterTreeTelescope::Configure() {
@@ -75,7 +59,7 @@ void FileWriterTreeTelescope::StartRun(unsigned run_number) {
     ttree_->Branch("rate", v_scaler, "rate[5]/l");
   }
 
-  ttree_->Branch("n_hits_tot", &f_n_hits, "n_hits_tot/b");
+  ttree_->Branch("n_hits_tot", &f_n_hits);
   ttree_->Branch("plane", f_plane, "plane[n_hits_tot]/b");
   ttree_->Branch("col", f_col, "col[n_hits_tot]/b");
   ttree_->Branch("row", f_row, "row[n_hits_tot]/b");

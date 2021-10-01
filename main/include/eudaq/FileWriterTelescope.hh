@@ -66,18 +66,18 @@ namespace eudaq {
     double old_time;
 
     /** VECTOR BRANCHES */
-    uint8_t f_n_hits;
-    uint8_t * f_plane;
-    uint8_t * f_col;
-    uint8_t * f_row;
-    int16_t * f_adc;
-    float * f_charge;
-    uint8_t * f_trig_phase;
+    UShort_t f_n_hits;
+    uint8_t f_plane[UINT8_MAX + 1] {};
+    uint8_t f_col[UINT8_MAX + 1] {};
+    uint8_t f_row[UINT8_MAX + 1] {};
+    int16_t f_adc[UINT8_MAX + 1] {};
+    float f_charge[UINT8_MAX + 1] {};
+    uint8_t f_trig_phase[2] {};
 
     //tu
     uint16_t f_beam_current;
-    uint64_t * v_scaler;
-    uint64_t * old_scaler;
+    uint64_t v_scaler[5] {};
+    uint64_t old_scaler[5] {};
   };
 }
 
