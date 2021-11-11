@@ -58,7 +58,7 @@ namespace eudaq {
     void SetBeamCurrent(StandardEvent);
     void SetScalers(StandardEvent);
 
-    void FillTelescopeArrays(const StandardEvent&, bool=false);
+    bool FillTelescopeArrays(const StandardEvent&, bool=false);
 
     /** SCALAR BRANCHES */
     uint32_t f_event_number;

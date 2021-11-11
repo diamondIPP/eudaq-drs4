@@ -99,8 +99,8 @@ void FileWriterTreeTelescope::WriteEvent(const DetectorEvent & ev) {
 
   f_n_hits = 0;
   at_plane_ = 0;
-  FillTelescopeArrays(sev, false);  // first fill the telescope planes and then the DUT
-  FillTelescopeArrays(sev, true);  // nothing happens in case there are no dut planes
+  if (not FillTelescopeArrays(sev, false) or not FillTelescopeArrays(sev, true)){  // first fill the telescope planes and then the DUT (if they exist)
+    return; }  // exclude events with too many hits
 
   AddWrite(sev);
   ttree_->Fill();
@@ -144,7 +144,7 @@ void FileWriterTreeTelescope::SetScalers(StandardEvent sev) {
   }
 }
 
-void FileWriterTreeTelescope::FillTelescopeArrays(const StandardEvent & sev, bool is_dut) {
+bool FileWriterTreeTelescope::FillTelescopeArrays(const StandardEvent & sev, bool is_dut) {
 
   for (auto iplane(0); iplane < sev.NumPlanes(); ++iplane) {
     const eudaq::StandardPlane & plane = sev.GetPlane(iplane);
@@ -158,9 +158,12 @@ void FileWriterTreeTelescope::FillTelescopeArrays(const StandardEvent & sev, boo
       f_row[f_n_hits] = uint8_t(plane.GetY(ipix));
       f_adc[f_n_hits] = int16_t(plane.GetPixel(ipix));
       f_charge[f_n_hits++] = 42;						// todo: do charge conversion here!
+      if (f_n_hits == UINT8_MAX) {  // exclude events with too many hits
+        return false; }
     }
     at_plane_++;
   }
+  return true;
 }
 
 #endif // ROOT_FOUND
