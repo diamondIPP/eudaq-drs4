@@ -157,7 +157,7 @@ bool FileWriterTreeTelescope::FillTelescopeArrays(const StandardEvent & sev, boo
       f_col[f_n_hits] = uint8_t(plane.GetX(ipix));
       f_row[f_n_hits] = uint8_t(plane.GetY(ipix));
       f_adc[f_n_hits] = int16_t(plane.GetPixel(ipix));
-      f_charge[f_n_hits++] = 42;						// todo: do charge conversion here!
+      f_charge[f_n_hits++] = 42;  // charge conversion in tracking tel
       if (f_n_hits == UINT8_MAX) {  // exclude events with too many hits
         return false; }
     }

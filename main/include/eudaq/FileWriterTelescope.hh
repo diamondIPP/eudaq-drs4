@@ -66,7 +66,7 @@ namespace eudaq {
     double old_time;
 
     /** VECTOR BRANCHES */
-    UChar_t f_n_hits;
+    UShort_t f_n_hits;
     uint8_t f_plane[UINT8_MAX + 1] {};
     uint8_t f_col[UINT8_MAX + 1] {};
     uint8_t f_row[UINT8_MAX + 1] {};
